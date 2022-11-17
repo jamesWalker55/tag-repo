@@ -12,6 +12,7 @@
   "dependencies": {
     "@tauri-apps/api": "^1.2.0",
     "vue": "^3.2.37",
+    "vue-file-toolbar-menu": "^2.1.0",
     "vue3-click-away": "^1.2.4"
   },
   "devDependencies": {
