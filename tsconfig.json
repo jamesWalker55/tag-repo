@@ -10,6 +10,9 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "esModuleInterop": true,
+    "types": [
+      "unplugin-icons/types/vue",
+    ],
     "lib": [
       "ESNext",
       "DOM"
