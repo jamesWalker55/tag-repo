@@ -11,12 +11,12 @@ rust-version = "1.57"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [build-dependencies]
-tauri-build = "1.2"
+tauri-build = { version = "1.2", features = [] }
 
 [dependencies]
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
-tauri = "1.2"
+tauri = { version = "1.2", features = ["api-all"] }
 tauri-plugin-window-state = { git = "https://github.com/tauri-apps/tauri-plugin-window-state", rev = "17f468062904e64bb3ebf5f1b7486883aaafa1cf" }
 
 [features]
