@@ -53,8 +53,7 @@ const menuItems = computed(() => [
   <VueFileToolbarMenu
       :content="menuItems"
       class="toolbar
-        !bg-neutral-100 !text-neutral-900
-        !border-solid !border-0 !border-b !border-b-neutral-300"
+        !bg-neutral-100 !text-neutral-900"
       data-tauri-drag-region/>
 </template>
 
