@@ -15,9 +15,18 @@ const happy = ref(false);
 const menuItems = computed(() => [
       {
         text: 'File',
-        menu_class: 'rounded text-sm',
         menu: [
           {text: 'Open repository...', icon: OpenFolderIcon, click: () => alert('Action 1')},
+          {is: 'separator'},
+          {text: 'Exit', icon: CloseIcon2, click: () => appWindow.close()},
+        ],
+      },
+      {
+        text: 'Edit',
+        menu: [
+          {text: 'Copy'},
+          {text: 'Cut'},
+          {text: 'Paste'},
           {is: 'separator'},
           {text: 'Exit', icon: CloseIcon2, click: () => appWindow.close()},
         ],
@@ -33,17 +42,17 @@ const menuItems = computed(() => [
       {
         icon: MinimizeIcon,
         click: () => appWindow.minimize(),
-        class: 'w-title-button !rounded-none',
+        class: 'title-button',
       },
       {
         icon: MaximiseIcon,
         click: () => appWindow.toggleMaximize(),
-        class: 'w-title-button !rounded-none',
+        class: 'title-button',
       },
       {
         icon: CloseIcon,
         click: () => appWindow.close(),
-        class: 'w-title-button !rounded-none',
+        class: 'title-button',
       },
     ],
 );
@@ -51,40 +60,46 @@ const menuItems = computed(() => [
 
 <template>
   <VueFileToolbarMenu
+      id="toolbar"
       :content="menuItems"
-      class="toolbar
-        !bg-neutral-100 !text-neutral-900"
       data-tauri-drag-region/>
 </template>
 
-<style>
-.toolbar {
-  --bar-font-color: rgb(32, 33, 36);
-  --bar-font-size: 14px;
-  //--bar-letter-spacing: 0.013333333em;
-  --bar-padding: 2px;
-  --bar-button-icon-size: 18px;
-  --bar-button-padding: 1px 6px 1px 6px;
-  --bar-button-radius: 4px;
-  --bar-button-hover-bkg: rgb(241, 243, 244);
-  --bar-button-active-color: rgb(26, 115, 232);
-  --bar-button-active-bkg: rgb(232, 240, 254);
-  --bar-button-open-color: rgb(32, 33, 36);
-  --bar-button-open-bkg: rgb(232, 240, 254);
-  --bar-menu-bkg: unset;
-  //--bar-menu-border-radius: 0 0 3px 3px;
-  //--bar-menu-item-chevron-margin: 0;
-  //--bar-menu-item-hover-bkg: rgb(241, 243, 244);
-  --bar-menu-item-padding: 2px 8px 2px 27px;
-  --bar-menu-item-icon-size: 14px;
-  --bar-menu-item-icon-margin: 0 7px 0 -21px;
-  --bar-menu-padding: 4px 0px;
-  --bar-menu-shadow: 0 2px 6px 2px rgba(60, 64, 67, 0.15);
-  --bar-menu-separator-height: 1px;
-  --bar-menu-separator-margin: 4px 8px;
-  --bar-menu-separator-color: rgb(227, 229, 233);
-  --bar-separator-color: rgb(218, 220, 224);
-  --bar-separator-width: 1px;
-  --bar-sub-menu-border-radius: 3px;
+<style scoped>
+// i'm using a random #toolbar ID to make these styles more important, so it overrides the default styles
+#toolbar.bar {
+  // Text styling
+  @apply text-sm;
+
+  // Button colors
+  @apply text-neutral-900;
+
+  :deep(.bar-button) {
+    @apply hover:bg-neutral-100 transition-colors duration-75;
+    &:active {@apply bg-neutral-300;}
+  }
+
+  :deep(.bar-button.active) {
+    @apply bg-emerald-100 hover:bg-emerald-200 text-emerald-600;
+    &:active {@apply bg-emerald-300;}
+  }
+
+  :deep(.bar-button.open) {
+    @apply hover:bg-neutral-300 text-neutral-900;
+  }
+
+  // Button styling
+  :deep(.bar-button) {
+    @apply px-1 py-0 rounded-none;
+  }
+  :deep(.bar-button.title-button) {
+    @apply w-title-button;
+  }
+
+  // Button icon sizes
+  :deep(.bar-button) {
+    .icon {@apply w-5;}
+    .material-icons.icon {@apply text-xl;}
+  }
 }
 </style>
