@@ -1136,9 +1136,9 @@ dependencies = [
 
 [[package]]
 name = "indexmap"
-version = "1.9.1"
+version = "1.9.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "10a35a97730320ffe8e2d410b5d3b69279b98d2c14bdb8b70ea89ecf7888d41e"
+checksum = "1885e79c1fc4b10f0e172c475f458b7f7b93061064d98c3293e98c5ba0c8b399"
 dependencies = [
  "autocfg",
  "hashbrown",
@@ -2607,6 +2607,7 @@ dependencies = [
  "tauri",
  "tauri-build",
  "tauri-plugin-window-state",
+ "window-shadows",
 ]
 
 [[package]]
@@ -3376,6 +3377,17 @@ name = "winapi-x86_64-pc-windows-gnu"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "712e227841d057c1ee1cd2fb22fa7e5a5461ae8e48fa2ca79ec42cfc1931183f"
+
+[[package]]
+name = "window-shadows"
+version = "0.2.0"
+source = "git+https://github.com/tauri-apps/window-shadows?rev=38e89e93340e3ecd44e6f6cdfdd810df9f7b3073#38e89e93340e3ecd44e6f6cdfdd810df9f7b3073"
+dependencies = [
+ "cocoa",
+ "objc",
+ "raw-window-handle",
+ "windows-sys 0.42.0",
+]
 
 [[package]]
 name = "windows"
