@@ -6,6 +6,7 @@ import MaximiseIcon from '~icons/material-symbols/fullscreen';
 import CloseIcon from '~icons/material-symbols/close';
 import OpenFolderIcon from '~icons/heroicons/folder-open';
 import CloseIcon2 from '~icons/heroicons/x-mark';
+import TempIcon from '~icons/ic/baseline-sentiment-very-satisfied';
 
 import {appWindow} from '@tauri-apps/api/window';
 import {computed, ref} from 'vue';
@@ -28,7 +29,9 @@ const menuItems = computed(() => [
           {text: 'Cut'},
           {text: 'Paste'},
           {is: 'separator'},
-          {text: 'Exit', icon: CloseIcon2, click: () => appWindow.close()},
+          {text: 'Exit', icon: TempIcon, click: () => appWindow.close(), disabled: true},
+          {text: 'Exit', icon: TempIcon, click: () => appWindow.close()},
+          {text: 'Exit', icon: 'sentiment_very_satisfied', click: () => appWindow.close()},
         ],
       },
       {
@@ -75,17 +78,17 @@ const menuItems = computed(() => [
   @apply text-neutral-900;
 
   :deep(.bar-button) {
-    @apply hover:bg-neutral-100 transition-colors duration-75;
+    @apply hover:bg-neutral-100 transition-colors duration-75 ease-out;
     &:active {@apply bg-neutral-300;}
-  }
 
-  :deep(.bar-button.active) {
-    @apply bg-emerald-100 hover:bg-emerald-200 text-emerald-600;
-    &:active {@apply bg-emerald-300;}
-  }
+    &.active {
+      @apply bg-emerald-100 hover:bg-emerald-200 text-emerald-600;
+      &:active {@apply bg-emerald-300;}
+    }
 
-  :deep(.bar-button.open) {
-    @apply hover:bg-neutral-300 text-neutral-900;
+    &.open {
+      @apply hover:bg-neutral-300 text-neutral-900;
+    }
   }
 
   // Button styling
@@ -100,6 +103,29 @@ const menuItems = computed(() => [
   :deep(.bar-button) {
     .icon {@apply w-5;}
     .material-icons.icon {@apply text-xl;}
+  }
+
+  // Menu styling
+  :deep(.bar-menu-items) {
+    @apply text-neutral-900;
+    @apply px-0 py-1;
+    @apply shadow-none drop-shadow-md;
+  }
+
+  :deep(.bar-menu-item) {
+    @apply pl-8 pr-3 py-0.5 hover:bg-neutral-100 transition-colors duration-75 ease-out;
+    &:active {@apply bg-neutral-300;}
+    &.disabled {@apply text-neutral-300;}
+  }
+
+  :deep(.bar-menu-separator) {
+    @apply h-px mx-2 my-1 bg-neutral-200;
+  }
+
+  // Menu icon sizes
+  :deep(.bar-menu-items) {
+    .icon {@apply w-4 mr-2 -ml-6 h-min;}
+    .material-icons.icon {@apply text-base;}
   }
 }
 </style>
