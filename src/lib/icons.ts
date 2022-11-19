@@ -8,7 +8,10 @@ export {default as MenuClose} from '~icons/heroicons/x-mark';
 
 // Common actions
 export {default as OpenRepo} from '~icons/heroicons/folder-open';
+export {default as Cut} from '~icons/heroicons/scissors';
+export {default as Copy} from '~icons/heroicons/document-duplicate';
+export {default as Paste} from '~icons/heroicons/clipboard-document';
 
 // Misc
-export {default as Satisfied} from '~icons/ic/baseline-sentiment-satisfied';
-export {default as VerySatisfied} from '~icons/ic/baseline-sentiment-very-satisfied';
+export {default as FaceSmile} from '~icons/heroicons/face-smile';
+export {default as FaceFrown} from '~icons/heroicons/face-frown';

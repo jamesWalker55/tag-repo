@@ -1,7 +1,16 @@
 <script lang="ts" setup>
 import VueFileToolbarMenu from 'vue-file-toolbar-menu';
 
-import {TitleMinimize, TitleMaximise, TitleClose, MenuClose, OpenRepo, Satisfied, VerySatisfied} from '@/lib/icons';
+import {
+  TitleMinimize,
+  TitleMaximise,
+  TitleClose,
+  MenuClose,
+  OpenRepo,
+  FaceSmile,
+  FaceFrown,
+  Copy, Cut, Paste,
+} from '@/lib/icons';
 
 import {appWindow} from '@tauri-apps/api/window';
 import {computed, ref} from 'vue';
@@ -20,19 +29,16 @@ const menuItems = computed(() => [
       {
         text: 'Edit',
         menu: [
-          {text: 'Copy'},
-          {text: 'Cut'},
-          {text: 'Paste'},
+          {text: 'Cut', icon: Cut},
+          {text: 'Copy', icon: Copy},
+          {text: 'Paste', icon: Paste},
           {is: 'separator'},
-          {text: 'Exit', icon: VerySatisfied, click: () => appWindow.close(), disabled: true},
-          {text: 'Exit', icon: VerySatisfied, click: () => appWindow.close()},
-          {text: 'Exit', icon: VerySatisfied, click: () => appWindow.close()},
+          {text: 'Tools', disabled: true},
         ],
       },
       {
-        text: 'My Button',
         active: happy.value,
-        icon: happy.value ? VerySatisfied : Satisfied,
+        icon: happy.value ? FaceFrown : FaceSmile,
         click: () => { happy.value = !happy.value; },
       },
       // Spacer
@@ -50,7 +56,7 @@ const menuItems = computed(() => [
       {
         icon: TitleClose,
         click: () => appWindow.close(),
-        class: 'title-button',
+        class: 'title-button danger',
       },
     ],
 );
@@ -73,8 +79,8 @@ const menuItems = computed(() => [
   @apply text-neutral-900;
 
   :deep(.bar-button) {
-    @apply hover:bg-neutral-100 transition-colors duration-75 ease-out;
-    &:active {@apply bg-neutral-300;}
+    @apply hover:bg-neutral-200 transition-colors duration-75 ease-out;
+    &:active {@apply bg-neutral-400;}
 
     &.active {
       @apply bg-emerald-100 hover:bg-emerald-200 text-emerald-600;
@@ -82,7 +88,7 @@ const menuItems = computed(() => [
     }
 
     &.open {
-      @apply hover:bg-neutral-300 text-neutral-900;
+      @apply hover:bg-neutral-400 text-neutral-900;
     }
   }
 
@@ -90,8 +96,18 @@ const menuItems = computed(() => [
   :deep(.bar-button) {
     @apply px-1 py-0 rounded-none;
   }
+
+  // Special buttons
   :deep(.bar-button.title-button) {
     @apply w-title-button;
+
+    .icon {@apply w-4 h-min;}
+    .material-icons.icon {@apply text-base;}
+
+    &.danger {
+      @apply hover:text-white hover:bg-red-600;
+      &:active {@apply text-white bg-red-500;}
+    }
   }
 
   // Button icon sizes
