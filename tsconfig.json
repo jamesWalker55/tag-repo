@@ -13,6 +13,10 @@
     "types": [
       "unplugin-icons/types/vue",
     ],
+    "baseUrl": "./",
+    "paths": {
+      "@/*": ["src/*"]
+    },
     "lib": [
       "ESNext",
       "DOM"

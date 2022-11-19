@@ -1,6 +1,7 @@
 import {defineConfig} from 'vite';
 import vue from '@vitejs/plugin-vue';
 import Icons from 'unplugin-icons/vite';
+import path from 'path';
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -8,6 +9,12 @@ export default defineConfig({
     vue(),
     Icons(),
   ],
+
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './src'),
+    },
+  },
 
   // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
   // prevent vite from obscuring rust errors
