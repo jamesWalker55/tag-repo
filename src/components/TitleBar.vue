@@ -1,12 +1,7 @@
 <script lang="ts" setup>
 import VueFileToolbarMenu from 'vue-file-toolbar-menu';
 
-import MinimizeIcon from '~icons/material-symbols/minimize';
-import MaximiseIcon from '~icons/material-symbols/fullscreen';
-import CloseIcon from '~icons/material-symbols/close';
-import OpenFolderIcon from '~icons/heroicons/folder-open';
-import CloseIcon2 from '~icons/heroicons/x-mark';
-import TempIcon from '~icons/ic/baseline-sentiment-very-satisfied';
+import {TitleMinimize, TitleMaximise, TitleClose, MenuClose, OpenRepo, Satisfied, VerySatisfied} from '@/lib/icons';
 
 import {appWindow} from '@tauri-apps/api/window';
 import {computed, ref} from 'vue';
@@ -17,9 +12,9 @@ const menuItems = computed(() => [
       {
         text: 'File',
         menu: [
-          {text: 'Open repository...', icon: OpenFolderIcon, click: () => alert('Action 1')},
+          {text: 'Open repository...', icon: OpenRepo, click: () => alert('Action 1')},
           {is: 'separator'},
-          {text: 'Exit', icon: CloseIcon2, click: () => appWindow.close()},
+          {text: 'Exit', icon: MenuClose, click: () => appWindow.close()},
         ],
       },
       {
@@ -29,31 +24,31 @@ const menuItems = computed(() => [
           {text: 'Cut'},
           {text: 'Paste'},
           {is: 'separator'},
-          {text: 'Exit', icon: TempIcon, click: () => appWindow.close(), disabled: true},
-          {text: 'Exit', icon: TempIcon, click: () => appWindow.close()},
-          {text: 'Exit', icon: 'sentiment_very_satisfied', click: () => appWindow.close()},
+          {text: 'Exit', icon: VerySatisfied, click: () => appWindow.close(), disabled: true},
+          {text: 'Exit', icon: VerySatisfied, click: () => appWindow.close()},
+          {text: 'Exit', icon: VerySatisfied, click: () => appWindow.close()},
         ],
       },
       {
         text: 'My Button',
         active: happy.value,
-        icon: happy.value ? 'sentiment_very_satisfied' : 'sentiment_satisfied',
+        icon: happy.value ? VerySatisfied : Satisfied,
         click: () => { happy.value = !happy.value; },
       },
       // Spacer
       {is: 'div', class: 'ml-auto'},
       {
-        icon: MinimizeIcon,
+        icon: TitleMinimize,
         click: () => appWindow.minimize(),
         class: 'title-button',
       },
       {
-        icon: MaximiseIcon,
+        icon: TitleMaximise,
         click: () => appWindow.toggleMaximize(),
         class: 'title-button',
       },
       {
-        icon: CloseIcon,
+        icon: TitleClose,
         click: () => appWindow.close(),
         class: 'title-button',
       },
