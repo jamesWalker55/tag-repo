@@ -19,6 +19,7 @@ serde = { version = "1.0", features = ["derive"] }
 tauri = { version = "1.2", features = ["api-all"] }
 tauri-plugin-window-state = { git = "https://github.com/tauri-apps/tauri-plugin-window-state", rev = "17f468062904e64bb3ebf5f1b7486883aaafa1cf" }
 window-shadows = { git = "https://github.com/tauri-apps/window-shadows", rev = "38e89e93340e3ecd44e6f6cdfdd810df9f7b3073" }
+time = { version = "0.3.17", features = ["std"] }
 
 [features]
 # by default Tauri runs in production mode
