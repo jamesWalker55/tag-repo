@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@tauri-apps/api": "^1.2.0",
+    "path-browserify": "^1.0.1",
     "vue": "^3.2.37",
     "vue-file-toolbar-menu": "git+https://github.com/jamesWalker55/vue-file-toolbar-menu.git#91dcd04d",
     "vue3-click-away": "^1.2.4"
@@ -19,6 +20,7 @@
     "@iconify/json": "^2.1.139",
     "@tauri-apps/cli": "^1.2.0",
     "@types/node": "^18.7.10",
+    "@types/path-browserify": "^1.0.0",
     "@vitejs/plugin-vue": "^3.0.1",
     "autoprefixer": "^10.4.13",
     "postcss": "^8.4.19",
