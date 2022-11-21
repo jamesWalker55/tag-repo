@@ -3,8 +3,13 @@ all(not(debug_assertions), target_os = "windows"),
 windows_subsystem = "windows"
 )]
 
+mod db;
+mod path;
+mod app_state;
+
 use tauri::Manager;
 use window_shadows::set_shadow;
+use crate::app_state::AppState;
 
 // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
 #[tauri::command]
@@ -14,6 +19,7 @@ fn greet(name: &str) -> String {
 
 fn main() {
   tauri::Builder::default()
+    .manage(AppState::default())
     .setup(|app| {
       let window = app.get_window("main").unwrap();
       set_shadow(&window, true).expect("Unsupported platform!");
