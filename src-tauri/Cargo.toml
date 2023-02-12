@@ -21,6 +21,7 @@ tauri-plugin-window-state = { git = "https://github.com/tauri-apps/tauri-plugin-
 window-shadows = { git = "https://github.com/tauri-apps/window-shadows", rev = "38e89e93340e3ecd44e6f6cdfdd810df9f7b3073" }
 time = { version = "0.3.17", features = ["std"] }
 rusqlite = { version = "0.28.0", features = ["bundled"] }
+indoc = "2"
 
 [features]
 # by default Tauri runs in production mode
