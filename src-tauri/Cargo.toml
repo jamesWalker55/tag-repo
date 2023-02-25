@@ -24,6 +24,7 @@ rusqlite = { version = "0.28.0", features = ["bundled"] }
 indoc = "2"
 rusqlite_migration = "1.0.1"
 lazy_static = "1.4.0"
+tempfile = "3.4.0"
 
 [features]
 # by default Tauri runs in production mode
