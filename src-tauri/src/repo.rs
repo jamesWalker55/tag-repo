@@ -141,10 +141,10 @@ mod tests {
     assert!(matches!(rv, Err(DatabaseError::DuplicatePathError(_))));
   }
 
-  #[test]
-  fn print_sqlite_version() {
-    let repo = new_repo();
-    let version: String = repo.conn.query_row("select sqlite_version()", [], |row| row.get(0)).unwrap();
-    dbg!(version);
-  }
+  // #[test]
+  // fn print_sqlite_version() {
+  //   let repo = new_repo();
+  //   let version: String = repo.conn.query_row("select sqlite_version()", [], |row| row.get(0)).unwrap();
+  //   dbg!(version);
+  // }
 }
