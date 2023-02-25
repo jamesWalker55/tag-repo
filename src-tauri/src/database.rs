@@ -1,5 +1,5 @@
 use std::path::{Path, PathBuf};
-use rusqlite::{params, Connection, Result, Error};
+use rusqlite::{Connection, Result, Error};
 use rusqlite_migration::{Migrations, M};
 use std::collections::HashSet;
 use lazy_static::lazy_static;
