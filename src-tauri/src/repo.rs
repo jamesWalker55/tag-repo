@@ -25,7 +25,9 @@ pub struct Repo {
 
 impl Repo {
   fn insert_item<T>(&self, path: T, tags: T) -> Result<(), DatabaseError>
-    where T: AsRef<str> {
+  where
+    T: AsRef<str>,
+  {
     let path = path.as_ref();
     let tags = tags.as_ref();
     let result = self.conn.execute(
@@ -37,13 +39,17 @@ impl Repo {
       Ok(_) => Ok(()),
       Err(SqliteFailure(sqlite_err, Some(msg))) => {
         if sqlite_err.code == ErrorCode::ConstraintViolation
-          && msg == "UNIQUE constraint failed: items.path" {
+          && msg == "UNIQUE constraint failed: items.path"
+        {
           Err(DatabaseError::DuplicatePathError(path.into()))
         } else {
-          Err(DatabaseError::BackendError(SqliteFailure(sqlite_err, Some(msg))))
+          Err(DatabaseError::BackendError(SqliteFailure(
+            sqlite_err,
+            Some(msg),
+          )))
         }
       }
-      Err(err) => Err(DatabaseError::BackendError(err))
+      Err(err) => Err(DatabaseError::BackendError(err)),
     }
   }
 }
@@ -59,7 +65,11 @@ lazy_static! {
 pub fn open_database(db_path: impl AsRef<Path>) -> Result<Connection, OpenError> {
   let db_path = db_path.as_ref();
   let mut conn = Connection::open(db_path).map_err(OpenError::FailedToCreateDatabase)?;
-  MIGRATIONS.to_latest(&mut conn).map_err(OpenError::FailedToMigrateDatabase)?;
+
+  MIGRATIONS
+    .to_latest(&mut conn)
+    .map_err(OpenError::FailedToMigrateDatabase)?;
+
   Ok(conn)
 }
 
@@ -80,8 +90,8 @@ pub fn open(repo_path: impl AsRef<Path>) -> Result<Repo, OpenError> {
 
 #[cfg(test)]
 mod tests {
-  use std::collections::HashSet;
   use super::*;
+  use std::collections::HashSet;
   use tempfile::tempdir;
 
   fn new_repo() -> Repo {
@@ -92,8 +102,10 @@ mod tests {
   fn check_tables_of_newly_created_database() {
     let repo = new_repo();
 
-    let mut stmt = repo.conn
-      .prepare("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name").unwrap();
+    let mut stmt = repo
+      .conn
+      .prepare("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")
+      .unwrap();
     let table_names = stmt.query_map([], |row| row.get::<_, String>(0)).unwrap();
     let table_names: Vec<_> = table_names.flatten().collect();
 
