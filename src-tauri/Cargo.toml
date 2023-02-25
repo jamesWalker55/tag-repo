@@ -32,3 +32,16 @@ default = ["custom-protocol"]
 # this feature is used used for production builds where `devPath` points to the filesystem
 # DO NOT remove this
 custom-protocol = ["tauri/custom-protocol"]
+
+# Config for the main.rs entry file
+[[bin]]
+name = "main"
+path = "src/main.rs"
+# Disable testing until I've finished the lib
+test = false
+bench = false
+
+[lib]
+name = "lib"
+path = "src/lib.rs"
+test = true
