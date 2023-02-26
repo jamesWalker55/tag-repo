@@ -131,8 +131,6 @@ pub fn open_database(db_path: impl AsRef<Path>) -> Result<Connection, OpenError>
 #[cfg(test)]
 mod tests {
   use super::*;
-  use std::collections::HashSet;
-  use std::ops::Deref;
   use tempfile::tempdir;
 
   fn empty_repo() -> Repo {
@@ -149,16 +147,10 @@ mod tests {
     repo
   }
 
-  fn unordered_eq<'a, T, U, V, W>(a: T, b: V)
+  fn unordered_eq<'a, T, U>(a: T, b: U)
   where
-    T: Iterator<Item = U>,
-    U: AsRef<str>,
-    V: Iterator<Item = W>,
-    W: AsRef<str>,
-    &'a str: From<U>,
-    &'a str: From<W>,
-    Vec<&'a str>: FromIterator<U>,
-    Vec<&'a str>: FromIterator<W>,
+    T: Iterator<Item = &'a str>,
+    U: Iterator<Item = &'a str>,
   {
     let mut a: Vec<&str> = a.collect();
     let mut b: Vec<&str> = b.collect();
@@ -178,18 +170,17 @@ mod tests {
     let table_names = stmt.query_map([], |row| row.get::<_, String>(0)).unwrap();
     let table_names: Vec<_> = table_names.flatten().collect();
 
-    let expected_names = [
-      "items",
-      "tag_query",
-      "tag_query_data",
-      "tag_query_idx",
-      "tag_query_docsize",
-      "tag_query_config",
-    ];
-
-    let a: HashSet<_> = table_names.iter().map(|x| x.to_string()).collect();
-    let b: HashSet<_> = expected_names.iter().map(|x| x.to_string()).collect();
-    assert_eq!(a, b);
+    unordered_eq(
+      table_names.iter().map(String::as_str),
+      [
+        "items",
+        "tag_query",
+        "tag_query_data",
+        "tag_query_idx",
+        "tag_query_docsize",
+        "tag_query_config",
+      ].iter().cloned(),
+    );
   }
 
   #[test]
@@ -199,17 +190,16 @@ mod tests {
     repo.insert_item("world", "video root").unwrap();
 
     let mut stmt = repo.conn.prepare("SELECT path FROM items").unwrap();
-    let item_names = stmt.query_map([], |row| row.get::<_, String>(0)).unwrap();
+    let item_names: Vec<String> = stmt
+      .query_map([], |row| row.get::<_, String>(0))
+      .unwrap()
+      .flatten()
+      .collect();
 
-    let expected_names = [
-      "hello",
-      "world",
-    ];
-    for (name, expected_name) in item_names.zip(expected_names) {
-      assert_eq!(name.unwrap(), expected_name);
-    }
-
-    ()
+    unordered_eq(
+      item_names.iter().map(String::as_str),
+      ["hello", "world"].iter().cloned(),
+    );
   }
 
   #[test]
@@ -224,14 +214,13 @@ mod tests {
 
   #[test]
   fn can_query_items() {
-    fn expect_query(repo: &Repo, query: &str, mut expected: Vec<&str>) {
+    fn expect_query(repo: &Repo, query: &str, expected: Vec<&str>) {
       let items = repo.get_items(Some(query)).unwrap();
 
-      let mut rv: Vec<&str> = items.iter().map(|x| x.path.as_str()).collect();
-      rv.sort();
-      expected.sort();
-
-      assert_eq!(rv, expected);
+      unordered_eq(
+        items.iter().map(|x| x.path.as_str()),
+        expected.iter().cloned(),
+      );
     }
 
     let repo = test_repo();
@@ -246,7 +235,7 @@ mod tests {
     let items = repo.get_items(None::<String>).unwrap();
     unordered_eq(
       items.iter().map(|x| x.path.as_str()),
-      ["hello", "hello2", "hello3", "hello4", "world"].iter().map(|x| x.deref()),
+      ["hello", "hello2", "hello3", "hello4", "world"].iter().copied(),
     )
   }
 
