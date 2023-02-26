@@ -186,6 +186,19 @@ impl Repo {
       Err(e) => Err(DatabaseError::BackendError(e)),
     }
   }
+
+  fn update_path(&self, item_id: i64, path: impl AsRef<Path>) -> Result<(), DatabaseError> {
+    let path = path.as_ref();
+    let path = path.to_str().ok_or(DatabaseError::InvalidPath(PathBuf::from(path)))?;
+    let rv = self.conn.execute(
+      "UPDATE items SET path = :path WHERE id = :id",
+      params![path, item_id],
+    );
+    match rv {
+      Ok(_) => Ok(()),
+      Err(e) => Err(DatabaseError::BackendError(e)),
+    }
+  }
 }
 
 lazy_static! {
@@ -363,6 +376,19 @@ mod tests {
     // fetch item again
     let item = repo.get_item_by_path("apple").unwrap();
     assert_eq!(item.tags, new_tags);
+  }
+
+  #[test]
+  fn can_update_item_path() {
+    let repo = test_repo();
+
+    let item = repo.get_item_by_id(1).unwrap();
+    let new_path = "pizza";
+    repo.update_path(item.id, new_path).unwrap();
+
+    // fetch item again
+    let item = repo.get_item_by_id(1).unwrap();
+    assert_eq!(item.path, new_path);
   }
 
   // #[test]
