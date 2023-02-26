@@ -81,7 +81,7 @@ impl Repo {
     }
   }
 
-  fn get_items(&self, query: Option<impl AsRef<str>>) -> Result<Vec<Item>, DatabaseError> {
+  fn get_items(&self, query: Option<&str>) -> Result<Vec<Item>, DatabaseError> {
     let to_item_closure: fn(&Row) -> Result<Item, rusqlite::Error> = |row: &Row| {
       Ok(Item {
         id: row.get::<_, i64>(0)?,
@@ -100,7 +100,7 @@ impl Repo {
             INNER JOIN tag_query tq ON i.id = tq.id
           WHERE tq.tag_query MATCH :query
         "})?;
-        stmt.query_map(&[(":query", query.as_ref())], to_item_closure)
+        stmt.query_map(&[(":query", query)], to_item_closure)
       }
       None => {
         stmt = self.conn.prepare(indoc! {"
@@ -237,7 +237,7 @@ mod tests {
   #[test]
   fn can_get_all_items() {
     let repo = test_repo();
-    let items = repo.get_items(None::<String>).unwrap();
+    let items = repo.get_items(None).unwrap();
     unordered_eq(
       items.iter().map(|x| x.path.as_str()),
       ["hello", "hello2", "hello3", "hello4", "world"].iter().copied(),
