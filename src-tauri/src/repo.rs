@@ -36,6 +36,21 @@ pub struct Repo {
 }
 
 impl Repo {
+  fn open(repo_path: impl AsRef<Path>) -> Result<Repo, OpenError> {
+    let repo_path = repo_path.as_ref();
+    if !repo_path.exists() {
+      return Err(OpenError::PathDoesNotExist);
+    }
+    let data_path = repo_path.join(".tagrepo");
+    if !data_path.exists() {
+      create_dir(&data_path).map_err(OpenError::FailedToCreateRepo)?;
+    }
+    let db_path = data_path.join("tags.db");
+    let conn = open_database(&db_path)?;
+    let repo = Self { conn };
+    Ok(repo)
+  }
+
   fn insert_item<T>(&self, path: T, tags: T) -> Result<(), DatabaseError>
   where
     T: AsRef<str>,
@@ -113,21 +128,6 @@ pub fn open_database(db_path: impl AsRef<Path>) -> Result<Connection, OpenError>
   Ok(conn)
 }
 
-pub fn open(repo_path: impl AsRef<Path>) -> Result<Repo, OpenError> {
-  let repo_path = repo_path.as_ref();
-  if !repo_path.exists() {
-    return Err(OpenError::PathDoesNotExist);
-  }
-  let data_path = repo_path.join(".tagrepo");
-  if !data_path.exists() {
-    create_dir(&data_path).map_err(OpenError::FailedToCreateRepo)?;
-  }
-  let db_path = data_path.join("tags.db");
-  let conn = open_database(&db_path)?;
-  let repo = Repo { conn };
-  Ok(repo)
-}
-
 #[cfg(test)]
 mod tests {
   use super::*;
@@ -136,7 +136,7 @@ mod tests {
   use tempfile::tempdir;
 
   fn empty_repo() -> Repo {
-    open(tempdir().unwrap()).unwrap()
+    Repo::open(tempdir().unwrap()).unwrap()
   }
 
   fn test_repo() -> Repo {
