@@ -132,32 +132,44 @@ pub fn open(repo_path: impl AsRef<Path>) -> Result<Repo, OpenError> {
 mod tests {
   use super::*;
   use std::collections::HashSet;
+  use std::ops::Deref;
   use tempfile::tempdir;
 
-  fn new_repo() -> Repo {
+  fn empty_repo() -> Repo {
     open(tempdir().unwrap()).unwrap()
   }
 
-  // fn unordered_eq<'a, T, U, V, W>(a: T, b: V)
-  // where
-  //   T: IntoIterator<Item = U>,
-  //   U: AsRef<str>,
-  //   V: IntoIterator<Item = W>,
-  //   W: AsRef<str>,
-  //   // &'a str: From<U>,
-  //   // &'a str: From<W>,
-  // {
-  //   let a: Vec<&str> = a.into_iter().collect();
-  //   let b: Vec<&str> = b.into_iter().collect();
-  //   // let a: Vec<&str> = a.into_iter().map(|x| x.as_ref()).collect();
-  //   // let b: Vec<&str> = b.into_iter().map(|x| x.as_ref()).collect();
-  //   // a.so
-  //   // let b: Vec<&str> = b.into_iter().map(|x| x.as_ref()).collect();
-  // }
+  fn test_repo() -> Repo {
+    let repo = empty_repo();
+    repo.insert_item("hello", "text root").unwrap();
+    repo.insert_item("hello2", "text root").unwrap();
+    repo.insert_item("hello3", "video root").unwrap();
+    repo.insert_item("hello4", "text root apple").unwrap();
+    repo.insert_item("world", "video root").unwrap();
+    repo
+  }
+
+  fn unordered_eq<'a, T, U, V, W>(a: T, b: V)
+  where
+    T: Iterator<Item = U>,
+    U: AsRef<str>,
+    V: Iterator<Item = W>,
+    W: AsRef<str>,
+    &'a str: From<U>,
+    &'a str: From<W>,
+    Vec<&'a str>: FromIterator<U>,
+    Vec<&'a str>: FromIterator<W>,
+  {
+    let mut a: Vec<&str> = a.collect();
+    let mut b: Vec<&str> = b.collect();
+    a.sort();
+    b.sort();
+    assert_eq!(a, b);
+  }
 
   #[test]
   fn check_tables_of_newly_created_database() {
-    let repo = new_repo();
+    let repo = empty_repo();
 
     let mut stmt = repo
       .conn
@@ -182,7 +194,7 @@ mod tests {
 
   #[test]
   fn can_insert_items() {
-    let repo = new_repo();
+    let repo = empty_repo();
     repo.insert_item("hello", "text root").unwrap();
     repo.insert_item("world", "video root").unwrap();
 
@@ -202,7 +214,7 @@ mod tests {
 
   #[test]
   fn cant_insert_duplicate_items() {
-    let repo = new_repo();
+    let repo = empty_repo();
 
     repo.insert_item("hello", "text root").unwrap();
     let rv = repo.insert_item("hello", "video root");
@@ -222,16 +234,20 @@ mod tests {
       assert_eq!(rv, expected);
     }
 
-    let repo = new_repo();
-    repo.insert_item("hello", "text root").unwrap();
-    repo.insert_item("hello2", "text root").unwrap();
-    repo.insert_item("hello3", "video root").unwrap();
-    repo.insert_item("hello4", "text root apple").unwrap();
-    repo.insert_item("world", "video root").unwrap();
-
+    let repo = test_repo();
     expect_query(&repo, "text", vec!["hello", "hello2", "hello4"]);
     expect_query(&repo, "video", vec!["hello3", "world"]);
     expect_query(&repo, "apple", vec!["hello4"]);
+  }
+
+  #[test]
+  fn can_get_all_items() {
+    let repo = test_repo();
+    let items = repo.get_items(None::<String>).unwrap();
+    unordered_eq(
+      items.iter().map(|x| x.path.as_str()),
+      ["hello", "hello2", "hello3", "hello4", "world"].iter().map(|x| x.deref()),
+    )
   }
 
   // #[test]
