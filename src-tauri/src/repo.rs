@@ -227,6 +227,7 @@ pub fn open_database(db_path: impl AsRef<Path>) -> Result<Connection, OpenError>
 mod tests {
   use super::*;
   use tempfile::tempdir;
+  use crate::testutils::unordered_eq;
 
   fn empty_repo() -> Repo {
     Repo::open(tempdir().unwrap()).unwrap()
@@ -240,18 +241,6 @@ mod tests {
     repo.insert_item("dog", "animal orange").unwrap();
     repo.insert_item("egg", "food orange").unwrap();
     repo
-  }
-
-  fn unordered_eq<'a, T, U>(a: T, b: U)
-  where
-    T: Iterator<Item = &'a str>,
-    U: Iterator<Item = &'a str>,
-  {
-    let mut a: Vec<_> = a.collect();
-    let mut b: Vec<_> = b.collect();
-    a.sort();
-    b.sort();
-    assert_eq!(a, b);
   }
 
   #[test]
