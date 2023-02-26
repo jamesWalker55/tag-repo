@@ -148,11 +148,11 @@ mod tests {
 
   fn test_repo() -> Repo {
     let repo = empty_repo();
-    repo.insert_item("hello", "text root").unwrap();
-    repo.insert_item("hello2", "text root").unwrap();
-    repo.insert_item("hello3", "video root").unwrap();
-    repo.insert_item("hello4", "text root apple").unwrap();
-    repo.insert_item("world", "video root").unwrap();
+    repo.insert_item("apple", "food red").unwrap();
+    repo.insert_item("bee", "animal yellow").unwrap();
+    repo.insert_item("cat", "animal yellow").unwrap();
+    repo.insert_item("dog", "animal orange").unwrap();
+    repo.insert_item("egg", "food orange").unwrap();
     repo
   }
 
@@ -233,9 +233,9 @@ mod tests {
     }
 
     let repo = test_repo();
-    expect_query(&repo, "text", vec!["hello", "hello2", "hello4"]);
-    expect_query(&repo, "video", vec!["hello3", "world"]);
-    expect_query(&repo, "apple", vec!["hello4"]);
+    expect_query(&repo, "animal", vec!["bee", "cat", "dog"]);
+    expect_query(&repo, "food", vec!["apple", "egg"]);
+    expect_query(&repo, "yellow", vec!["bee", "cat"]);
   }
 
   #[test]
@@ -244,7 +244,7 @@ mod tests {
     let items = repo.get_items(None).unwrap();
     unordered_eq(
       items.iter().map(|x| x.path.as_str()),
-      ["hello", "hello2", "hello3", "hello4", "world"].iter().copied(),
+      ["apple", "bee", "cat", "dog", "egg"].iter().copied(),
     )
   }
 
