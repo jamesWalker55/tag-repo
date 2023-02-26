@@ -62,7 +62,7 @@ mod tests {
 
   #[test]
   fn benchmark() -> () {
-    let path = PathBuf::from("D:/");
+    let path = PathBuf::from(r#"D:\Audio Samples\"#);
     let start = Instant::now();
     let r = scan_dir(path);
     let duration = start.elapsed();
