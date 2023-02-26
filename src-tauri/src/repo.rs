@@ -17,7 +17,8 @@ pub enum OpenError {
 #[derive(Debug)]
 pub enum DatabaseError {
   DuplicatePathError(PathBuf),
-  ItemNotFound(PathBuf),
+  ItemNotFound,
+  InvalidPath(PathBuf),
   BackendError(rusqlite::Error),
 }
 
@@ -54,11 +55,13 @@ impl Repo {
     Ok(repo)
   }
 
-  fn insert_item<T>(&self, path: T, tags: T) -> Result<Item, DatabaseError>
+  fn insert_item<T, U>(&self, path: T, tags: U) -> Result<Item, DatabaseError>
   where
-    T: AsRef<str>,
+    T: AsRef<Path>,
+    U: AsRef<str>,
   {
     let path = path.as_ref();
+    let path = path.to_str().ok_or(DatabaseError::InvalidPath(PathBuf::from(path)))?;
     let tags = tags.as_ref();
     let result = self.conn.execute(
       "INSERT INTO items (path, tags) VALUES (?1, ?2)",
@@ -119,8 +122,9 @@ impl Repo {
     Ok(items)
   }
 
-  fn get_item_by_path(&self, path: impl AsRef<str>) -> Result<Item, DatabaseError> {
+  fn get_item_by_path(&self, path: impl AsRef<Path>) -> Result<Item, DatabaseError> {
     let path = path.as_ref();
+    let path = path.to_str().ok_or(DatabaseError::InvalidPath(PathBuf::from(path)))?;
     let mut stmt = self
       .conn
       .prepare("SELECT id, path, tags FROM items WHERE path = :path LIMIT 1")?;
@@ -134,7 +138,7 @@ impl Repo {
       })
     );
     if let Err(QueryReturnedNoRows) = item {
-      return Err(DatabaseError::ItemNotFound(path.into()));
+      return Err(DatabaseError::ItemNotFound);
     }
 
     Ok(item?)
@@ -152,12 +156,17 @@ impl Repo {
         path: row.get::<_, String>(1)?,
         tags: row.get::<_, String>(2)?,
       })
-    )?;
-    Ok(item)
+    );
+    if let Err(QueryReturnedNoRows) = item {
+      return Err(DatabaseError::ItemNotFound);
+    }
+
+    Ok(item?)
   }
 
-  fn remove_item_by_path(&self, path: impl AsRef<str>) -> Result<(), DatabaseError> {
+  fn remove_item_by_path(&self, path: impl AsRef<Path>) -> Result<(), DatabaseError> {
     let path = path.as_ref();
+    let path = path.to_str().ok_or(DatabaseError::InvalidPath(PathBuf::from(path)))?;
     self.conn.execute("DELETE FROM items WHERE path = :path", [path])?;
     Ok(())
   }
@@ -332,7 +341,15 @@ mod tests {
     let repo = test_repo();
     repo.remove_item_by_path("apple").unwrap();
     let rv = repo.get_item_by_path("apple");
-    assert!(rv.is_err());
+    assert!(matches!(rv, Err(DatabaseError::ItemNotFound)))
+  }
+
+  #[test]
+  fn can_remove_item_by_id() {
+    let repo = test_repo();
+    repo.remove_item_by_id(1).unwrap();
+    let rv = repo.get_item_by_id(1);
+    assert!(matches!(rv, Err(DatabaseError::ItemNotFound)))
   }
 
   #[test]
