@@ -1,7 +1,7 @@
 use std::fs;
 use std::fs::ReadDir;
 use std::io::Error;
-use std::path::{PathBuf};
+use std::path::{Path, PathBuf};
 
 // pub enum Filter {
 //   ExcludeName(PathBuf),
@@ -14,7 +14,9 @@ pub enum ScanError {
   IOError(Error),
 }
 
-pub fn scan_dir(path: PathBuf) -> Result<Vec<PathBuf>, ScanError> {
+pub fn scan_dir(path: impl AsRef<Path>) -> Result<Vec<PathBuf>, ScanError> {
+  let path = path.as_ref();
+
   // make sure path is a directory
   let metadata = path.metadata().map_err(ScanError::IOError)?;
   if !metadata.is_dir() { return Err(ScanError::NotADirectory); }
