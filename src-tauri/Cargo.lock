@@ -2197,6 +2197,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "rusqlite_migration"
+version = "1.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e2a7ba8908f9b41e2b240a3de0790517c7a636df1f7bb7612276a2d0a42f9ce2"
+dependencies = [
+ "log",
+ "rusqlite",
+]
+
+[[package]]
 name = "rustc_version"
 version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2629,7 +2639,9 @@ name = "tag-repo"
 version = "0.0.0"
 dependencies = [
  "indoc",
+ "lazy_static",
  "rusqlite",
+ "rusqlite_migration",
  "serde",
  "serde_json",
  "tauri",
