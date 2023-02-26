@@ -62,10 +62,11 @@ mod tests {
   use std::time::Instant;
   use tempfile::{tempdir, TempDir};
 
-  fn unordered_eq<'a, T, U>(a: T, b: U)
+  fn unordered_eq<'a, T, U, V>(a: T, b: U)
   where
-    T: Iterator<Item=&'a Path>,
-    U: Iterator<Item=&'a Path>,
+    T: Iterator<Item=V>,
+    U: Iterator<Item=V>,
+    V: Ord + std::fmt::Debug,
   {
     let mut a: Vec<_> = a.collect();
     let mut b: Vec<_> = b.collect();
