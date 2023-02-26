@@ -1,10 +1,10 @@
 use std::fs::create_dir;
 use std::path::{Path, PathBuf};
 use indoc::indoc;
-use rusqlite::{Connection, ErrorCode, Row};
+use rusqlite::{Connection, ErrorCode, params, Row};
 use rusqlite_migration::{Migrations, M};
 use lazy_static::lazy_static;
-use rusqlite::Error::SqliteFailure;
+use rusqlite::Error::{QueryReturnedNoRows, SqliteFailure};
 
 #[derive(Debug)]
 pub enum OpenError {
@@ -17,6 +17,7 @@ pub enum OpenError {
 #[derive(Debug)]
 pub enum DatabaseError {
   DuplicatePathError(PathBuf),
+  ItemNotFound(PathBuf),
   BackendError(rusqlite::Error),
 }
 
@@ -26,6 +27,7 @@ impl From<rusqlite::Error> for DatabaseError {
   }
 }
 
+#[derive(Debug)]
 pub struct Item {
   id: i64,
   path: String,
@@ -115,6 +117,65 @@ impl Repo {
     }?;
     let items: Vec<Item> = mapped_rows.flatten().collect();
     Ok(items)
+  }
+
+  fn get_item_by_path(&self, path: impl AsRef<str>) -> Result<Item, DatabaseError> {
+    let path = path.as_ref();
+    let mut stmt = self
+      .conn
+      .prepare("SELECT id, path, tags FROM items WHERE path = :path LIMIT 1")?;
+    let item = stmt
+      .query_row(
+      [&path],
+      |row| Ok(Item {
+        id: row.get::<_, i64>(0)?,
+        path: row.get::<_, String>(1)?,
+        tags: row.get::<_, String>(2)?,
+      })
+    );
+    if let Err(QueryReturnedNoRows) = item {
+      return Err(DatabaseError::ItemNotFound(path.into()));
+    }
+
+    Ok(item?)
+  }
+
+  fn get_item_by_id(&self, id: i64) -> Result<Item, DatabaseError> {
+    let mut stmt = self
+      .conn
+      .prepare("SELECT id, path, tags FROM items WHERE id = :id LIMIT 1")?;
+    let item = stmt
+      .query_row(
+      [id],
+      |row| Ok(Item {
+        id: row.get::<_, i64>(0)?,
+        path: row.get::<_, String>(1)?,
+        tags: row.get::<_, String>(2)?,
+      })
+    )?;
+    Ok(item)
+  }
+
+  fn remove_item_by_path(&self, path: impl AsRef<str>) -> Result<(), DatabaseError> {
+    let path = path.as_ref();
+    self.conn.execute("DELETE FROM items WHERE path = :path", [path])?;
+    Ok(())
+  }
+
+  fn remove_item_by_id(&self, id: i64) -> Result<(), DatabaseError> {
+    self.conn.execute("DELETE FROM items WHERE id = :id", [id])?;
+    Ok(())
+  }
+
+  fn update_tags(&self, item_id: i64, tags: impl AsRef<str>) -> Result<(), DatabaseError> {
+    let rv = self.conn.execute(
+      "UPDATE items SET tags = :tags WHERE id = :id",
+      params![tags.as_ref(), item_id],
+    );
+    match rv {
+      Ok(_) => Ok(()),
+      Err(e) => Err(DatabaseError::BackendError(e)),
+    }
   }
 }
 
@@ -246,6 +307,45 @@ mod tests {
       items.iter().map(|x| x.path.as_str()),
       ["apple", "bee", "cat", "dog", "egg"].iter().copied(),
     )
+  }
+
+  #[test]
+  fn can_get_item_by_path() {
+    let repo = test_repo();
+    let item = repo.get_item_by_path("apple").unwrap();
+    assert_eq!(item.id, 1);
+    assert_eq!(item.path, "apple");
+    assert_eq!(item.tags, "food red");
+  }
+
+  #[test]
+  fn can_get_item_by_id() {
+    let repo = test_repo();
+    let item = repo.get_item_by_id(1).unwrap();
+    assert_eq!(item.id, 1);
+    assert_eq!(item.path, "apple");
+    assert_eq!(item.tags, "food red");
+  }
+
+  #[test]
+  fn can_remove_item_by_path() {
+    let repo = test_repo();
+    repo.remove_item_by_path("apple").unwrap();
+    let rv = repo.get_item_by_path("apple");
+    assert!(rv.is_err());
+  }
+
+  #[test]
+  fn can_update_item_tags() {
+    let repo = test_repo();
+
+    let item = repo.get_item_by_path("apple").unwrap();
+    let new_tags = "computer laptop";
+    repo.update_tags(item.id, new_tags).unwrap();
+
+    // fetch item again
+    let item = repo.get_item_by_path("apple").unwrap();
+    assert_eq!(item.tags, new_tags);
   }
 
   // #[test]
