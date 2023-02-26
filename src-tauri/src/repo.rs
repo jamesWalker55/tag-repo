@@ -1,6 +1,7 @@
 use std::fs::create_dir;
 use std::path::{Path, PathBuf};
-use rusqlite::{Connection, ErrorCode, Result};
+use indoc::indoc;
+use rusqlite::{Connection, ErrorCode, Row};
 use rusqlite_migration::{Migrations, M};
 use lazy_static::lazy_static;
 use rusqlite::Error::SqliteFailure;
@@ -19,6 +20,17 @@ pub enum DatabaseError {
   BackendError(rusqlite::Error),
 }
 
+impl From<rusqlite::Error> for DatabaseError {
+  fn from(error: rusqlite::Error) -> Self {
+    DatabaseError::BackendError(error)
+  }
+}
+
+pub struct Item {
+  path: String,
+  tags: String,
+}
+
 pub struct Repo {
   conn: Connection,
 }
@@ -32,7 +44,7 @@ impl Repo {
     let tags = tags.as_ref();
     let result = self.conn.execute(
       "INSERT INTO items (path, tags) VALUES (?1, ?2)",
-      (path, tags),
+      (&path, &tags),
     );
 
     match result {
@@ -51,6 +63,34 @@ impl Repo {
       }
       Err(err) => Err(DatabaseError::BackendError(err)),
     }
+  }
+
+  fn get_items(&self, query: Option<impl AsRef<str>>) -> Result<Vec<Item>, DatabaseError> {
+    let to_item_closure: fn(&Row) -> Result<Item, rusqlite::Error> = |row: &Row| {
+      Ok(Item { path: row.get::<_, String>(0)?, tags: row.get::<_, String>(1)? })
+    };
+
+    let mut stmt;
+
+    let mapped_rows = match query {
+      Some(query) => {
+        stmt = self.conn.prepare(indoc! {"
+          SELECT i.path, i.tags
+          FROM items i
+            INNER JOIN tag_query tq ON i.id = tq.id
+          WHERE tq.tag_query MATCH :query
+        "})?;
+        stmt.query_map(&[(":query", query.as_ref())], to_item_closure)
+      }
+      None => {
+        stmt = self.conn.prepare(indoc! {"
+          SELECT i.path, i.tags FROM items i
+        "})?;
+        stmt.query_map([], to_item_closure)
+      }
+    }?;
+    let items: Vec<Item> = mapped_rows.flatten().collect();
+    Ok(items)
   }
 }
 
@@ -97,6 +137,23 @@ mod tests {
   fn new_repo() -> Repo {
     open(tempdir().unwrap()).unwrap()
   }
+
+  // fn unordered_eq<'a, T, U, V, W>(a: T, b: V)
+  // where
+  //   T: IntoIterator<Item = U>,
+  //   U: AsRef<str>,
+  //   V: IntoIterator<Item = W>,
+  //   W: AsRef<str>,
+  //   // &'a str: From<U>,
+  //   // &'a str: From<W>,
+  // {
+  //   let a: Vec<&str> = a.into_iter().collect();
+  //   let b: Vec<&str> = b.into_iter().collect();
+  //   // let a: Vec<&str> = a.into_iter().map(|x| x.as_ref()).collect();
+  //   // let b: Vec<&str> = b.into_iter().map(|x| x.as_ref()).collect();
+  //   // a.so
+  //   // let b: Vec<&str> = b.into_iter().map(|x| x.as_ref()).collect();
+  // }
 
   #[test]
   fn check_tables_of_newly_created_database() {
@@ -151,6 +208,30 @@ mod tests {
     let rv = repo.insert_item("hello", "video root");
 
     assert!(matches!(rv, Err(DatabaseError::DuplicatePathError(_))));
+  }
+
+  #[test]
+  fn can_query_items() {
+    fn expect_query(repo: &Repo, query: &str, mut expected: Vec<&str>) {
+      let items = repo.get_items(Some(query)).unwrap();
+
+      let mut rv: Vec<&str> = items.iter().map(|x| x.path.as_str()).collect();
+      rv.sort();
+      expected.sort();
+
+      assert_eq!(rv, expected);
+    }
+
+    let repo = new_repo();
+    repo.insert_item("hello", "text root").unwrap();
+    repo.insert_item("hello2", "text root").unwrap();
+    repo.insert_item("hello3", "video root").unwrap();
+    repo.insert_item("hello4", "text root apple").unwrap();
+    repo.insert_item("world", "video root").unwrap();
+
+    expect_query(&repo, "text", vec!["hello", "hello2", "hello4"]);
+    expect_query(&repo, "video", vec!["hello3", "world"]);
+    expect_query(&repo, "apple", vec!["hello4"]);
   }
 
   // #[test]
