@@ -52,7 +52,7 @@ impl Repo {
     Ok(repo)
   }
 
-  fn insert_item<T>(&self, path: T, tags: T) -> Result<(), DatabaseError>
+  fn insert_item<T>(&self, path: T, tags: T) -> Result<Item, DatabaseError>
   where
     T: AsRef<str>,
   {
@@ -64,7 +64,11 @@ impl Repo {
     );
 
     match result {
-      Ok(_) => Ok(()),
+      Ok(_) => Ok(Item {
+        id: self.conn.last_insert_rowid(),
+        path: path.to_string(),
+        tags: tags.to_string(),
+      }),
       Err(SqliteFailure(sqlite_err, Some(msg))) => {
         if sqlite_err.code == ErrorCode::ConstraintViolation
           && msg == "UNIQUE constraint failed: items.path"
