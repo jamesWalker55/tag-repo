@@ -247,8 +247,8 @@ mod tests {
     T: Iterator<Item = &'a str>,
     U: Iterator<Item = &'a str>,
   {
-    let mut a: Vec<&str> = a.collect();
-    let mut b: Vec<&str> = b.collect();
+    let mut a: Vec<_> = a.collect();
+    let mut b: Vec<_> = b.collect();
     a.sort();
     b.sort();
     assert_eq!(a, b);
