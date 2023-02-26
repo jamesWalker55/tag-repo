@@ -42,7 +42,7 @@ pub fn scan_dir(path: impl AsRef<Path>) -> Result<Vec<PathBuf>, ScanError> {
 /// Classify incoming DirEntries as either items or folders to be further scanned.
 fn classify_dir_items<T>(dir_iter: T, items: &mut Vec<PathBuf>, unscanned_dirs: &mut Vec<PathBuf>)
 where
-  T: Iterator<Item = DirEntry>
+  T: Iterator<Item=DirEntry>
 {
   for entry in dir_iter {
     if let Ok(metadata) = entry.metadata() {
@@ -58,7 +58,54 @@ where
 #[cfg(test)]
 mod tests {
   use super::*;
+  use std::fs::File;
   use std::time::Instant;
+  use tempfile::{tempdir, TempDir};
+
+  fn unordered_eq<'a, T, U>(a: T, b: U)
+  where
+    T: Iterator<Item=&'a Path>,
+    U: Iterator<Item=&'a Path>,
+  {
+    let mut a: Vec<_> = a.collect();
+    let mut b: Vec<_> = b.collect();
+    a.sort();
+    b.sort();
+    assert_eq!(a, b);
+  }
+
+  fn test_folder_1() -> TempDir {
+    let dir = tempdir().unwrap();
+
+    let paths_to_create = vec![
+      dir.path().join("apple"),
+      dir.path().join("bee"),
+      dir.path().join("cat"),
+    ];
+    for p in &paths_to_create {
+      File::create(p).unwrap();
+    }
+
+    dir
+  }
+
+  #[test]
+  fn scans_files_in_folder() {
+    let dir = test_folder_1();
+
+    let expected = vec![
+      dir.path().join("apple"),
+      dir.path().join("bee"),
+      dir.path().join("cat"),
+    ];
+
+    let scanned_paths = scan_dir(dir).unwrap();
+
+    unordered_eq(
+      scanned_paths.iter().map(|x| x.as_path()),
+      expected.iter().map(|x| x.as_path()),
+    )
+  }
 
   #[test]
   fn benchmark() -> () {
