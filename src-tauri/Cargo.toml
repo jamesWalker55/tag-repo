@@ -26,6 +26,9 @@ rusqlite_migration = "1.0.1"
 lazy_static = "1.4.0"
 tempfile = "3.4.0"
 notify = "5.1.0"
+notify-debouncer-mini = "0.2.0"
+futures = "0.3.26"
+futures-timer = "3.0.2"
 
 [features]
 # by default Tauri runs in production mode
