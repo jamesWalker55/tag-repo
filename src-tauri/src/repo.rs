@@ -27,6 +27,7 @@ impl From<rusqlite::Error> for DatabaseError {
 }
 
 pub struct Item {
+  id: i64,
   path: String,
   tags: String,
 }
@@ -82,7 +83,11 @@ impl Repo {
 
   fn get_items(&self, query: Option<impl AsRef<str>>) -> Result<Vec<Item>, DatabaseError> {
     let to_item_closure: fn(&Row) -> Result<Item, rusqlite::Error> = |row: &Row| {
-      Ok(Item { path: row.get::<_, String>(0)?, tags: row.get::<_, String>(1)? })
+      Ok(Item {
+        id: row.get::<_, i64>(0)?,
+        path: row.get::<_, String>(1)?,
+        tags: row.get::<_, String>(2)?,
+      })
     };
 
     let mut stmt;
@@ -90,7 +95,7 @@ impl Repo {
     let mapped_rows = match query {
       Some(query) => {
         stmt = self.conn.prepare(indoc! {"
-          SELECT i.path, i.tags
+          SELECT i.id, i.path, i.tags
           FROM items i
             INNER JOIN tag_query tq ON i.id = tq.id
           WHERE tq.tag_query MATCH :query
@@ -99,7 +104,7 @@ impl Repo {
       }
       None => {
         stmt = self.conn.prepare(indoc! {"
-          SELECT i.path, i.tags FROM items i
+          SELECT i.id, i.path, i.tags FROM items i
         "})?;
         stmt.query_map([], to_item_closure)
       }
