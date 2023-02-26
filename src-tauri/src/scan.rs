@@ -1,5 +1,5 @@
 use std::fs;
-use std::fs::ReadDir;
+use std::fs::{DirEntry, ReadDir};
 use std::io::Error;
 use std::path::{Path, PathBuf};
 
@@ -14,6 +14,7 @@ pub enum ScanError {
   IOError(Error),
 }
 
+/// Scan a given folder, return a vector of paths `Vec<PathBuf>`
 pub fn scan_dir(path: impl AsRef<Path>) -> Result<Vec<PathBuf>, ScanError> {
   let path = path.as_ref();
 
@@ -26,20 +27,24 @@ pub fn scan_dir(path: impl AsRef<Path>) -> Result<Vec<PathBuf>, ScanError> {
 
   // scan the path for initial list of folders
   let dir_iter = fs::read_dir(&path).map_err(ScanError::IOError)?;
-  classify_dir_items(dir_iter, &mut items, &mut unscanned_dirs);
+  classify_dir_items(dir_iter.flatten(), &mut items, &mut unscanned_dirs);
 
   // scan remaining folders
   while !unscanned_dirs.is_empty() {
     if let Ok(dir_iter) = fs::read_dir(unscanned_dirs.pop().unwrap()) {
-      classify_dir_items(dir_iter, &mut items, &mut unscanned_dirs);
+      classify_dir_items(dir_iter.flatten(), &mut items, &mut unscanned_dirs);
     }
   }
 
   Ok(items)
 }
 
-fn classify_dir_items(dir_iter: ReadDir, items: &mut Vec<PathBuf>, unscanned_dirs: &mut Vec<PathBuf>) {
-  for entry in dir_iter.flatten() {
+/// Classify incoming DirEntries as either items or folders to be further scanned.
+fn classify_dir_items<T>(dir_iter: T, items: &mut Vec<PathBuf>, unscanned_dirs: &mut Vec<PathBuf>)
+where
+  T: Iterator<Item = DirEntry>
+{
+  for entry in dir_iter {
     if let Ok(metadata) = entry.metadata() {
       if metadata.is_dir() {
         unscanned_dirs.push(entry.path());
