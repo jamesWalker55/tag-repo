@@ -213,6 +213,9 @@ pub fn open_database(db_path: impl AsRef<Path>) -> Result<Connection, OpenError>
   let db_path = db_path.as_ref();
   let mut conn = Connection::open(db_path).map_err(OpenError::FailedToCreateDatabase)?;
 
+  conn.pragma_update(None, "journal_mode", "WAL").unwrap();
+  conn.pragma_update(None, "foreign_keys", "ON").unwrap();
+
   MIGRATIONS
     .to_latest(&mut conn)
     .map_err(OpenError::FailedToMigrateDatabase)?;
