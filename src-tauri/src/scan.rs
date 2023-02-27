@@ -26,7 +26,7 @@ pub fn scan_dir(path: impl AsRef<Path>) -> Result<Vec<PathBuf>, ScanError> {
   let mut unscanned_dirs = vec![];
 
   // scan the path for initial list of folders
-  let dir_iter = fs::read_dir(&path).map_err(ScanError::IOError)?;
+  let dir_iter = fs::read_dir(path).map_err(ScanError::IOError)?;
   classify_dir_items(dir_iter.flatten(), &mut items, &mut unscanned_dirs);
 
   // scan remaining folders

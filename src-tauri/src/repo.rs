@@ -51,7 +51,7 @@ impl Repo {
       create_dir(&data_path).map_err(OpenError::FailedToCreateRepo)?;
     }
     let db_path = data_path.join("tags.db");
-    let conn = open_database(&db_path)?;
+    let conn = open_database(db_path)?;
     let repo = Self {
       path: PathBuf::from(repo_path),
       conn,
@@ -92,7 +92,7 @@ impl Repo {
     }
   }
 
-  fn insert_items<'a, T>(&mut self, items_params: impl Iterator<Item=(T, T)>) -> Result<(), DatabaseError>
+  fn insert_items<T>(&mut self, items_params: impl Iterator<Item=(T, T)>) -> Result<(), DatabaseError>
   where
     T: AsRef<str>,
   {
