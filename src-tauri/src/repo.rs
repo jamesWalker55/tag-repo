@@ -16,9 +16,8 @@ pub enum OpenError {
 
 #[derive(Debug)]
 pub enum DatabaseError {
-  DuplicatePathError(PathBuf),
+  DuplicatePathError(String),
   ItemNotFound,
-  InvalidPath(PathBuf),
   BackendError(rusqlite::Error),
 }
 
@@ -55,13 +54,11 @@ impl Repo {
     Ok(repo)
   }
 
-  fn insert_item<T, U>(&self, path: T, tags: U) -> Result<Item, DatabaseError>
+  fn insert_item<T>(&self, path: T, tags: T) -> Result<Item, DatabaseError>
   where
-    T: AsRef<Path>,
-    U: AsRef<str>,
+    T: AsRef<str>,
   {
     let path = path.as_ref();
-    let path = path.to_str().ok_or(DatabaseError::InvalidPath(PathBuf::from(path)))?;
     let tags = tags.as_ref();
     let result = self.conn.execute(
       "INSERT INTO items (path, tags) VALUES (?1, ?2)",
@@ -90,15 +87,13 @@ impl Repo {
     }
   }
 
-  fn insert_items<'a, T, U>(&mut self, items_params: impl Iterator<Item=(T, U)>) -> Result<(), DatabaseError>
+  fn insert_items<'a, T>(&mut self, items_params: impl Iterator<Item=(T, T)>) -> Result<(), DatabaseError>
   where
-    T: AsRef<Path>,
-    U: AsRef<str>,
+    T: AsRef<str>,
   {
     let tx = self.conn.transaction()?;
     for (path, tags) in items_params {
       let path = path.as_ref();
-      let path = path.to_str().ok_or(DatabaseError::InvalidPath(PathBuf::from(path)))?;
       let tags = tags.as_ref();
       tx.execute(
         "INSERT INTO ITEMS (path, tags) VALUES (?1, ?2)",
@@ -141,9 +136,8 @@ impl Repo {
     Ok(items)
   }
 
-  fn get_item_by_path(&self, path: impl AsRef<Path>) -> Result<Item, DatabaseError> {
+  fn get_item_by_path(&self, path: impl AsRef<str>) -> Result<Item, DatabaseError> {
     let path = path.as_ref();
-    let path = path.to_str().ok_or(DatabaseError::InvalidPath(PathBuf::from(path)))?;
     let mut stmt = self
       .conn
       .prepare("SELECT id, path, tags FROM items WHERE path = :path LIMIT 1")?;
@@ -183,9 +177,8 @@ impl Repo {
     Ok(item?)
   }
 
-  fn remove_item_by_path(&self, path: impl AsRef<Path>) -> Result<(), DatabaseError> {
+  fn remove_item_by_path(&self, path: impl AsRef<str>) -> Result<(), DatabaseError> {
     let path = path.as_ref();
-    let path = path.to_str().ok_or(DatabaseError::InvalidPath(PathBuf::from(path)))?;
     self.conn.execute("DELETE FROM items WHERE path = :path", [path])?;
     Ok(())
   }
@@ -206,9 +199,8 @@ impl Repo {
     }
   }
 
-  fn update_path(&self, item_id: i64, path: impl AsRef<Path>) -> Result<(), DatabaseError> {
+  fn update_path(&self, item_id: i64, path: impl AsRef<str>) -> Result<(), DatabaseError> {
     let path = path.as_ref();
-    let path = path.to_str().ok_or(DatabaseError::InvalidPath(PathBuf::from(path)))?;
     let rv = self.conn.execute(
       "UPDATE items SET path = :path WHERE id = :id",
       params![path, item_id],
@@ -429,7 +421,7 @@ mod tests {
       println!("Adding paths");
       let start = Instant::now();
       repo.insert_items(
-        paths.iter().map(|p| (p.as_path(), "asd"))
+        paths.iter().map(|p| (p.to_str().unwrap(), "asd"))
       ).unwrap();
       println!("  Took: {:?}", start.elapsed());
       println!("Done!");
