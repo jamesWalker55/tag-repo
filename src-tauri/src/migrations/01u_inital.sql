@@ -1,7 +1,8 @@
 CREATE TABLE items (
   id INTEGER PRIMARY KEY,
   path TEXT UNIQUE NOT NULL,
-  tags TEXT NOT NULL
+  tags TEXT NOT NULL,
+  meta_tags TEXT NOT NULL DEFAULT 'all'
 );
 
 -- FTS5 Documentation:
@@ -12,6 +13,8 @@ CREATE VIRTUAL TABLE tag_query USING fts5 (
   id UNINDEXED,
   -- Include the `tags` column to index them
   tags,
+  -- a 'meta' column that stores additional tags, e.g. 'all'
+  meta_tags,
 
   -- Make this an external content table (don't store the data in this table, but reference
   -- the original table)
@@ -24,14 +27,14 @@ CREATE VIRTUAL TABLE tag_query USING fts5 (
 );
 
 CREATE TRIGGER items_trigger_ai AFTER INSERT ON items BEGIN
-  INSERT INTO tag_query(id, tags) VALUES (NEW.id, NEW.tags);
+  INSERT INTO tag_query(id, tags, meta_tags) VALUES (NEW.id, NEW.tags, NEW.meta_tags);
 END;
 
 CREATE TRIGGER items_trigger_ad AFTER DELETE ON items BEGIN
-  INSERT INTO tag_query(tag_query, id, tags) VALUES('delete', OLD.id, OLD.tags);
+  INSERT INTO tag_query(tag_query, id, tags, meta_tags) VALUES('delete', OLD.id, OLD.tags, OLD.meta_tags);
 END;
 
 CREATE TRIGGER items_trigger_au AFTER UPDATE ON items BEGIN
-  INSERT INTO tag_query(tag_query, id, tags) VALUES('delete', OLD.id, old.tags);
-  INSERT INTO tag_query(id, tags) VALUES (NEW.id, NEW.tags);
+  INSERT INTO tag_query(tag_query, id, tags, meta_tags) VALUES('delete', OLD.id, old.tags, old.meta_tags);
+  INSERT INTO tag_query(id, tags, meta_tags) VALUES (NEW.id, NEW.tags, NEW.meta_tags);
 END;
