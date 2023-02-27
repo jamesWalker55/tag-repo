@@ -30,6 +30,9 @@ notify-debouncer-mini = "0.2.0"
 futures = "0.3.26"
 futures-timer = "3.0.2"
 
+[dev-dependencies]
+itertools = "0.10.5"
+
 [features]
 # by default Tauri runs in production mode
 # when `tauri dev` runs it is executed with `cargo run --no-default-features` if `devPath` is an URL

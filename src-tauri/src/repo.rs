@@ -244,6 +244,7 @@ pub fn open_database(db_path: impl AsRef<Path>) -> Result<Connection, OpenError>
 
 #[cfg(test)]
 mod tests {
+  use itertools::Itertools;
   use tempfile::{tempdir, TempDir};
 
   use crate::testutils::assert_unordered_eq;
@@ -276,6 +277,7 @@ mod tests {
     TestRepo::new()
   }
 
+  /// Simple repo with 5 items in ascending alphabetical order
   fn testrepo_1() -> TestRepo {
     let tr = empty_testrepo();
     tr.repo.insert_item("apple", "food red").unwrap();
@@ -283,6 +285,28 @@ mod tests {
     tr.repo.insert_item("cat", "animal yellow").unwrap();
     tr.repo.insert_item("dog", "animal orange").unwrap();
     tr.repo.insert_item("egg", "food orange").unwrap();
+    tr
+  }
+
+  /// Repo with all possible combinations of letters "a", "b", "c", "d", "e"
+  fn testrepo_2() -> TestRepo {
+    let tr = empty_testrepo();
+
+    let possible_tags: Vec<_> = "a b c d e"
+      .split_whitespace()
+      .collect();
+
+    let mut counter = 0;
+
+    for i in 1..=possible_tags.len() {
+      for x in possible_tags.iter().combinations(i) {
+        let name = format!("item {}", counter);
+        let tags = x.iter().join(" ");
+        tr.repo.insert_item(name, tags).unwrap();
+        counter += 1;
+      }
+    }
+
     tr
   }
 
@@ -437,6 +461,37 @@ mod tests {
     // fetch item again
     let item = repo.get_item_by_id(1).unwrap();
     assert_eq!(item.path, new_path);
+  }
+
+  #[test]
+  /// not really a test, just some code to manually test queries
+  fn query_test() {
+    let tr = testrepo_2();
+
+    let sql = indoc! {r##"
+      SELECT i.path, i.tags
+      FROM items i
+        INNER JOIN tag_query tq ON i.id = tq.id
+      WHERE
+        tag_query = '"a" "b" "c" AND ("meta_tags": "all") NOT "e"'
+    "##};
+
+    let conn = tr.repo.conn;
+
+    let mut stmt = conn.prepare(&sql).unwrap();
+    let out = stmt.query_map([], |row| {
+      let path = row.get::<_, String>(0)?;
+      let tags = row.get::<_, String>(1)?;
+      let out = format!("{: >8}: {}", path, tags);
+
+      Ok(out)
+    }).unwrap();
+
+    for x in out {
+      println!("{}", x.unwrap());
+    }
+
+    ()
   }
 
   // #[test]
