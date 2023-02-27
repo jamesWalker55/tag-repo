@@ -90,6 +90,25 @@ impl Repo {
     }
   }
 
+  fn insert_items<'a, T, U>(&mut self, items_params: impl Iterator<Item = (T, U)>) -> Result<(), DatabaseError>
+  where
+    T: AsRef<Path>,
+    U: AsRef<str>,
+  {
+    let tx = self.conn.transaction()?;
+    for (path, tags) in items_params {
+      let path = path.as_ref();
+      let path = path.to_str().ok_or(DatabaseError::InvalidPath(PathBuf::from(path)))?;
+      let tags = tags.as_ref();
+      tx.execute(
+        "INSERT INTO ITEMS (path, tags) VALUES (?1, ?2)",
+        params![path, tags],
+      )?;
+    }
+    tx.commit()?;
+    Ok(())
+  }
+
   fn get_items(&self, query: Option<&str>) -> Result<Vec<Item>, DatabaseError> {
     let to_item_closure: fn(&Row) -> Result<Item, rusqlite::Error> = |row: &Row| {
       Ok(Item {
@@ -389,4 +408,31 @@ mod tests {
   //   let version: String = repo.conn.query_row("select sqlite_version()", [], |row| row.get(0)).unwrap();
   //   dbg!(version);
   // }
+
+  mod scan_integration {
+    use std::time::Instant;
+    use super::*;
+    use crate::scan::scan_dir;
+
+    #[test]
+    fn my_test() {
+      println!("Creating repo");
+      let start = Instant::now();
+      let mut repo = empty_repo();
+      println!("  Took: {:?}", start.elapsed());
+
+      println!("Scanning dir");
+      let start = Instant::now();
+      let paths = scan_dir(r#"D:\Audio Samples\"#).unwrap();
+      println!("  Took: {:?}", start.elapsed());
+
+      println!("Adding paths");
+      let start = Instant::now();
+      repo.insert_items(
+        paths.iter().map(|p| (p.as_path(), "asd"))
+      ).unwrap();
+      println!("  Took: {:?}", start.elapsed());
+      println!("Done!");
+    }
+  }
 }
