@@ -90,7 +90,7 @@ impl Repo {
     }
   }
 
-  fn insert_items<'a, T, U>(&mut self, items_params: impl Iterator<Item = (T, U)>) -> Result<(), DatabaseError>
+  fn insert_items<'a, T, U>(&mut self, items_params: impl Iterator<Item=(T, U)>) -> Result<(), DatabaseError>
   where
     T: AsRef<Path>,
     U: AsRef<str>,
@@ -149,13 +149,13 @@ impl Repo {
       .prepare("SELECT id, path, tags FROM items WHERE path = :path LIMIT 1")?;
     let item = stmt
       .query_row(
-      [&path],
-      |row| Ok(Item {
-        id: row.get::<_, i64>(0)?,
-        path: row.get::<_, String>(1)?,
-        tags: row.get::<_, String>(2)?,
-      })
-    );
+        [&path],
+        |row| Ok(Item {
+          id: row.get::<_, i64>(0)?,
+          path: row.get::<_, String>(1)?,
+          tags: row.get::<_, String>(2)?,
+        }),
+      );
     if let Err(QueryReturnedNoRows) = item {
       return Err(DatabaseError::ItemNotFound);
     }
@@ -169,13 +169,13 @@ impl Repo {
       .prepare("SELECT id, path, tags FROM items WHERE id = :id LIMIT 1")?;
     let item = stmt
       .query_row(
-      [id],
-      |row| Ok(Item {
-        id: row.get::<_, i64>(0)?,
-        path: row.get::<_, String>(1)?,
-        tags: row.get::<_, String>(2)?,
-      })
-    );
+        [id],
+        |row| Ok(Item {
+          id: row.get::<_, i64>(0)?,
+          path: row.get::<_, String>(1)?,
+          tags: row.get::<_, String>(2)?,
+        }),
+      );
     if let Err(QueryReturnedNoRows) = item {
       return Err(DatabaseError::ItemNotFound);
     }
