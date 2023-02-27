@@ -1,4 +1,4 @@
-use std::fs::{create_dir, remove_dir_all};
+use std::fs::create_dir;
 use std::path::{Path, PathBuf};
 use indoc::indoc;
 use rusqlite::{Connection, ErrorCode, params, Row};
@@ -37,9 +37,6 @@ pub struct Item {
 pub struct Repo {
   path: PathBuf,
   conn: Connection,
-  /// This field is only used for unit testing
-  #[cfg(test)]
-  temporary: bool,
 }
 
 impl Repo {
@@ -57,8 +54,6 @@ impl Repo {
     let repo = Self {
       path: PathBuf::from(repo_path),
       conn,
-      #[cfg(test)]
-      temporary: false,
     };
     Ok(repo)
   }
@@ -224,25 +219,6 @@ impl Repo {
   }
 }
 
-#[cfg(test)]
-impl Drop for Repo {
-  // When testing, we need a way to delete the old path
-  fn drop(&mut self) {
-    // Replace connection with a useless, temporary connection
-    // This is to force the old connection to drop right now, and stop accessing the database file
-    let temp_conn = Connection::open_in_memory().unwrap();
-    let old_conn = std::mem::replace(&mut self.conn, temp_conn);
-    let rv = old_conn.close();
-    if let Err(_) = rv { println!("Failed to close database connection"); }
-
-    // Now that the database isn't accessed, we can delete the directory
-    if self.temporary {
-      let rv = remove_dir_all(&self.path);
-      if let Err(_) = rv { println!("Failed to delete temporary directory"); }
-    }
-  }
-}
-
 lazy_static! {
   static ref MIGRATIONS: Migrations<'static> =
     Migrations::new(vec![
@@ -268,29 +244,49 @@ pub fn open_database(db_path: impl AsRef<Path>) -> Result<Connection, OpenError>
 #[cfg(test)]
 mod tests {
   use super::*;
-  use tempfile::tempdir;
+  use tempfile::{tempdir, TempDir};
   use crate::testutils::unordered_eq;
 
-  fn empty_repo() -> Repo {
-    let dir = tempdir().unwrap();
-    let mut repo = Repo::open(&dir).unwrap();
-    repo.temporary = true;
-    repo
+  /// The only purpose of this struct is to bundle `Repo` and `TempDir` together. This ensures that
+  /// `TempDir` is dropped AFTER `Repo`.
+  ///
+  /// Otherwise, if `TempDir` drops first, it cannot delete the temp folder as `Repo` is still using
+  /// the database.
+  struct TestRepo {
+    repo: Repo,
+    #[allow(dead_code)]
+    tempdir: TempDir,
   }
 
-  fn test_repo() -> Repo {
-    let repo = empty_repo();
-    repo.insert_item("apple", "food red").unwrap();
-    repo.insert_item("bee", "animal yellow").unwrap();
-    repo.insert_item("cat", "animal yellow").unwrap();
-    repo.insert_item("dog", "animal orange").unwrap();
-    repo.insert_item("egg", "food orange").unwrap();
-    repo
+  impl TestRepo {
+    fn new() -> Self {
+      let dir = tempdir().unwrap();
+      let repo = Repo::open(&dir).unwrap();
+      Self {
+        repo,
+        tempdir: dir,
+      }
+    }
+  }
+
+  fn empty_testrepo() -> TestRepo {
+    TestRepo::new()
+  }
+
+  fn testrepo_1() -> TestRepo {
+    let tr = empty_testrepo();
+    tr.repo.insert_item("apple", "food red").unwrap();
+    tr.repo.insert_item("bee", "animal yellow").unwrap();
+    tr.repo.insert_item("cat", "animal yellow").unwrap();
+    tr.repo.insert_item("dog", "animal orange").unwrap();
+    tr.repo.insert_item("egg", "food orange").unwrap();
+    tr
   }
 
   #[test]
   fn check_tables_of_newly_created_database() {
-    let repo = empty_repo();
+    let mut tr = empty_testrepo();
+    let repo = &mut tr.repo;
 
     let mut stmt = repo
       .conn
@@ -314,7 +310,9 @@ mod tests {
 
   #[test]
   fn can_insert_items() {
-    let repo = empty_repo();
+    let mut tr = empty_testrepo();
+    let repo = &mut tr.repo;
+
     repo.insert_item("hello", "text root").unwrap();
     repo.insert_item("world", "video root").unwrap();
 
@@ -333,7 +331,8 @@ mod tests {
 
   #[test]
   fn cant_insert_duplicate_items() {
-    let repo = empty_repo();
+    let mut tr = empty_testrepo();
+    let repo = &mut tr.repo;
 
     repo.insert_item("hello", "text root").unwrap();
     let rv = repo.insert_item("hello", "video root");
@@ -352,7 +351,9 @@ mod tests {
       );
     }
 
-    let repo = test_repo();
+    let mut tr = testrepo_1();
+    let repo = &mut tr.repo;
+
     expect_query(&repo, "animal", vec!["bee", "cat", "dog"]);
     expect_query(&repo, "food", vec!["apple", "egg"]);
     expect_query(&repo, "yellow", vec!["bee", "cat"]);
@@ -360,7 +361,8 @@ mod tests {
 
   #[test]
   fn can_get_all_items() {
-    let repo = test_repo();
+    let mut tr = testrepo_1();
+    let repo = &mut tr.repo;
     let items = repo.get_items(None).unwrap();
     unordered_eq(
       items.iter().map(|x| x.path.as_str()),
@@ -370,7 +372,8 @@ mod tests {
 
   #[test]
   fn can_get_item_by_path() {
-    let repo = test_repo();
+    let mut tr = testrepo_1();
+    let repo = &mut tr.repo;
     let item = repo.get_item_by_path("apple").unwrap();
     assert_eq!(item.id, 1);
     assert_eq!(item.path, "apple");
@@ -379,7 +382,8 @@ mod tests {
 
   #[test]
   fn can_get_item_by_id() {
-    let repo = test_repo();
+    let mut tr = testrepo_1();
+    let repo = &mut tr.repo;
     let item = repo.get_item_by_id(1).unwrap();
     assert_eq!(item.id, 1);
     assert_eq!(item.path, "apple");
@@ -388,7 +392,8 @@ mod tests {
 
   #[test]
   fn can_remove_item_by_path() {
-    let repo = test_repo();
+    let mut tr = testrepo_1();
+    let repo = &mut tr.repo;
     repo.remove_item_by_path("apple").unwrap();
     let rv = repo.get_item_by_path("apple");
     assert!(matches!(rv, Err(DatabaseError::ItemNotFound)))
@@ -396,7 +401,8 @@ mod tests {
 
   #[test]
   fn can_remove_item_by_id() {
-    let repo = test_repo();
+    let mut tr = testrepo_1();
+    let repo = &mut tr.repo;
     repo.remove_item_by_id(1).unwrap();
     let rv = repo.get_item_by_id(1);
     assert!(matches!(rv, Err(DatabaseError::ItemNotFound)))
@@ -404,7 +410,8 @@ mod tests {
 
   #[test]
   fn can_update_item_tags() {
-    let repo = test_repo();
+    let mut tr = testrepo_1();
+    let repo = &mut tr.repo;
 
     let item = repo.get_item_by_path("apple").unwrap();
     let new_tags = "computer laptop";
@@ -417,7 +424,8 @@ mod tests {
 
   #[test]
   fn can_update_item_path() {
-    let repo = test_repo();
+    let mut tr = testrepo_1();
+    let repo = &mut tr.repo;
 
     let item = repo.get_item_by_id(1).unwrap();
     let new_path = "pizza";
@@ -444,7 +452,8 @@ mod tests {
     fn my_test() {
       println!("Creating repo");
       let start = Instant::now();
-      let mut repo = empty_repo();
+      let mut tr = empty_testrepo();
+      let repo = &mut tr.repo;
       println!("  Took: {:?}", start.elapsed());
 
       println!("Scanning dir");
