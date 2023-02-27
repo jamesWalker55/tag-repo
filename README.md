@@ -18,3 +18,11 @@ Frontend
 
 - study virtualized list implementations then build your own
 - 2 views: row / gallery
+
+Code quality
+
+- optimise functions that use strings as input:
+  - hint: `AsRef<str>` is not the best choice
+  - https://hermanradtke.com/2015/05/06/creating-a-rust-function-that-accepts-string-or-str.html/
+  - https://hermanradtke.com/2015/05/29/creating-a-rust-function-that-returns-string-or-str.html/
+  - https://lise-henry.github.io/articles/optimising_strings.html
