@@ -33,6 +33,7 @@ pub struct Item {
   id: i64,
   path: String,
   tags: String,
+  meta_tags: String,
 }
 
 pub struct Repo {
@@ -71,11 +72,10 @@ impl Repo {
     );
 
     match result {
-      Ok(_) => Ok(Item {
-        id: self.conn.last_insert_rowid(),
-        path: path.to_string(),
-        tags: tags.to_string(),
-      }),
+      Ok(_) => {
+        let id = self.conn.last_insert_rowid();
+        self.get_item_by_id(id)
+      },
       Err(SqliteFailure(sqlite_err, Some(msg))) => {
         if sqlite_err.code == ErrorCode::ConstraintViolation
           && msg == "UNIQUE constraint failed: items.path"
@@ -118,6 +118,7 @@ impl Repo {
         id: row.get::<_, i64>(0)?,
         path: row.get::<_, String>(1)?,
         tags: row.get::<_, String>(2)?,
+        meta_tags: row.get::<_, String>(3)?,
       })
     };
 
@@ -126,7 +127,7 @@ impl Repo {
     let mapped_rows = match query {
       Some(query) => {
         stmt = self.conn.prepare(indoc! {"
-          SELECT i.id, i.path, i.tags
+          SELECT i.id, i.path, i.tags, i.meta_tags
           FROM items i
             INNER JOIN tag_query tq ON i.id = tq.id
           WHERE tq.tag_query MATCH :query
@@ -135,7 +136,7 @@ impl Repo {
       }
       None => {
         stmt = self.conn.prepare(indoc! {"
-          SELECT i.id, i.path, i.tags FROM items i
+          SELECT i.id, i.path, i.tags, i.meta_tags FROM items i
         "})?;
         stmt.query_map([], to_item_closure)
       }
@@ -148,7 +149,7 @@ impl Repo {
     let path = path.as_ref();
     let mut stmt = self
       .conn
-      .prepare("SELECT id, path, tags FROM items WHERE path = :path LIMIT 1")?;
+      .prepare("SELECT id, path, tags, meta_tags FROM items WHERE path = :path LIMIT 1")?;
     let item = stmt
       .query_row(
         [&path],
@@ -156,6 +157,7 @@ impl Repo {
           id: row.get::<_, i64>(0)?,
           path: row.get::<_, String>(1)?,
           tags: row.get::<_, String>(2)?,
+          meta_tags: row.get::<_, String>(3)?,
         }),
       );
     if let Err(QueryReturnedNoRows) = item {
@@ -168,7 +170,7 @@ impl Repo {
   fn get_item_by_id(&self, id: i64) -> Result<Item, DatabaseError> {
     let mut stmt = self
       .conn
-      .prepare("SELECT id, path, tags FROM items WHERE id = :id LIMIT 1")?;
+      .prepare("SELECT id, path, tags, meta_tags FROM items WHERE id = :id LIMIT 1")?;
     let item = stmt
       .query_row(
         [id],
@@ -176,6 +178,7 @@ impl Repo {
           id: row.get::<_, i64>(0)?,
           path: row.get::<_, String>(1)?,
           tags: row.get::<_, String>(2)?,
+          meta_tags: row.get::<_, String>(3)?,
         }),
       );
     if let Err(QueryReturnedNoRows) = item {
