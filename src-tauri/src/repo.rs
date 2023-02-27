@@ -75,7 +75,7 @@ impl Repo {
       Ok(_) => {
         let id = self.conn.last_insert_rowid();
         self.get_item_by_id(id)
-      },
+      }
       Err(SqliteFailure(sqlite_err, Some(msg))) => {
         if sqlite_err.code == ErrorCode::ConstraintViolation
           && msg == "UNIQUE constraint failed: items.path"
