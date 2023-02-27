@@ -1,5 +1,5 @@
 use std::fs;
-use std::fs::{DirEntry};
+use std::fs::DirEntry;
 use std::io::Error;
 use std::path::{Path, PathBuf};
 
@@ -57,11 +57,14 @@ where
 
 #[cfg(test)]
 mod tests {
-  use super::*;
   use std::fs::File;
   use std::time::Instant;
+
   use tempfile::{tempdir, TempDir};
+
   use crate::testutils::unordered_eq;
+
+  use super::*;
 
   fn test_folder_1() -> TempDir {
     let dir = tempdir().unwrap();

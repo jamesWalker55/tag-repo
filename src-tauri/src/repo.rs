@@ -1,10 +1,11 @@
 use std::fs::create_dir;
 use std::path::{Path, PathBuf};
+
 use indoc::indoc;
-use rusqlite::{Connection, ErrorCode, params, Row};
-use rusqlite_migration::{Migrations, M};
 use lazy_static::lazy_static;
+use rusqlite::{Connection, ErrorCode, params, Row};
 use rusqlite::Error::{QueryReturnedNoRows, SqliteFailure};
+use rusqlite_migration::{M, Migrations};
 
 #[derive(Debug)]
 pub enum OpenError {
@@ -243,9 +244,11 @@ pub fn open_database(db_path: impl AsRef<Path>) -> Result<Connection, OpenError>
 
 #[cfg(test)]
 mod tests {
-  use super::*;
   use tempfile::{tempdir, TempDir};
+
   use crate::testutils::unordered_eq;
+
+  use super::*;
 
   /// The only purpose of this struct is to bundle `Repo` and `TempDir` together. This ensures that
   /// `TempDir` is dropped AFTER `Repo`.
@@ -445,8 +448,10 @@ mod tests {
 
   mod scan_integration {
     use std::time::Instant;
-    use super::*;
+
     use crate::scan::scan_dir;
+
+    use super::*;
 
     #[test]
     fn my_test() {
