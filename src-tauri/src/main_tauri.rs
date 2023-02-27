@@ -9,6 +9,7 @@ use window_shadows::set_shadow;
 mod scan;
 mod repo;
 mod watch;
+mod query;
 #[cfg(test)]
 mod testutils;
 
