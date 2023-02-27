@@ -1,7 +1,7 @@
 use std::fs::create_dir;
 use std::path::{Path, PathBuf};
 use indoc::indoc;
-use rusqlite::{Connection, ErrorCode, params, Row};
+use rusqlite::{Connection, ErrorCode, params, Row, ToSql};
 use rusqlite_migration::{Migrations, M};
 use lazy_static::lazy_static;
 use rusqlite::Error::{QueryReturnedNoRows, SqliteFailure};
@@ -91,14 +91,17 @@ impl Repo {
   where
     T: AsRef<str>,
   {
+    // I attempted to optimise this following this guide:
+    // https://avi.im/blag/2021/fast-sqlite-inserts/
+
     let tx = self.conn.transaction()?;
-    for (path, tags) in items_params {
-      let path = path.as_ref();
-      let tags = tags.as_ref();
-      tx.execute(
-        "INSERT INTO ITEMS (path, tags) VALUES (?1, ?2)",
-        params![path, tags],
-      )?;
+    {
+      let mut stmt = tx.prepare_cached("INSERT INTO ITEMS (path, tags) VALUES (?1, ?2)")?;
+      for (path, tags) in items_params {
+        let path = path.as_ref();
+        let tags = tags.as_ref();
+        stmt.execute(params![path, tags])?;
+      }
     }
     tx.commit()?;
     Ok(())
@@ -419,6 +422,7 @@ mod tests {
       println!("  Took: {:?}", start.elapsed());
 
       println!("Adding paths");
+      println!("  Inserting {} paths...", paths.len());
       let start = Instant::now();
       repo.insert_items(
         paths.iter().map(|p| (p.to_str().unwrap(), "asd"))
