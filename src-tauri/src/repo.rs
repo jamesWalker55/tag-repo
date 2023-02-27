@@ -1,7 +1,7 @@
-use std::fs::create_dir;
+use std::fs::{create_dir, remove_dir_all};
 use std::path::{Path, PathBuf};
 use indoc::indoc;
-use rusqlite::{Connection, ErrorCode, params, Row, ToSql};
+use rusqlite::{Connection, ErrorCode, params, Row};
 use rusqlite_migration::{Migrations, M};
 use lazy_static::lazy_static;
 use rusqlite::Error::{QueryReturnedNoRows, SqliteFailure};
@@ -35,7 +35,11 @@ pub struct Item {
 }
 
 pub struct Repo {
+  path: PathBuf,
   conn: Connection,
+  /// This field is only used for unit testing
+  #[cfg(test)]
+  temporary: bool,
 }
 
 impl Repo {
@@ -50,7 +54,12 @@ impl Repo {
     }
     let db_path = data_path.join("tags.db");
     let conn = open_database(&db_path)?;
-    let repo = Self { conn };
+    let repo = Self {
+      path: PathBuf::from(repo_path),
+      conn,
+      #[cfg(test)]
+      temporary: false,
+    };
     Ok(repo)
   }
 
@@ -215,6 +224,25 @@ impl Repo {
   }
 }
 
+#[cfg(test)]
+impl Drop for Repo {
+  // When testing, we need a way to delete the old path
+  fn drop(&mut self) {
+    // Replace connection with a useless, temporary connection
+    // This is to force the old connection to drop right now, and stop accessing the database file
+    let temp_conn = Connection::open_in_memory().unwrap();
+    let old_conn = std::mem::replace(&mut self.conn, temp_conn);
+    let rv = old_conn.close();
+    if let Err(_) = rv { println!("Failed to close database connection"); }
+
+    // Now that the database isn't accessed, we can delete the directory
+    if self.temporary {
+      let rv = remove_dir_all(&self.path);
+      if let Err(_) = rv { println!("Failed to delete temporary directory"); }
+    }
+  }
+}
+
 lazy_static! {
   static ref MIGRATIONS: Migrations<'static> =
     Migrations::new(vec![
@@ -244,7 +272,10 @@ mod tests {
   use crate::testutils::unordered_eq;
 
   fn empty_repo() -> Repo {
-    Repo::open(tempdir().unwrap()).unwrap()
+    let dir = tempdir().unwrap();
+    let mut repo = Repo::open(&dir).unwrap();
+    repo.temporary = true;
+    repo
   }
 
   fn test_repo() -> Repo {
