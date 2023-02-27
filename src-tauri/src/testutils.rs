@@ -1,11 +1,11 @@
-pub fn unordered_eq<'a, T, U, V>(a: T, b: U)
+pub fn assert_unordered_eq<'a, T, U, V>(a: T, b: U)
 where
-  T: Iterator<Item=V>,
-  U: Iterator<Item=V>,
+  T: IntoIterator<Item=V>,
+  U: IntoIterator<Item=V>,
   V: Ord + std::fmt::Debug,
 {
-  let mut a: Vec<_> = a.collect();
-  let mut b: Vec<_> = b.collect();
+  let mut a: Vec<_> = a.into_iter().collect();
+  let mut b: Vec<_> = b.into_iter().collect();
   a.sort();
   b.sort();
   assert_eq!(a, b);

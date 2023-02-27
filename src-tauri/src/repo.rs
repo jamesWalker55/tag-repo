@@ -246,7 +246,7 @@ pub fn open_database(db_path: impl AsRef<Path>) -> Result<Connection, OpenError>
 mod tests {
   use tempfile::{tempdir, TempDir};
 
-  use crate::testutils::unordered_eq;
+  use crate::testutils::assert_unordered_eq;
 
   use super::*;
 
@@ -298,7 +298,7 @@ mod tests {
     let table_names = stmt.query_map([], |row| row.get::<_, String>(0)).unwrap();
     let table_names: Vec<_> = table_names.flatten().collect();
 
-    unordered_eq(
+    assert_unordered_eq(
       table_names.iter().map(String::as_str),
       [
         "items",
@@ -307,7 +307,7 @@ mod tests {
         "tag_query_idx",
         "tag_query_docsize",
         "tag_query_config",
-      ].iter().cloned(),
+      ],
     );
   }
 
@@ -326,9 +326,9 @@ mod tests {
       .flatten()
       .collect();
 
-    unordered_eq(
+    assert_unordered_eq(
       item_names.iter().map(String::as_str),
-      ["hello", "world"].iter().cloned(),
+      ["hello", "world"],
     );
   }
 
@@ -348,9 +348,9 @@ mod tests {
     fn expect_query(repo: &Repo, query: &str, expected: Vec<&str>) {
       let items = repo.get_items(Some(query)).unwrap();
 
-      unordered_eq(
+      assert_unordered_eq(
         items.iter().map(|x| x.path.as_str()),
-        expected.iter().cloned(),
+        expected,
       );
     }
 
@@ -367,9 +367,9 @@ mod tests {
     let mut tr = testrepo_1();
     let repo = &mut tr.repo;
     let items = repo.get_items(None).unwrap();
-    unordered_eq(
+    assert_unordered_eq(
       items.iter().map(|x| x.path.as_str()),
-      ["apple", "bee", "cat", "dog", "egg"].iter().copied(),
+      ["apple", "bee", "cat", "dog", "egg"],
     )
   }
 

@@ -62,7 +62,7 @@ mod tests {
 
   use tempfile::{tempdir, TempDir};
 
-  use crate::testutils::unordered_eq;
+  use crate::testutils::assert_unordered_eq;
 
   use super::*;
 
@@ -93,9 +93,9 @@ mod tests {
 
     let scanned_paths = scan_dir(dir).unwrap();
 
-    unordered_eq(
-      scanned_paths.iter().map(|x| x.as_path()),
-      expected.iter().map(|x| x.as_path()),
+    assert_unordered_eq(
+      scanned_paths,
+      expected,
     )
   }
 
