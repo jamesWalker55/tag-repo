@@ -25,7 +25,14 @@ fn escape_fts5_string(text: &str) -> String {
 enum Symbol {
   /// A tag. The boolean indicates whether this singleton is positive:
   /// `true = a`, and `false = ~a`.
+  ///
+  /// E.g. `kick`
   Tag(String, bool),
+  /// A key-value pair. The boolean indicates whether this singleton is positive:
+  /// `true = k:v`, and `false = ~k:v`.
+  ///
+  /// E.g. `inpath:res/audio/`
+  KeyValue(String, String, bool),
 }
 
 impl From<&Symbol> for String {
@@ -37,6 +44,9 @@ impl From<&Symbol> for String {
         } else {
           format!(r#"(("meta_tags": "all") NOT "{}")"#, escape_fts5_string(name.as_str()))
         }
+      }
+      Symbol::KeyValue(key, val, positive) => {
+        let query = todo!();
       }
     }
   }
