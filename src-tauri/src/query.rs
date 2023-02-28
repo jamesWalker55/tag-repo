@@ -1,5 +1,7 @@
 // TODO: Make this module be able to handle complicated queries like in src/repo.rs:478
 
+use std::collections::VecDeque;
+
 // This function can be optimised further, but I'm lazy at the moment:
 // https://lise-henry.github.io/articles/optimising_strings.html
 // Use the Cow implementation, since most of the input will not contain quotes
@@ -99,15 +101,49 @@ enum Expr {
   Term(Symbol),
 }
 
-impl Expr {
-  fn to_where_clause(&self) -> String {
-    todo!();
-    // match self {
-    //   Symbol::Tag(_) => Err(QueryConversionError::NoAssociatedWhereClause),
-    //   Symbol::InPath(path) => {
-    //     Ok(format!(r#"path LIKE '{}' ESCAPE '\'"#, escape_like_pattern(path, '\\')))
-    //   }
-    // }
+// impl Expr {
+//   fn to_where_clause(&self) -> String {
+//     match self {
+//       And(a, b) => {},
+//       Or(a, b) => {},
+//       Not(a) => {},
+//       Term(sym) => {},
+//     }
+//   }
+// }
+
+struct ExprIterator<'a> {
+  remaining_nodes: VecDeque<&'a Expr>,
+}
+
+impl<'a> ExprIterator<'a> {
+  fn new(expr: &'a Expr) -> Self {
+    Self {
+      remaining_nodes: VecDeque::from([expr])
+    }
+  }
+}
+
+impl<'a> Iterator for ExprIterator<'a> {
+  type Item = &'a Expr;
+
+  fn next(&mut self) -> Option<Self::Item> {
+    let next_node = self.remaining_nodes.pop_front();
+    match next_node {
+      Some(Expr::And(a, b)) | Some(Expr::Or(a, b)) => {
+        self.remaining_nodes.push_back(&**a);
+        self.remaining_nodes.push_back(&**b);
+      }
+      // Some(expr) => {}
+      Some(Expr::Not(a)) => {
+        self.remaining_nodes.push_back(&**a);
+      }
+      Some(expr) => {
+        self.remaining_nodes.push_back(expr);
+      }
+      None => ()
+    }
+    next_node
   }
 }
 
