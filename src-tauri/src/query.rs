@@ -46,7 +46,7 @@ fn escape_like_pattern(text: &str, escape_char: char) -> String {
       '\'' => {
         result.push_str("''");
       }
-      escape_char => {
+      _ if char == escape_char => {
         result.push(escape_char);
         result.push(escape_char);
       }
