@@ -62,8 +62,8 @@ fn escape_like_pattern(text: &str, escape_char: char) -> String {
 enum Symbol {
   /// A tag. E.g. `kick`
   Tag(String),
-  // /// A key-value pair. E.g. `inpath:res/audio/`
-  // InPath(String),
+  /// A key-value pair. E.g. `inpath:res/audio/`
+  InPath(String),
 }
 
 enum QueryConversionError {
@@ -75,16 +75,16 @@ impl Symbol {
   fn to_fts_string(&self) -> Result<String, QueryConversionError> {
     match self {
       Symbol::Tag(name) => Ok(format!(r#"tags:"{}""#, escape_fts5_string(name.as_str()))),
-      // Symbol::InPath(_) => Err(QueryConversionError::NoAssociatedFTSString),
+      Symbol::InPath(_) => Err(QueryConversionError::NoAssociatedFTSString),
     }
   }
 
   fn to_where_clause(&self) -> Result<String, QueryConversionError> {
     match self {
       Symbol::Tag(_) => Err(QueryConversionError::NoAssociatedWhereClause),
-      // Symbol::InPath(path) => {
-      //   Ok(format!(r#"path LIKE '{}' ESCAPE '\'"#, escape_like_pattern(path, '\\')))
-      // }
+      Symbol::InPath(path) => {
+        Ok(format!(r#"path LIKE '{}' ESCAPE '\'"#, escape_like_pattern(path, '\\')))
+      }
     }
   }
 }
@@ -112,11 +112,12 @@ enum Expr {
 //   }
 // }
 
-struct ExprIterator<'a> {
+/// Depth-first search iterator for an expression
+struct ExprDFSIterator<'a> {
   remaining_nodes: VecDeque<&'a Expr>,
 }
 
-impl<'a> ExprIterator<'a> {
+impl<'a> ExprDFSIterator<'a> {
   fn new(expr: &'a Expr) -> Self {
     Self {
       remaining_nodes: VecDeque::from([expr])
@@ -124,7 +125,7 @@ impl<'a> ExprIterator<'a> {
   }
 }
 
-impl<'a> Iterator for ExprIterator<'a> {
+impl<'a> Iterator for ExprDFSIterator<'a> {
   type Item = &'a Expr;
 
   fn next(&mut self) -> Option<Self::Item> {
@@ -138,143 +139,50 @@ impl<'a> Iterator for ExprIterator<'a> {
       Some(Expr::Not(a)) => {
         self.remaining_nodes.push_back(&**a);
       }
-      Some(expr) => {
-        self.remaining_nodes.push_back(expr);
-      }
-      None => ()
+      Some(Expr::Term(_)) => (),
+      None => (),
     }
     next_node
   }
 }
 
-// #[cfg(test)]
-// mod tests {
-//   use super::*;
-//
-//   mod escape_test {
-//     use super::*;
-//
-//     #[test]
-//     fn no_quotes() {
-//       assert_eq!(
-//         escape_fts5_string("asd"),
-//         "asd",
-//       )
-//     }
-//
-//     #[test]
-//     fn single_quotes() {
-//       assert_eq!(
-//         escape_fts5_string("'as'd"),
-//         "''as''d",
-//       )
-//     }
-//
-//     #[test]
-//     fn double_quotes() {
-//       assert_eq!(
-//         escape_fts5_string(r#""as"d"#),
-//         r#"""as""d"#,
-//       )
-//     }
-//
-//     #[test]
-//     fn both_quotes() {
-//       assert_eq!(
-//         escape_fts5_string(r#""a's"d'"#),
-//         r#"""a''s""d''"#,
-//       )
-//     }
-//   }
-//
-//   mod symbol_test {
-//     use super::*;
-//
-//     #[test]
-//     fn tag_positive() {
-//       let sym = Symbol::Tag("hello".into(), true);
-//       let expected = r#""hello""#;
-//       let rv = String::from(&sym);
-//       assert_eq!(rv, expected);
-//     }
-//
-//     #[test]
-//     fn tag_positive_with_quote() {
-//       let sym = Symbol::Tag("he' llo".into(), true);
-//       let expected = r#""he'' llo""#;
-//       let rv = String::from(&sym);
-//       assert_eq!(rv, expected);
-//     }
-//
-//     #[test]
-//     fn tag_negative() {
-//       let sym = Symbol::Tag("hello".into(), false);
-//       let expected = r#"(("meta_tags": "all") NOT "hello")"#;
-//       let rv = String::from(&sym);
-//       assert_eq!(rv, expected);
-//     }
-//
-//     #[test]
-//     fn tag_negative_with_quote() {
-//       let sym = Symbol::Tag(r#"he" llo"#.into(), false);
-//       let expected = r#"(("meta_tags": "all") NOT "he"" llo")"#;
-//       let rv = String::from(&sym);
-//       assert_eq!(rv, expected);
-//     }
-//   }
-//
-//   mod expr_test {
-//     use crate::query::{Expr, Symbol};
-//
-//     #[test]
-//     fn and_str() {
-//       let a = Expr::Term(Symbol::Tag("a".to_string(), true));
-//       let b = Expr::Term(Symbol::Tag("b".to_string(), false));
-//       let expr = Expr::And(Box::new(a), Box::new(b));
-//       let expected = r#"("a" AND (("meta_tags": "all") NOT "b"))"#;
-//       assert_eq!(String::from(&expr), expected);
-//     }
-//
-//     #[test]
-//     fn or_str() {
-//       let a = Expr::Term(Symbol::Tag("a".to_string(), true));
-//       let b = Expr::Term(Symbol::Tag("b".to_string(), false));
-//       let expr = Expr::Or(Box::new(a), Box::new(b));
-//       let expected = r#"("a" OR (("meta_tags": "all") NOT "b"))"#;
-//       assert_eq!(String::from(&expr), expected);
-//     }
-//
-//     #[test]
-//     fn term_str() {
-//       let expr = Expr::Term(Symbol::Tag("a".to_string(), true));
-//       let expected = r#""a""#;
-//       assert_eq!(String::from(&expr), expected);
-//     }
-//
-//     #[test]
-//     fn test1() {
-//       let expr =
-//         Expr::And(
-//           Box::new(Expr::And(
-//             Box::new(Expr::Or(
-//               Box::new(Expr::Term(
-//                 Symbol::Tag("a".to_string(), true)
-//               )),
-//               Box::new(Expr::Term(
-//                 Symbol::Tag("b".to_string(), true)
-//               )),
-//             )),
-//             Box::new(Expr::Term(
-//               Symbol::Tag("c".to_string(), false)
-//             )),
-//           )),
-//           Box::new(Expr::Term(
-//             Symbol::Tag("d".to_string(), true)
-//           )),
-//         );
-//       let rv = String::from(&expr);
-//       let expected = r#"((("a" OR "b") AND (("meta_tags": "all") NOT "c")) AND "d")"#;
-//       assert_eq!(rv, expected);
-//     }
-//   }
-// }
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  fn and(a: Box<Expr>, b: Box<Expr>) -> Box<Expr> {
+    Box::new(Expr::And(a, b))
+  }
+
+  fn or(a: Box<Expr>, b: Box<Expr>) -> Box<Expr> {
+    Box::new(Expr::Or(a, b))
+  }
+
+  fn not(a: Box<Expr>) -> Box<Expr> {
+    Box::new(Expr::Not(a))
+  }
+
+  fn tag(name: &str) -> Box<Expr> {
+    Box::new(Expr::Term(Symbol::Tag(String::from(name))))
+  }
+
+  fn inpath(path: &str) -> Box<Expr> {
+    Box::new(Expr::Term(Symbol::InPath(String::from(path))))
+  }
+
+  #[test]
+  fn my_test() {
+    /// The query:
+    ///
+    ///     a b -e inpath:1 | d e inpath:0
+    ///
+    let expr = or(
+      and(and(tag("a"), tag("b")), and(not(tag("e")), inpath("1"))),
+      and(tag("d"), and(tag("e"), inpath("0"))),
+    );
+    // dbg!(expr);
+    for x in ExprDFSIterator::new(&expr) {
+      println!("{:?}", x);
+    }
+  }
+}
