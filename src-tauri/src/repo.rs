@@ -471,13 +471,20 @@ mod tests {
   fn query_test() {
     let tr = testrepo_2();
 
-    let sql = indoc! {r##"
+    // The query:
+    //
+    //     a b -e inpath:1 | d e inpath:0
+    //
+    let sql = indoc! {r#"
       SELECT i.path, i.tags
       FROM items i
-        INNER JOIN tag_query tq ON i.id = tq.id
       WHERE
-        tag_query = '"a" "b" "c" AND ("meta_tags": "all") NOT "e"'
-    "##};
+        i.id IN ( SELECT id FROM tag_query('tags:"a" tags:"b" AND ("meta_tags": "all") NOT tags:"e"') )
+        AND i.path LIKE '%1%'
+      OR
+        i.id IN ( SELECT id FROM tag_query('tags:"d" tags:"e"') )
+        AND i.path LIKE '%0%'
+    "#};
 
     let conn = tr.repo.conn;
 
@@ -490,9 +497,12 @@ mod tests {
       Ok(out)
     }).unwrap();
 
+    let mut count = 0;
     for x in out {
       println!("{}", x.unwrap());
+      count += 1;
     }
+    println!("Got {} rows.", count);
 
     ()
   }
