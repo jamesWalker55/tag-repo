@@ -1,6 +1,6 @@
-mod scan;
-mod repo;
-mod watch;
 mod query;
+mod repo;
+mod scan;
 #[cfg(test)]
 mod testutils;
+mod watch;
