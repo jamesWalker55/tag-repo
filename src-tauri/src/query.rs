@@ -171,11 +171,11 @@ mod tests {
   }
 
   #[test]
+  /// The query:
+  ///
+  ///     a b -e inpath:1 | d e inpath:0
+  ///
   fn my_test() {
-    /// The query:
-    ///
-    ///     a b -e inpath:1 | d e inpath:0
-    ///
     let expr = or(
       and(and(tag("a"), tag("b")), and(not(tag("e")), inpath("1"))),
       and(tag("d"), and(tag("e"), inpath("0"))),
