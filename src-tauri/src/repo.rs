@@ -130,17 +130,17 @@ impl Repo {
         let mapped_rows = match query {
             Some(query) => {
                 stmt = self.conn.prepare(indoc! {"
-          SELECT i.id, i.path, i.tags, i.meta_tags
-          FROM items i
-            INNER JOIN tag_query tq ON i.id = tq.id
-          WHERE tq.tag_query MATCH :query
-        "})?;
+                    SELECT i.id, i.path, i.tags, i.meta_tags
+                    FROM items i
+                        INNER JOIN tag_query tq ON i.id = tq.id
+                    WHERE tq.tag_query MATCH :query
+                "})?;
                 stmt.query_map(&[(":query", query)], to_item_closure)
             }
             None => {
                 stmt = self.conn.prepare(indoc! {"
-          SELECT i.id, i.path, i.tags, i.meta_tags FROM items i
-        "})?;
+                    SELECT i.id, i.path, i.tags, i.meta_tags FROM items i
+                "})?;
                 stmt.query_map([], to_item_closure)
             }
         }?;
@@ -225,9 +225,12 @@ impl Repo {
 }
 
 lazy_static! {
+    #[rustfmt::skip]
     static ref MIGRATIONS: Migrations<'static> =
-        Migrations::new(vec![M::up(include_str!("migrations/01u_inital.sql"))
-            .down(include_str!("migrations/01d_inital.sql")),]);
+        Migrations::new(vec![
+            M::up(include_str!("migrations/01u_inital.sql"))
+            .down(include_str!("migrations/01d_inital.sql")),
+        ]);
 }
 
 pub fn open_database(db_path: impl AsRef<Path>) -> Result<Connection, OpenError> {
@@ -464,15 +467,15 @@ mod tests {
         //     a b -e inpath:1 | d e inpath:0
         //
         let sql = indoc! {r#"
-      SELECT i.path, i.tags
-      FROM items i
-      WHERE
-        i.id IN ( SELECT id FROM tag_query('tags:"a" tags:"b" AND ("meta_tags": "all") NOT tags:"e"') )
-        AND i.path LIKE '%1%'
-      OR
-        i.id IN ( SELECT id FROM tag_query('tags:"d" tags:"e"') )
-        AND i.path LIKE '%0%'
-    "#};
+            SELECT i.path, i.tags
+            FROM items i
+            WHERE
+                i.id IN ( SELECT id FROM tag_query('tags:"a" tags:"b" AND ("meta_tags": "all") NOT tags:"e"') )
+                AND i.path LIKE '%1%'
+            OR
+                i.id IN ( SELECT id FROM tag_query('tags:"d" tags:"e"') )
+                AND i.path LIKE '%0%'
+        "#};
 
         let conn = tr.repo.conn;
 
