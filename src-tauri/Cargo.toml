@@ -29,6 +29,8 @@ notify = "5.1.0"
 notify-debouncer-mini = "0.2.0"
 futures = "0.3.26"
 futures-timer = "3.0.2"
+pest = "2.0"
+pest_derive = "2.0"
 
 [dev-dependencies]
 itertools = "0.10.5"
@@ -41,13 +43,17 @@ default = ["custom-protocol"]
 # DO NOT remove this
 custom-protocol = ["tauri/custom-protocol"]
 
-# Config for the UI main file
-# If you're only working on the lib, comment out this section to stop the error when running `cargo test`
-[[bin]]
-name = "main"
-path = "src/main_tauri.rs"
+## Config for the UI main file
+## If you're only working on the lib, comment out this section to stop the error when running `cargo test`
+#[[bin]]
+#name = "main"
+#path = "src/main_tauri.rs"
 
 [lib]
 name = "lib"
 path = "src/lib.rs"
 test = true
+
+#[[bin]]
+#name = "parser"
+#path = "src/parser.rs"

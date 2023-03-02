@@ -1,0 +1,12 @@
+// field = { (ASCII_DIGIT | "." | "-")+ }
+// record = { field ~ ("," ~ field)* }
+// file = { SOI ~ (record ~ ("\r\n" | "\n"))* ~ EOI }
+
+double_quoted_string = @{ "\"" ~ ( "\"\"" | !"\"" ~ ANY )* ~ "\"" }
+single_quoted_string = @{ "'" ~ ( "''" | !"'" ~ ANY )* ~ "'" }
+string = @{ double_quoted_string | single_quoted_string }
+
+tag_nonstring = @{ !(WHITESPACE | ":" | "'" | "\"") ~ ANY ~ (!(WHITESPACE | ":") ~ ANY)* }
+tag = @{ string | tag_nonstring }
+
+WHITESPACE = _{ SPACE_SEPARATOR | "\t" | NEWLINE }
