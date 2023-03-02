@@ -13,17 +13,17 @@ enum StringFragment<'a> {
     EscapedQuote(char),
 }
 
-fn parse_double_quoted_string_fragment(input: &str) -> IResult<&str, StringFragment> {
+fn parse_double_quoted_string_fragment(input: &str) -> IResult<&str, Cow<str>> {
     alt((
-        map(is_not("\""), StringFragment::Literal),
-        map(value('"', tag("\"\"")), StringFragment::EscapedQuote),
+        map(is_not("\""), Cow::from),
+        map(value("\"", tag("\"\"")), Cow::from),
     ))(input)
 }
 
-fn parse_single_quoted_string_fragment(input: &str) -> IResult<&str, StringFragment> {
+fn parse_single_quoted_string_fragment(input: &str) -> IResult<&str, Cow<str>> {
     alt((
-        map(is_not("'"), StringFragment::Literal),
-        map(value('\'', tag("''")), StringFragment::EscapedQuote),
+        map(is_not("'"), Cow::from),
+        map(value("'", tag("''")), Cow::from),
     ))(input)
 }
 
@@ -42,10 +42,7 @@ fn parse_string(input: &str) -> IResult<&str, String> {
         parse_string_fragment,
         String::new,
         |mut string, fragment| {
-            match fragment {
-                StringFragment::Literal(s) => string.push_str(s),
-                StringFragment::EscapedQuote(c) => string.push(c),
-            }
+            string.push_str(&fragment);
             string
         },
     );
@@ -59,8 +56,8 @@ fn parse_literal(input: &str) -> IResult<&str, &str> {
 
 fn parse_string_or_literal<'a>(input: &'a str) -> IResult<&str, Cow<'a, str>> {
     alt((
-        map(parse_string, |x| Cow::Owned(x)),
-        map(parse_literal, |x| x.into()),
+        map(parse_string, |x| Cow::from(x)),
+        map(parse_literal, |x| Cow::from(x)),
     ))(input)
 }
 
