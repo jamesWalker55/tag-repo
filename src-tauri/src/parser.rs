@@ -1,16 +1,3 @@
-//! This example shows an example of how to parse an escaped string. The
-//! rules for the string are similar to JSON and rust. A string is:
-//!
-//! - Enclosed by double quotes
-//! - Can contain any raw unescaped code point besides \ and "
-//! - Matches the following escape sequences: \b, \f, \n, \r, \t, \", \\, \/
-//! - Matches code points like Rust: \u{XXXX}, where XXXX can be up to 6
-//!   hex characters
-//! - an escape followed by whitespace consumes all whitespace between the
-//!   escape and the next non-whitespace character
-
-// #![cfg(feature = "alloc")]
-
 use nom::branch::alt;
 use nom::bytes::complete::{is_not, tag, take_till};
 use nom::character::complete::{none_of, one_of};
@@ -83,6 +70,10 @@ fn parse_key_value<'a>(input: &'a str) -> IResult<&str, (&str, Cow<'a, str>)> {
     separated_pair(parse_literal, char(':'), parse_string_or_literal)(input)
 }
 
+fn parse_tag<'a>(input: &'a str) -> IResult<&str, Cow<'a, str>> {
+    parse_string_or_literal(input)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -151,4 +142,34 @@ mod tests {
         assert_parse("m'lady", "m'lady");
         assert_parse_fails("'mlady");
     }
+
+    #[test]
+    fn test_tag() {
+        fn assert_parse(text: &str, expected: &str) {
+            let result = parse_tag(&text).unwrap().1;
+            assert_eq!(result, expected);
+        }
+        fn assert_parse_fails(text: &str) {
+            assert!(parse_tag(&text).is_err());
+        }
+        assert_parse("a", "a");
+        assert_parse("abc", "abc");
+        assert_parse("mc'donalds", "mc'donalds");
+        assert_parse("'tag with spaces'", "tag with spaces");
+    }
+
+    // #[test]
+    // fn test_tag() {
+    //     fn assert_parse(text: &str, expected: &str) {
+    //         let result = parse_tag(&text).unwrap().1;
+    //         assert_eq!(result, expected);
+    //     }
+    //     fn assert_parse_fails(text: &str) {
+    //         assert!(parse_tag(&text).is_err());
+    //     }
+    //     assert_parse("a", "a");
+    //     assert_parse("abc", "abc");
+    //     assert_parse("mc'donalds", "mc'donalds");
+    //     assert_parse("'tag with spaces'", "tag with spaces");
+    // }
 }
