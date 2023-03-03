@@ -1,41 +1,35 @@
 use nom::branch::alt;
-use nom::bytes::complete::{is_not, tag, take_till};
+use nom::bytes::complete::{is_not, tag as nom_tag, take_till, take_while};
 use nom::character::complete::{none_of, one_of};
+use nom::character::is_space;
+use nom::character::streaming::char as nom_char;
 use nom::combinator::{map, recognize, value};
 use nom::multi::fold_many0;
 use nom::sequence::{delimited, pair, separated_pair};
 use nom::IResult;
 use std::borrow::Cow;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum StringFragment<'a> {
-    Literal(&'a str),
-    EscapedQuote(char),
-}
-
-fn parse_double_quoted_string_fragment(input: &str) -> IResult<&str, Cow<str>> {
+fn double_quoted_string_fragment(input: &str) -> IResult<&str, Cow<str>> {
     alt((
         map(is_not("\""), Cow::from),
-        map(value("\"", tag("\"\"")), Cow::from),
+        map(value("\"", nom_tag("\"\"")), Cow::from),
     ))(input)
 }
 
-fn parse_single_quoted_string_fragment(input: &str) -> IResult<&str, Cow<str>> {
+fn single_quoted_string_fragment(input: &str) -> IResult<&str, Cow<str>> {
     alt((
         map(is_not("'"), Cow::from),
-        map(value("'", tag("''")), Cow::from),
+        map(value("'", nom_tag("''")), Cow::from),
     ))(input)
 }
 
-fn parse_string(input: &str) -> IResult<&str, String> {
-    use nom::character::streaming::char;
-
+fn string(input: &str) -> IResult<&str, String> {
     let (_, quote_char): (_, char) = one_of("'\"")(input)?;
 
     let parse_string_fragment = if quote_char == '"' {
-        parse_double_quoted_string_fragment
+        double_quoted_string_fragment
     } else {
-        parse_single_quoted_string_fragment
+        single_quoted_string_fragment
     };
 
     let build_string = fold_many0(
@@ -47,28 +41,52 @@ fn parse_string(input: &str) -> IResult<&str, String> {
         },
     );
 
-    delimited(char(quote_char), build_string, char(quote_char))(input)
+    delimited(nom_char(quote_char), build_string, nom_char(quote_char))(input)
 }
 
-fn parse_literal(input: &str) -> IResult<&str, &str> {
+fn literal(input: &str) -> IResult<&str, &str> {
     recognize(pair(none_of("\"': "), take_till(|x| x == ' ' || x == ':')))(input)
 }
 
-fn parse_string_or_literal<'a>(input: &'a str) -> IResult<&str, Cow<'a, str>> {
+fn string_or_literal<'a>(input: &'a str) -> IResult<&str, Cow<'a, str>> {
     alt((
-        map(parse_string, |x| Cow::from(x)),
-        map(parse_literal, |x| Cow::from(x)),
+        map(string, |x| Cow::from(x)),
+        map(literal, |x| Cow::from(x)),
     ))(input)
 }
 
-fn parse_key_value<'a>(input: &'a str) -> IResult<&str, (&str, Cow<'a, str>)> {
-    use nom::character::streaming::char;
-
-    separated_pair(parse_literal, char(':'), parse_string_or_literal)(input)
+enum Expr<'a> {
+    And(Vec<Expr<'a>>),
+    Or(Vec<Expr<'a>>),
+    Not(Box<Expr<'a>>),
+    Tag(Cow<'a, str>),
+    KeyValue(Cow<'a, str>, Cow<'a, str>),
 }
 
-fn parse_tag<'a>(input: &'a str) -> IResult<&str, Cow<'a, str>> {
-    parse_string_or_literal(input)
+fn parse_tag(input: &str) -> IResult<&str, Expr> {
+    map(string_or_literal, Expr::Tag)(input)
+}
+
+fn key_val<'a>(input: &'a str) -> IResult<&str, Expr<'a>> {
+    map(
+        separated_pair(literal, nom_char(':'), string_or_literal),
+        |(k, v)| Expr::KeyValue(Cow::from(k), v),
+    )(input)
+}
+
+fn parens(input: &str) -> IResult<&str, Expr> {
+    delimited(nom_char('('), parse_expr, nom_char(')'))(input)
+}
+
+// fn parse_implicit_and_group(input: &str) -> IResult<&str, Expr> {
+//     alt((
+//         delimited(take_while(is_space), parse_tag, take_while(is_space)),
+//         delimited(take_while(is_space), parse_key_value, take_while(is_space)),
+//     ))(input)
+// }
+
+fn parse_expr(input: &str) -> IResult<&str, Expr> {
+    alt((parens, key_val, parse_tag))(input)
 }
 
 #[cfg(test)]
@@ -78,11 +96,11 @@ mod tests {
     #[test]
     fn test_string() {
         fn assert_parse(text: &str, expected: &str) {
-            let result = parse_string(&text).unwrap().1;
+            let result = string(&text).unwrap().1;
             assert_eq!(result, expected);
         }
         fn assert_parse_fails(text: &str) {
-            assert!(parse_string(&text).is_err());
+            assert!(string(&text).is_err());
         }
 
         // double quoted
@@ -103,12 +121,16 @@ mod tests {
     #[test]
     fn test_key_value() {
         fn assert_parse(text: &str, expected: (&str, &str)) {
-            let result = parse_key_value(&text).unwrap().1;
-            assert_eq!(expected.0, result.0);
-            assert_eq!(expected.1, result.1);
+            let result = key_val(&text).unwrap().1;
+            if let Expr::KeyValue(key, val) = result {
+                assert_eq!(expected.0, key);
+                assert_eq!(expected.1, val);
+            } else {
+                unreachable!();
+            }
         }
         fn assert_parse_fails(text: &str) {
-            assert!(parse_key_value(&text).is_err());
+            assert!(key_val(&text).is_err());
         }
 
         assert_parse(r#"inpath:src/"#, ("inpath", "src/"));
@@ -126,11 +148,11 @@ mod tests {
     #[test]
     fn test_literal() {
         fn assert_parse(text: &str, expected: &str) {
-            let result = parse_literal(&text).unwrap().1;
+            let result = literal(&text).unwrap().1;
             assert_eq!(result, expected);
         }
         fn assert_parse_fails(text: &str) {
-            assert!(parse_literal(&text).is_err());
+            assert!(literal(&text).is_err());
         }
         assert_parse("a", "a");
         assert_parse("abc", "abc");
@@ -144,11 +166,15 @@ mod tests {
     fn test_tag() {
         fn assert_parse(text: &str, expected: &str) {
             let result = parse_tag(&text).unwrap().1;
-            assert_eq!(result, expected);
+            if let Expr::Tag(text) = result {
+                assert_eq!(text, expected);
+            } else {
+                unreachable!();
+            }
         }
-        fn assert_parse_fails(text: &str) {
-            assert!(parse_tag(&text).is_err());
-        }
+        // fn assert_parse_fails(text: &str) {
+        //     assert!(parse_tag(&text).is_err());
+        // }
         assert_parse("a", "a");
         assert_parse("abc", "abc");
         assert_parse("mc'donalds", "mc'donalds");
