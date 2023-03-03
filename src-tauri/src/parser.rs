@@ -1,11 +1,14 @@
+//! This code is based on nom's arithmetic example:
+//! https://github.com/rust-bakery/nom/blob/main/tests/arithmetic.rs
+
 use nom::branch::alt;
 use nom::bytes::complete::{is_not, tag as nom_tag, take_till, take_while};
-use nom::character::complete::{none_of, one_of};
+use nom::character::complete::{none_of, one_of, space0 as space};
 use nom::character::is_space;
 use nom::character::streaming::char as nom_char;
-use nom::combinator::{map, recognize, value};
+use nom::combinator::{map, map_res, recognize, value};
 use nom::multi::fold_many0;
-use nom::sequence::{delimited, pair, separated_pair};
+use nom::sequence::{delimited, pair, preceded, separated_pair};
 use nom::IResult;
 use std::borrow::Cow;
 
@@ -55,6 +58,7 @@ fn string_or_literal<'a>(input: &'a str) -> IResult<&str, Cow<'a, str>> {
     ))(input)
 }
 
+#[derive(Copy, Clone)]
 enum Expr<'a> {
     And(Vec<Expr<'a>>),
     Or(Vec<Expr<'a>>),
@@ -63,7 +67,7 @@ enum Expr<'a> {
     KeyValue(Cow<'a, str>, Cow<'a, str>),
 }
 
-fn parse_tag(input: &str) -> IResult<&str, Expr> {
+fn tag(input: &str) -> IResult<&str, Expr> {
     map(string_or_literal, Expr::Tag)(input)
 }
 
@@ -74,19 +78,67 @@ fn key_val<'a>(input: &'a str) -> IResult<&str, Expr<'a>> {
     )(input)
 }
 
+/// Parse an expression wrapped with parenthesis "(...)"
 fn parens(input: &str) -> IResult<&str, Expr> {
-    delimited(nom_char('('), parse_expr, nom_char(')'))(input)
+    delimited(space, delimited(nom_char('('), expr, nom_char(')')), space)(input)
 }
 
-// fn parse_implicit_and_group(input: &str) -> IResult<&str, Expr> {
-//     alt((
-//         delimited(take_while(is_space), parse_tag, take_while(is_space)),
-//         delimited(take_while(is_space), parse_key_value, take_while(is_space)),
-//     ))(input)
-// }
+/// Parse a single "factor", which is a singular expression, whether that is a tag, key-value, or a
+/// group (parenthesis).
+///
+/// This function is "unsigned", that is it will only check for positive expressions. Negated
+/// expressions are not checked, e.g. `a -b -c` only checks `a`.
+fn unsigned_factor(input: &str) -> IResult<&str, Expr> {
+    alt((delimited(space, alt((key_val, tag)), space), parens))(input)
+}
 
-fn parse_expr(input: &str) -> IResult<&str, Expr> {
-    alt((parens, key_val, parse_tag))(input)
+/// Parse a single "factor", which is a singular expression, whether that is a tag, key-value, or a
+/// group (parenthesis).
+///
+/// This function is "signed", that is it will check for normal and negated expressions.
+/// E.g. `a -b -c` will check `a`, `-b` and `-c`
+fn factor(input: &str) -> IResult<&str, Expr> {
+    alt((
+        // normal factor
+        unsigned_factor,
+        // negated factor
+        map(
+            preceded(space, preceded(nom_char('-'), unsigned_factor)),
+            |x| Expr::Not(Box::new(x)),
+        ),
+    ))(input)
+}
+
+/// Process AND operators. This also handles implicit ANDs.
+/// (AND has the highest precedence)
+fn term(input: &str) -> IResult<&str, Expr> {
+    // read an initial factor first
+    let (input, init) = factor(input)?;
+
+    fold_many0(
+        alt((
+            factor,
+            preceded(nom_char('&'), factor)
+        )),
+        // TODO: This is a FnMut function, meaning it can be called multiple times. However, Expr
+        // TODO: cannot be cloned (since it has Vecs and Cows). idk what to do
+        // TODO:
+        // TODO: If you fixed this, continue from: https://github.com/rust-bakery/nom/blob/main/tests/arithmetic.rs
+        move || init,
+        |acc, x| {
+            match acc {
+                Expr::And(mut vec) => {
+                    vec.push(x);
+                    Expr::And(vec)
+                }
+                acc => Expr::And(vec![acc, x])
+            }
+        }
+    )(input)
+}
+
+fn expr(input: &str) -> IResult<&str, Expr> {
+    alt((parens, key_val, tag))(input)
 }
 
 #[cfg(test)]
@@ -165,7 +217,7 @@ mod tests {
     #[test]
     fn test_tag() {
         fn assert_parse(text: &str, expected: &str) {
-            let result = parse_tag(&text).unwrap().1;
+            let result = tag(&text).unwrap().1;
             if let Expr::Tag(text) = result {
                 assert_eq!(text, expected);
             } else {
