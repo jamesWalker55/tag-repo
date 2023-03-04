@@ -2,12 +2,10 @@
 //! https://github.com/rust-bakery/nom/blob/main/tests/arithmetic.rs
 
 use nom::branch::alt;
-use nom::bytes::complete::{is_not, tag as nom_tag, take_till, take_while};
-use nom::character::complete::{none_of, one_of, space0 as space};
-use nom::character::is_space;
-use nom::character::streaming::char as nom_char;
-use nom::combinator::{map, map_res, recognize, value};
-use nom::multi::fold_many0;
+use nom::bytes::complete::{is_not, tag as nom_tag};
+use nom::character::complete::{char as nom_char, none_of, one_of, space0 as space};
+use nom::combinator::{map, opt, recognize, value};
+use nom::multi::{fold_many0, many0};
 use nom::sequence::{delimited, pair, preceded, separated_pair};
 use nom::IResult;
 use std::borrow::Cow;
@@ -48,7 +46,11 @@ fn string(input: &str) -> IResult<&str, String> {
 }
 
 fn literal(input: &str) -> IResult<&str, &str> {
-    recognize(pair(none_of("\"': "), take_till(|x| x == ' ' || x == ':')))(input)
+    recognize(pair(
+        none_of("\"' :|&"),
+        // take_till(|x| x == ' ' || x == ':'),
+        opt(is_not(" :|&")),
+    ))(input)
 }
 
 fn string_or_literal<'a>(input: &'a str) -> IResult<&str, Cow<'a, str>> {
@@ -58,7 +60,7 @@ fn string_or_literal<'a>(input: &'a str) -> IResult<&str, Cow<'a, str>> {
     ))(input)
 }
 
-#[derive(Copy, Clone)]
+#[derive(Debug, PartialEq, Eq)]
 enum Expr<'a> {
     And(Vec<Expr<'a>>),
     Or(Vec<Expr<'a>>),
@@ -80,7 +82,11 @@ fn key_val<'a>(input: &'a str) -> IResult<&str, Expr<'a>> {
 
 /// Parse an expression wrapped with parenthesis "(...)"
 fn parens(input: &str) -> IResult<&str, Expr> {
-    delimited(space, delimited(nom_char('('), expr, nom_char(')')), space)(input)
+    delimited(
+        space,
+        delimited(nom_char('('), or_terms, nom_char(')')),
+        space,
+    )(input)
 }
 
 /// Parse a single "factor", which is a singular expression, whether that is a tag, key-value, or a
@@ -89,11 +95,13 @@ fn parens(input: &str) -> IResult<&str, Expr> {
 /// This function is "unsigned", that is it will only check for positive expressions. Negated
 /// expressions are not checked, e.g. `a -b -c` only checks `a`.
 fn unsigned_factor(input: &str) -> IResult<&str, Expr> {
-    alt((delimited(space, alt((key_val, tag)), space), parens))(input)
+    alt((parens, delimited(space, alt((key_val, tag)), space)))(input)
 }
 
 /// Parse a single "factor", which is a singular expression, whether that is a tag, key-value, or a
 /// group (parenthesis).
+///
+/// (This is as opposed to multi-term expressions like `And` and `Or`)
 ///
 /// This function is "signed", that is it will check for normal and negated expressions.
 /// E.g. `a -b -c` will check `a`, `-b` and `-c`
@@ -111,34 +119,34 @@ fn factor(input: &str) -> IResult<&str, Expr> {
 
 /// Process AND operators. This also handles implicit ANDs.
 /// (AND has the highest precedence)
-fn term(input: &str) -> IResult<&str, Expr> {
+fn and_terms(input: &str) -> IResult<&str, Expr> {
     // read an initial factor first
     let (input, init) = factor(input)?;
 
-    fold_many0(
-        alt((
-            factor,
-            preceded(nom_char('&'), factor)
-        )),
-        // TODO: This is a FnMut function, meaning it can be called multiple times. However, Expr
-        // TODO: cannot be cloned (since it has Vecs and Cows). idk what to do
-        // TODO:
-        // TODO: If you fixed this, continue from: https://github.com/rust-bakery/nom/blob/main/tests/arithmetic.rs
-        move || init,
-        |acc, x| {
-            match acc {
-                Expr::And(mut vec) => {
-                    vec.push(x);
-                    Expr::And(vec)
-                }
-                acc => Expr::And(vec![acc, x])
-            }
-        }
-    )(input)
+    let (input, mut terms) = many0(alt((preceded(nom_char('&'), factor), factor)))(input)?;
+    terms.splice(0..0, vec![init]);
+
+    match terms.len() {
+        1 => Ok((input, terms.pop().unwrap())),
+        x if x >= 2 => Ok((input, Expr::And(terms))),
+        _ => unreachable!(),
+    }
 }
 
-fn expr(input: &str) -> IResult<&str, Expr> {
-    alt((parens, key_val, tag))(input)
+/// Main entry point for the parser.
+/// Process OR operators.
+/// (OR has the lower precedence than AND, so it is the one that calls AND)
+fn or_terms(input: &str) -> IResult<&str, Expr> {
+    let (input, init) = and_terms(input)?;
+
+    let (input, mut terms) = many0(preceded(nom_char('|'), and_terms))(input)?;
+    terms.splice(0..0, vec![init]);
+
+    match terms.len() {
+        1 => Ok((input, terms.pop().unwrap())),
+        x if x >= 2 => Ok((input, Expr::Or(terms))),
+        _ => unreachable!(),
+    }
 }
 
 #[cfg(test)]
@@ -232,19 +240,88 @@ mod tests {
         assert_parse("mc'donalds", "mc'donalds");
         assert_parse("'tag with spaces'", "tag with spaces");
     }
+}
 
-    // #[test]
-    // fn test_tag() {
-    //     fn assert_parse(text: &str, expected: &str) {
-    //         let result = parse_tag(&text).unwrap().1;
-    //         assert_eq!(result, expected);
-    //     }
-    //     fn assert_parse_fails(text: &str) {
-    //         assert!(parse_tag(&text).is_err());
-    //     }
-    //     assert_parse("a", "a");
-    //     assert_parse("abc", "abc");
-    //     assert_parse("mc'donalds", "mc'donalds");
-    //     assert_parse("'tag with spaces'", "tag with spaces");
-    // }
+#[cfg(test)]
+mod expr_tests {
+    use super::*;
+
+    fn and(exprs: Vec<Expr>) -> Expr {
+        Expr::And(exprs)
+    }
+
+    fn or(exprs: Vec<Expr>) -> Expr {
+        Expr::Or(exprs)
+    }
+
+    fn not(expr: Expr) -> Expr {
+        Expr::Not(Box::new(expr))
+    }
+
+    fn tag(name: &str) -> Expr {
+        Expr::Tag(name.into())
+    }
+
+    fn kv<'a, 'b>(key: &'a str, val: &'a str) -> Expr<'b> {
+        Expr::KeyValue(key.to_string().into(), val.to_string().into())
+    }
+
+    fn assert_expr(input: &str, expected: Expr) {
+        let expr = or_terms(input).unwrap();
+        assert_eq!(expr.1, expected);
+        // the entire input must be consumed
+        assert_eq!(expr.0, "");
+    }
+
+    #[test]
+    fn just_and_1() {
+        assert_expr("a b c", and(vec![tag("a"), tag("b"), tag("c")]));
+    }
+    #[test]
+    fn just_and_2() {
+        assert_expr("a & b & c", and(vec![tag("a"), tag("b"), tag("c")]));
+    }
+    #[test]
+    fn just_and_3() {
+        assert_expr("a &b & c", and(vec![tag("a"), tag("&b"), tag("c")]));
+    }
+    #[test]
+    fn just_and_4() {
+        assert_expr("a&b & c", and(vec![tag("a&b"), tag("c")]));
+    }
+
+    #[test]
+    fn just_or_1() {
+        assert_expr("a | b | c", or(vec![tag("a"), tag("b"), tag("c")]));
+    }
+    #[test]
+    fn just_or_2() {
+        assert_expr("a | b | c", and(vec![tag("a"), tag("b"), tag("c")]));
+    }
+    #[test]
+    fn just_or_3() {
+        assert_expr("a | |b | c", and(vec![tag("a"), tag("|b"), tag("c")]));
+    }
+    #[test]
+    fn just_or_4() {
+        assert_expr("a|b | c", and(vec![tag("a|b"), tag("c")]));
+    }
+
+    #[test]
+    fn complex_1() {
+        assert_expr(
+            "a & b | c ( inpath:src/ | d &e ) & f",
+            or(vec![
+                and(vec![tag("a"), tag("b")]),
+                and(vec![
+                    tag("c"),
+                    or(vec![kv("inpath", "src/"), and(vec![tag("d"), tag("&e")])]),
+                    tag("f"),
+                ]),
+            ]),
+        );
+    }
+
+    // let text = "a & b | c ( inpath:src/ | d &e ) & f";
+    // dbg!(kv("a", "b") == kv("a", "b"));
 }
