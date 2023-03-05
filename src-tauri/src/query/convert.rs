@@ -3,7 +3,7 @@
 use super::parser::{parse, Expr};
 use std::borrow::Cow;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 enum WhereClause<'a> {
     FTS(FTSPart<'a>),
     InPath(Cow<'a, str>),
@@ -12,7 +12,7 @@ enum WhereClause<'a> {
     Not(Box<WhereClause<'a>>),
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 enum FTSPart<'a> {
     Phrase(Cow<'a, str>),
     And(Vec<FTSPart<'a>>),
@@ -79,13 +79,21 @@ fn generate_clause(root: Expr) -> WhereClause {
 
             if fts_parts.len() == 0 {
                 // no full text search, just return the sql statements in an OR group
-                WhereClause::And(sql_clauses)
+                if sql_clauses.len() == 1 {
+                    sql_clauses.pop().unwrap()
+                } else {
+                    WhereClause::And(sql_clauses)
+                }
             } else {
                 // combine full text search (if any), then return along with sql statements
                 let combined_fts_parts = FTSPart::combine_and(fts_parts);
-                let combined_fts_clauses = WhereClause::FTS(combined_fts_parts);
-                sql_clauses.push(combined_fts_clauses);
-                WhereClause::And(sql_clauses)
+                let combined_fts_clause = WhereClause::FTS(combined_fts_parts);
+                sql_clauses.insert(0, combined_fts_clause);
+                if sql_clauses.len() == 1 {
+                    sql_clauses.pop().unwrap()
+                } else {
+                    WhereClause::And(sql_clauses)
+                }
             }
         }
         Expr::Or(exprs) => {
@@ -105,13 +113,21 @@ fn generate_clause(root: Expr) -> WhereClause {
 
             if fts_parts.len() == 0 {
                 // no full text search, just return the sql statements in an OR group
-                WhereClause::Or(sql_clauses)
+                if sql_clauses.len() == 0 {
+                    sql_clauses.pop().unwrap()
+                } else {
+                    WhereClause::Or(sql_clauses)
+                }
             } else {
                 // combine full text search (if any), then return along with sql statements
                 let combined_fts_parts = FTSPart::combine_or(fts_parts);
-                let combined_fts_clauses = WhereClause::FTS(combined_fts_parts);
-                sql_clauses.push(combined_fts_clauses);
-                WhereClause::Or(sql_clauses)
+                let combined_fts_clause = WhereClause::FTS(combined_fts_parts);
+                sql_clauses.insert(0, combined_fts_clause);
+                if sql_clauses.len() == 1 {
+                    sql_clauses.pop().unwrap()
+                } else {
+                    WhereClause::Or(sql_clauses)
+                }
             }
         }
         Expr::Not(expr) => {
@@ -133,14 +149,184 @@ fn generate_clause(root: Expr) -> WhereClause {
     }
 }
 
+#[rustfmt::skip]
 #[cfg(test)]
 mod tests {
     use super::*;
 
+    fn fts(part: FTSPart) -> WhereClause { WhereClause::FTS(part) }
+    fn inpath(path: &str) -> WhereClause { WhereClause::InPath(Cow::from(path)) }
+    fn and(clauses: Vec<WhereClause>) -> WhereClause { WhereClause::And(clauses) }
+    fn or(clauses: Vec<WhereClause>) -> WhereClause { WhereClause::Or(clauses) }
+    fn not(clause: WhereClause) -> WhereClause { WhereClause::Not(Box::new(clause)) }
+
+    fn ftsphrase(name: &str) -> FTSPart { FTSPart::Phrase(Cow::from(name)) }
+    fn ftsand(clauses: Vec<FTSPart>) -> FTSPart { FTSPart::And(clauses) }
+    fn ftsor(clauses: Vec<FTSPart>) -> FTSPart { FTSPart::Or(clauses) }
+    fn ftsnot(clause: FTSPart) -> FTSPart { FTSPart::Not(Box::new(clause)) }
+
+    fn assert_clause(query: &str, expected: WhereClause) {
+        let expr = parse(query).unwrap();
+        let clause = generate_clause(expr);
+        assert_eq!(clause, expected);
+    }
+
     #[test]
-    fn my_test() {
-        dbg!(generate_clause(
-            parse("a -b inpath:123 | -c (d | -foo)").unwrap()
-        ));
+    fn fts_1() {
+        assert_clause(
+            "a b c",
+            fts(ftsand(vec![ftsphrase("a"), ftsphrase("b"), ftsphrase("c")])),
+        );
+    }
+
+    #[test]
+    fn fts_2() {
+        assert_clause(
+            "a | b -c",
+            fts(
+                ftsor(vec![
+                    ftsphrase("a"),
+                    ftsand(vec![
+                        ftsphrase("b"),
+                        ftsnot(ftsphrase("c")),
+                    ]),
+                ])
+            ),
+        );
+    }
+
+    #[test]
+    fn fts_3() {
+        assert_clause(
+            "(a | b) c",
+            fts(
+                ftsand(vec![
+                    ftsor(vec![
+                        ftsphrase("a"),
+                        ftsphrase("b"),
+                    ]),
+                ftsphrase("c"),
+            ])),
+        );
+    }
+
+    #[test]
+    fn fts_4() {
+        assert_clause(
+            "-(a | b c) d | e",
+            fts(
+                ftsor(vec![
+                    ftsand(vec![
+                        ftsnot(
+                            ftsor(vec![
+                                ftsphrase("a"),
+                                ftsand(vec![
+                                    ftsphrase("b"),
+                                    ftsphrase("c"),
+                                ])
+                            ])
+                        ),
+                        ftsphrase("d"),
+                    ]),
+                    ftsphrase("e"),
+                ]),
+            ),
+        );
+    }
+
+    #[test]
+    fn fts_5() {
+        assert_clause(
+            "a",
+            fts(ftsphrase("a")),
+        );
+    }
+
+    #[test]
+    fn inpath_1() {
+        assert_clause(
+            "inpath:a",
+            inpath("a"),
+        );
+    }
+
+    #[test]
+    fn inpath_2() {
+        assert_clause(
+            "inpath:a inpath:b inpath:c",
+            and(vec![inpath("a"), inpath("b"), inpath("c")]),
+        );
+    }
+
+    #[test]
+    fn inpath_3() {
+        assert_clause(
+            "inpath:a | inpath:b inpath:c",
+            or(vec![inpath("a"), and(vec![inpath("b"), inpath("c")])]),
+        );
+    }
+
+    #[test]
+    fn inpath_4() {
+        assert_clause(
+            "(inpath:a | inpath:b) inpath:c",
+            and(vec![or(vec![inpath("a"), inpath("b")]), inpath("c")]),
+        );
+    }
+
+    #[test]
+    fn inpath_5() {
+        assert_clause(
+            "-(inpath:a | -inpath:b) inpath:c",
+            and(vec![not(or(vec![inpath("a"), not(inpath("b"))])), inpath("c")]),
+        );
+    }
+
+    #[test]
+    fn common_1() {
+        assert_clause(
+            "a b inpath:c",
+            and(vec![
+                fts(ftsand(vec![ftsphrase("a"), ftsphrase("b")])),
+                inpath("c"),
+            ]),
+        );
+    }
+
+    #[test]
+    fn common_2() {
+        assert_clause(
+            "a | b -inpath:c",
+            or(vec![
+                fts(ftsphrase("a")),
+                and(vec![
+                    fts(ftsphrase("b")),
+                    not(inpath("c")),
+                ]),
+            ]),
+        );
+    }
+
+    #[test]
+    fn common_3() {
+        assert_clause(
+            "a -(b e inpath:1) | -d e inpath:0",
+            or(vec![
+                and(vec![
+                    fts(ftsphrase("a")),
+                    not(and(vec![
+                        fts(ftsand(vec![ftsphrase("b"), ftsphrase("e")])),
+                        inpath("1"),
+                    ])),
+                ]),
+                and(vec![
+                    fts(ftsand(vec![
+                        ftsnot(ftsphrase("d")),
+                        ftsphrase("e"),
+                    ])),
+                    inpath("0"),
+                ]),
+            ]),
+        );
     }
 }
