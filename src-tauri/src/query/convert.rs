@@ -1,7 +1,7 @@
 // TODO: Make this module be able to handle complicated queries like in src/repo.rs:478
 
 use super::parser::{parse, Expr};
-use std::borrow::Cow;
+use std::borrow::{Borrow, Cow};
 
 #[derive(Debug, PartialEq, Eq)]
 enum WhereClause<'a> {
@@ -64,7 +64,7 @@ impl<'a> FTSPart<'a> {
 /// NOTE: This assumes all AND and OR groups don't have nested groups of the same type. i.e. An
 /// AND group doesn't directly contain another AND group, but may contain an OR group (which can
 /// contain an AND group).
-fn generate_clause(root: Expr) -> WhereClause {
+fn generate_clause<'a>(root: &'a Expr<'a>) -> WhereClause<'a> {
     match root {
         Expr::And(exprs) => {
             // this vector must be non-empty
@@ -135,16 +135,22 @@ fn generate_clause(root: Expr) -> WhereClause {
             }
         }
         Expr::Not(expr) => {
-            let clause = generate_clause(*expr);
+            let clause = generate_clause(expr);
             if let WhereClause::FTS(ftspart) = clause {
                 WhereClause::FTS(FTSPart::Not(Box::new(ftspart)))
             } else {
                 WhereClause::Not(Box::new(clause))
             }
         }
-        Expr::Tag(name) => WhereClause::FTS(FTSPart::Phrase(name)),
+        Expr::Tag(name) => {
+            let name: &str = name.borrow();
+            WhereClause::FTS(FTSPart::Phrase(Cow::from(name)))
+        }
         Expr::KeyValue(key, val) => match key.as_ref() {
-            "inpath" => WhereClause::InPath(val.into()),
+            "inpath" => {
+                let val: &str = val.borrow();
+                WhereClause::InPath(Cow::from(val))
+            }
             _ => panic!(
                 "Unrecognised key-value pair received: {:?} = {:?}",
                 key, val
@@ -171,7 +177,7 @@ mod tests {
 
     fn assert_clause(query: &str, expected: WhereClause) {
         let expr = parse(query).unwrap();
-        let clause = generate_clause(expr);
+        let clause = generate_clause(&expr);
         assert_eq!(clause, expected);
     }
 
