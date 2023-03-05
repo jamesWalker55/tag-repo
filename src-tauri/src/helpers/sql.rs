@@ -10,7 +10,8 @@ pub(crate) fn escape_fts5_string<'a>(text: impl Into<Cow<'a, str>>) -> Cow<'a, s
         c == '\'' || c == '"'
     }
     if text.contains(is_quote_char) {
-        let mut result = String::with_capacity(text.len());
+        // add 1 to existing length, we already know it contains a quote
+        let mut result = String::with_capacity(text.len() + 1);
         for char in text.chars() {
             match char {
                 '\'' => {
