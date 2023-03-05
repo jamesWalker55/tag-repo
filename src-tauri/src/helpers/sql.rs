@@ -1,23 +1,33 @@
-// This function can be optimised further, but I'm lazy at the moment:
+use std::borrow::Cow;
+
+// Cow optimisation from:
 // https://lise-henry.github.io/articles/optimising_strings.html
-// Use the Cow implementation, since most of the input will not contain quotes
 /// Escape a string to be used in a FTS5 query. This duplicates all quotes (both single and double).
-pub(crate) fn escape_fts5_string(text: &str) -> String {
-    let mut result = String::with_capacity(text.len());
-    for char in text.chars() {
-        match char {
-            '\'' => {
-                result.push_str("''");
-            }
-            '"' => {
-                result.push_str(r#""""#);
-            }
-            _ => {
-                result.push(char);
+pub(crate) fn escape_fts5_string<'a>(text: impl Into<Cow<'a, str>>) -> Cow<'a, str> {
+    let text = text.into();
+
+    fn is_quote_char(c: char) -> bool {
+        c == '\'' || c == '"'
+    }
+    if text.contains(is_quote_char) {
+        let mut result = String::with_capacity(text.len());
+        for char in text.chars() {
+            match char {
+                '\'' => {
+                    result.push_str("''");
+                }
+                '"' => {
+                    result.push_str(r#""""#);
+                }
+                _ => {
+                    result.push(char);
+                }
             }
         }
+        result.into()
+    } else {
+        text.into()
     }
-    result
 }
 
 /// Escape a string to be used in a LIKE query. This prefixes any percent ("%"), underscore ("_"),
@@ -52,4 +62,29 @@ pub(crate) fn escape_like_pattern(text: &str, escape_char: char) -> String {
         }
     }
     result
+}
+
+#[cfg(test)]
+mod test_fts5 {
+    use super::*;
+
+    #[test]
+    fn no_quotes() {
+        assert_eq!(escape_fts5_string("asd"), "asd",)
+    }
+
+    #[test]
+    fn single_quotes() {
+        assert_eq!(escape_fts5_string("'as'd"), "''as''d",)
+    }
+
+    #[test]
+    fn double_quotes() {
+        assert_eq!(escape_fts5_string(r#""as"d"#), r#"""as""d"#,)
+    }
+
+    #[test]
+    fn both_quotes() {
+        assert_eq!(escape_fts5_string(r#""a's"d'"#), r#"""a''s""d''"#,)
+    }
 }
