@@ -386,6 +386,10 @@ mod expr_tests {
     #[test] fn parens_3() { assert_expr("( a b ) c", and(vec![t("a"), t("b"), t("c")])); }
     #[test] fn parens_4() { assert_expr("c ( a b )", and(vec![t("c"), t("a"), t("b")])); }
 
+    #[test] fn string_tags_1() { assert_expr(r#""c" ( 'a' "b" )"#, and(vec![t("c"), t("a"), t("b")])); }
+    #[test] fn string_tags_2() { assert_expr(r#""c ( 'a' b )""#, t("c ( 'a' b )")); }
+    #[test] fn string_tags_3() { assert_expr(r#" as "#, t("as")); }
+
     #[test]
     fn common_1() {
         assert_expr(
