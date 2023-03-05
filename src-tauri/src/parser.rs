@@ -3,10 +3,10 @@
 
 use nom::branch::alt;
 use nom::bytes::complete::{is_not, tag as nom_tag};
-use nom::character::complete::{char as nom_char, none_of, one_of, space0 as space};
+use nom::character::complete::{char as nom_char, none_of, one_of, space0, space1};
 use nom::combinator::{map, opt, recognize, value};
 use nom::multi::{fold_many0, many0};
-use nom::sequence::{delimited, pair, preceded, separated_pair};
+use nom::sequence::{delimited, pair, preceded, separated_pair, tuple};
 use nom::IResult;
 use std::borrow::Cow;
 
@@ -24,6 +24,7 @@ fn single_quoted_string_fragment(input: &str) -> IResult<&str, Cow<str>> {
     ))(input)
 }
 
+/// string = '...' | "..."
 fn string(input: &str) -> IResult<&str, String> {
     let (_, quote_char): (_, char) = one_of("'\"")(input)?;
 
@@ -45,12 +46,23 @@ fn string(input: &str) -> IResult<&str, String> {
     delimited(nom_char(quote_char), build_string, nom_char(quote_char))(input)
 }
 
+/// literal = [^"' -()] [^ ()]*
+///
+/// Literals cannot start with a quote (', "), a minus (-), or parentheses ("(", ")").
+///
+/// Literals cannot contain spaces (" "), or parentheses ("(", ")").
 fn literal(input: &str) -> IResult<&str, &str> {
-    recognize(pair(
-        none_of("\"' :|&"),
-        // take_till(|x| x == ' ' || x == ':'),
-        opt(is_not(" :|&")),
-    ))(input)
+    let (new_input, name) = recognize(pair(none_of("\"' -()"), opt(is_not(" ()"))))(input)?;
+
+    // disallow operators as tags
+    if ["|", "(", ")"].contains(&name) {
+        Err(nom::Err::Error(nom::error::Error {
+            input,
+            code: nom::error::ErrorKind::IsNot,
+        }))
+    } else {
+        Ok((new_input, name))
+    }
 }
 
 fn string_or_literal<'a>(input: &'a str) -> IResult<&str, Cow<'a, str>> {
@@ -69,24 +81,29 @@ enum Expr<'a> {
     KeyValue(Cow<'a, str>, Cow<'a, str>),
 }
 
+/// tag = string | literal
 fn tag(input: &str) -> IResult<&str, Expr> {
     map(string_or_literal, Expr::Tag)(input)
 }
 
+/// allowed_key = "inpath"
+fn allowed_key(input: &str) -> IResult<&str, &str> {
+    nom_tag("inpath")(input)
+}
+
+/// key_val = allowed_key ":" (string | literal)
 fn key_val<'a>(input: &'a str) -> IResult<&str, Expr<'a>> {
     map(
-        separated_pair(literal, nom_char(':'), string_or_literal),
+        separated_pair(allowed_key, nom_char(':'), string_or_literal),
         |(k, v)| Expr::KeyValue(Cow::from(k), v),
     )(input)
 }
 
 /// Parse an expression wrapped with parenthesis "(...)"
+///
+/// parens = "(" or_terms ")"
 fn parens(input: &str) -> IResult<&str, Expr> {
-    delimited(
-        space,
-        delimited(nom_char('('), or_terms, nom_char(')')),
-        space,
-    )(input)
+    delimited(pair(nom_char('('), space0), or_terms, pair(space0, nom_char(')')))(input)
 }
 
 /// Parse a single "factor", which is a singular expression, whether that is a tag, key-value, or a
@@ -95,7 +112,7 @@ fn parens(input: &str) -> IResult<&str, Expr> {
 /// This function is "unsigned", that is it will only check for positive expressions. Negated
 /// expressions are not checked, e.g. `a -b -c` only checks `a`.
 fn unsigned_factor(input: &str) -> IResult<&str, Expr> {
-    alt((parens, delimited(space, alt((key_val, tag)), space)))(input)
+    alt((parens, key_val, tag))(input)
 }
 
 /// Parse a single "factor", which is a singular expression, whether that is a tag, key-value, or a
@@ -107,13 +124,13 @@ fn unsigned_factor(input: &str) -> IResult<&str, Expr> {
 /// E.g. `a -b -c` will check `a`, `-b` and `-c`
 fn factor(input: &str) -> IResult<&str, Expr> {
     alt((
-        // normal factor
-        unsigned_factor,
         // negated factor
         map(
-            preceded(space, preceded(nom_char('-'), unsigned_factor)),
+            preceded(pair(nom_char('-'), space0), unsigned_factor),
             |x| Expr::Not(Box::new(x)),
         ),
+        // normal factor
+        unsigned_factor,
     ))(input)
 }
 
@@ -123,12 +140,15 @@ fn and_terms(input: &str) -> IResult<&str, Expr> {
     // read an initial factor first
     let (input, init) = factor(input)?;
 
-    let (input, mut terms) = many0(alt((preceded(nom_char('&'), factor), factor)))(input)?;
-    terms.splice(0..0, vec![init]);
+    let (input, mut terms) = many0(preceded(space0, factor))(input)?;
 
     match terms.len() {
-        1 => Ok((input, terms.pop().unwrap())),
-        x if x >= 2 => Ok((input, Expr::And(terms))),
+        0 => Ok((input, init)),
+        x if x > 0 => {
+            // push `init` to the front of the list
+            terms.splice(0..0, vec![init]);
+            Ok((input, Expr::And(terms)))
+        }
         _ => unreachable!(),
     }
 }
@@ -139,16 +159,21 @@ fn and_terms(input: &str) -> IResult<&str, Expr> {
 fn or_terms(input: &str) -> IResult<&str, Expr> {
     let (input, init) = and_terms(input)?;
 
-    let (input, mut terms) = many0(preceded(nom_char('|'), and_terms))(input)?;
-    terms.splice(0..0, vec![init]);
+    let (input, mut terms) =
+        many0(preceded(delimited(space1, nom_tag("|"), space1), and_terms))(input)?;
 
     match terms.len() {
-        1 => Ok((input, terms.pop().unwrap())),
-        x if x >= 2 => Ok((input, Expr::Or(terms))),
+        0 => Ok((input, init)),
+        x if x > 0 => {
+            // push `init` to the front of the list
+            terms.splice(0..0, vec![init]);
+            Ok((input, Expr::Or(terms)))
+        }
         _ => unreachable!(),
     }
 }
 
+#[rustfmt::skip]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -193,7 +218,10 @@ mod tests {
             assert!(key_val(&text).is_err());
         }
 
-        assert_parse(r#"inpath:src/"#, ("inpath", "src/"));
+        assert_parse(
+            r#"inpath:src/"#,
+            ("inpath", "src/"),
+        );
         assert_parse(
             r#"inpath:"D:/Audio Samples/""#,
             ("inpath", "D:/Audio Samples/"),
@@ -216,8 +244,8 @@ mod tests {
         }
         assert_parse("a", "a");
         assert_parse("abc", "abc");
-        assert_parse("a:sd qwe", "a");
-        assert_parse_fails(":sd qwe");
+        assert_parse("a:sd qwe", "a:sd");
+        assert_parse(":sd qwe", ":sd");
         assert_parse("m'lady", "m'lady");
         assert_parse_fails("'mlady");
     }
@@ -232,35 +260,29 @@ mod tests {
                 unreachable!();
             }
         }
-        // fn assert_parse_fails(text: &str) {
-        //     assert!(parse_tag(&text).is_err());
-        // }
+        fn assert_parse_fails(text: &str) {
+            assert!(tag(&text).is_err());
+        }
         assert_parse("a", "a");
         assert_parse("abc", "abc");
         assert_parse("mc'donalds", "mc'donalds");
         assert_parse("'tag with spaces'", "tag with spaces");
+        assert_parse_fails("'mlady");
     }
 }
 
+#[rustfmt::skip]
 #[cfg(test)]
 mod expr_tests {
     use super::*;
 
-    fn and(exprs: Vec<Expr>) -> Expr {
-        Expr::And(exprs)
-    }
+    fn and(exprs: Vec<Expr>) -> Expr { Expr::And(exprs) }
 
-    fn or(exprs: Vec<Expr>) -> Expr {
-        Expr::Or(exprs)
-    }
+    fn or(exprs: Vec<Expr>) -> Expr { Expr::Or(exprs) }
 
-    fn not(expr: Expr) -> Expr {
-        Expr::Not(Box::new(expr))
-    }
+    fn not(expr: Expr) -> Expr { Expr::Not(Box::new(expr)) }
 
-    fn tag(name: &str) -> Expr {
-        Expr::Tag(name.into())
-    }
+    fn tag(name: &str) -> Expr { Expr::Tag(name.into()) }
 
     fn kv<'a, 'b>(key: &'a str, val: &'a str) -> Expr<'b> {
         Expr::KeyValue(key.to_string().into(), val.to_string().into())
@@ -273,55 +295,39 @@ mod expr_tests {
         assert_eq!(expr.0, "");
     }
 
-    #[test]
-    fn just_and_1() {
-        assert_expr("a b c", and(vec![tag("a"), tag("b"), tag("c")]));
-    }
-    #[test]
-    fn just_and_2() {
-        assert_expr("a & b & c", and(vec![tag("a"), tag("b"), tag("c")]));
-    }
-    #[test]
-    fn just_and_3() {
-        assert_expr("a &b & c", and(vec![tag("a"), tag("&b"), tag("c")]));
-    }
-    #[test]
-    fn just_and_4() {
-        assert_expr("a&b & c", and(vec![tag("a&b"), tag("c")]));
-    }
+    #[test] fn just_and_1() { assert_expr("a b c", and(vec![tag("a"), tag("b"), tag("c")])); }
+    #[test] fn just_and_2() { assert_expr("a & b c", and(vec![tag("a"), tag("&"), tag("b"), tag("c")])); }
+    #[test] fn just_and_3() { assert_expr("a &b & c", and(vec![tag("a"), tag("&b"), tag("&"), tag("c")]), ); }
+    #[test] fn just_and_4() { assert_expr("a&b&c", tag("a&b&c")); }
 
-    #[test]
-    fn just_or_1() {
-        assert_expr("a | b | c", or(vec![tag("a"), tag("b"), tag("c")]));
-    }
-    #[test]
-    fn just_or_2() {
-        assert_expr("a | b | c", and(vec![tag("a"), tag("b"), tag("c")]));
-    }
-    #[test]
-    fn just_or_3() {
-        assert_expr("a | |b | c", and(vec![tag("a"), tag("|b"), tag("c")]));
-    }
-    #[test]
-    fn just_or_4() {
-        assert_expr("a|b | c", and(vec![tag("a|b"), tag("c")]));
-    }
+    #[test] fn just_or_1() { assert_expr("a | b | c", or(vec![tag("a"), tag("b"), tag("c")])); }
+    #[test] fn just_or_2() { assert_expr("a | b | c", or(vec![tag("a"), tag("b"), tag("c")])); }
+    #[test] fn just_or_3() { assert_expr("a | |b | c", or(vec![tag("a"), tag("|b"), tag("c")])); }
+    #[test] fn just_or_4() { assert_expr("a|b | c", or(vec![tag("a|b"), tag("c")])); }
 
     #[test]
     fn complex_1() {
         assert_expr(
             "a & b | c ( inpath:src/ | d &e ) & f",
             or(vec![
-                and(vec![tag("a"), tag("b")]),
+                and(vec![
+                    tag("a"),
+                    tag("&"),
+                    tag("b")
+                ]),
                 and(vec![
                     tag("c"),
-                    or(vec![kv("inpath", "src/"), and(vec![tag("d"), tag("&e")])]),
+                    or(vec![
+                        kv("inpath", "src/"),
+                        and(vec![
+                            tag("d"),
+                            tag("&e"),
+                        ]),
+                    ]),
+                    tag("&"),
                     tag("f"),
                 ]),
             ]),
         );
     }
-
-    // let text = "a & b | c ( inpath:src/ | d &e ) & f";
-    // dbg!(kv("a", "b") == kv("a", "b"));
 }
