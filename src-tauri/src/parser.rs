@@ -335,7 +335,7 @@ mod expr_tests {
 
     fn not(expr: Expr) -> Expr { Expr::Not(Box::new(expr)) }
 
-    fn tag(name: &str) -> Expr { Expr::Tag(name.into()) }
+    fn t(name: &str) -> Expr { Expr::Tag(name.into()) }
 
     fn kv<'a, 'b>(key: &'a str, val: &'a str) -> Expr<'b> {
         Expr::KeyValue(key.to_string().into(), val.to_string().into())
@@ -348,33 +348,33 @@ mod expr_tests {
         assert_eq!(expr.0, "");
     }
 
-    #[test] fn just_and_1() { assert_expr("a b c", and(vec![tag("a"), tag("b"), tag("c")])); }
-    #[test] fn just_and_2() { assert_expr("a & b c", and(vec![tag("a"), tag("&"), tag("b"), tag("c")])); }
-    #[test] fn just_and_3() { assert_expr("a &b & c", and(vec![tag("a"), tag("&b"), tag("&"), tag("c")]), ); }
-    #[test] fn just_and_4() { assert_expr("a&b&c", tag("a&b&c")); }
+    #[test] fn just_and_1() { assert_expr("a b c", and(vec![t("a"), t("b"), t("c")])); }
+    #[test] fn just_and_2() { assert_expr("a & b c", and(vec![t("a"), t("&"), t("b"), t("c")])); }
+    #[test] fn just_and_3() { assert_expr("a &b & c", and(vec![t("a"), t("&b"), t("&"), t("c")]), ); }
+    #[test] fn just_and_4() { assert_expr("a&b&c", t("a&b&c")); }
 
-    #[test] fn just_or_1() { assert_expr("a | b | c", or(vec![tag("a"), tag("b"), tag("c")])); }
-    #[test] fn just_or_2() { assert_expr("a | b | c", or(vec![tag("a"), tag("b"), tag("c")])); }
-    #[test] fn just_or_3() { assert_expr("a | |b | c", or(vec![tag("a"), tag("|b"), tag("c")])); }
-    #[test] fn just_or_4() { assert_expr("a|b | c", or(vec![tag("a|b"), tag("c")])); }
+    #[test] fn just_or_1() { assert_expr("a | b | c", or(vec![t("a"), t("b"), t("c")])); }
+    #[test] fn just_or_2() { assert_expr("a | b | c", or(vec![t("a"), t("b"), t("c")])); }
+    #[test] fn just_or_3() { assert_expr("a | |b | c", or(vec![t("a"), t("|b"), t("c")])); }
+    #[test] fn just_or_4() { assert_expr("a|b | c", or(vec![t("a|b"), t("c")])); }
 
-    #[test] fn and_or_1() { assert_expr("a| b | c", or(vec![and(vec![tag("a|"), tag("b")]), tag("c")])); }
-    #[test] fn and_or_2() { assert_expr("a b | c | d e f", or(vec![and(vec![tag("a"), tag("b")]), tag("c"), and(vec![tag("d"), tag("e"), tag("f")])])); }
+    #[test] fn and_or_1() { assert_expr("a| b | c", or(vec![and(vec![t("a|"), t("b")]), t("c")])); }
+    #[test] fn and_or_2() { assert_expr("a b | c | d e f", or(vec![and(vec![t("a"), t("b")]), t("c"), and(vec![t("d"), t("e"), t("f")])])); }
 
-    #[test] fn parens_1() { assert_expr("(a b) | c", or(vec![and(vec![tag("a"), tag("b")]), tag("c")])); }
-    #[test] fn parens_2() { assert_expr("(a b) c", and(vec![tag("a"), tag("b"), tag("c")])); }
-    #[test] fn parens_3() { assert_expr("( a b ) c", and(vec![tag("a"), tag("b"), tag("c")])); }
-    #[test] fn parens_4() { assert_expr("c ( a b )", and(vec![tag("c"), tag("a"), tag("b")])); }
+    #[test] fn parens_1() { assert_expr("(a b) | c", or(vec![and(vec![t("a"), t("b")]), t("c")])); }
+    #[test] fn parens_2() { assert_expr("(a b) c", and(vec![t("a"), t("b"), t("c")])); }
+    #[test] fn parens_3() { assert_expr("( a b ) c", and(vec![t("a"), t("b"), t("c")])); }
+    #[test] fn parens_4() { assert_expr("c ( a b )", and(vec![t("c"), t("a"), t("b")])); }
 
     #[test]
     fn common_1() {
         assert_expr(
             "kick drum (black_octopus_sounds | inpath:'black octopus' | inpath:'black-octopus')",
             and(vec![
-                tag("kick"),
-                tag("drum"),
+                t("kick"),
+                t("drum"),
                 or(vec![
-                    tag("black_octopus_sounds"),
+                    t("black_octopus_sounds"),
                     kv("inpath", "black octopus"),
                     kv("inpath", "black-octopus"),
                 ]),
@@ -388,21 +388,21 @@ mod expr_tests {
             "a & b | c ( inpath:src/ | d &e ) & f",
             or(vec![
                 and(vec![
-                    tag("a"),
-                    tag("&"),
-                    tag("b")
+                    t("a"),
+                    t("&"),
+                    t("b")
                 ]),
                 and(vec![
-                    tag("c"),
+                    t("c"),
                     or(vec![
                         kv("inpath", "src/"),
                         and(vec![
-                            tag("d"),
-                            tag("&e"),
+                            t("d"),
+                            t("&e"),
                         ]),
                     ]),
-                    tag("&"),
-                    tag("f"),
+                    t("&"),
+                    t("f"),
                 ]),
             ]),
         );
