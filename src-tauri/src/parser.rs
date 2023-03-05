@@ -89,7 +89,7 @@ fn string_or_literal<'a>(input: &'a str) -> IResult<&str, Cow<'a, str>> {
 }
 
 #[derive(Debug, PartialEq, Eq)]
-enum Expr<'a> {
+pub(crate) enum Expr<'a> {
     And(Vec<Expr<'a>>),
     Or(Vec<Expr<'a>>),
     Not(Box<Expr<'a>>),
@@ -190,7 +190,6 @@ fn and_terms(input: &str) -> IResult<&str, Expr> {
     }
 }
 
-/// Main entry point for the parser.
 /// Process OR operators.
 /// (OR has the lower precedence than AND, so it is the one that calls AND)
 fn or_terms(input: &str) -> IResult<&str, Expr> {
@@ -223,6 +222,29 @@ fn or_terms(input: &str) -> IResult<&str, Expr> {
         Ok((input, Expr::Or(flattened_terms)))
     } else {
         unreachable!();
+    }
+}
+
+#[derive(Debug)]
+pub(crate) enum ParseError<'a> {
+    NomError(nom::Err<nom::error::Error<&'a str>>),
+    InputNotFullyConsumed(&'a str, Expr<'a>),
+}
+
+impl<'a> From<nom::Err<nom::error::Error<&'a str>>> for ParseError<'a> {
+    fn from(value: nom::Err<nom::error::Error<&'a str>>) -> Self {
+        ParseError::NomError(value)
+    }
+}
+
+/// Main entry point for the parser.
+/// Calls `or_terms` and skips padded spaces in the beginning and end of input.
+pub(crate) fn parse(input: &str) -> Result<Expr, ParseError> {
+    let (unparsed_input, expr) = delimited(space0, or_terms, space0)(input)?;
+    if unparsed_input.len() > 0 {
+        Err(ParseError::InputNotFullyConsumed(unparsed_input, expr))
+    } else {
+        Ok(expr)
     }
 }
 
@@ -342,10 +364,8 @@ mod expr_tests {
     }
 
     fn assert_expr(input: &str, expected: Expr) {
-        let expr = or_terms(input).unwrap();
-        assert_eq!(expr.1, expected);
-        // the entire input must be consumed
-        assert_eq!(expr.0, "");
+        let expr = parse(input).unwrap();
+        assert_eq!(expr, expected);
     }
 
     #[test] fn just_and_1() { assert_expr("a b c", and(vec![t("a"), t("b"), t("c")])); }
