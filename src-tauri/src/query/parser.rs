@@ -390,6 +390,19 @@ mod expr_tests {
     #[test] fn string_tags_2() { assert_expr(r#""c ( 'a' b )""#, t("c ( 'a' b )")); }
     #[test] fn string_tags_3() { assert_expr(r#" as "#, t("as")); }
 
+    #[test] fn not_1() { assert_expr("a b -e inpath:1 | d e inpath:0",
+        or(vec![
+            and(vec![t("a"), t("b"), not(t("e")), kv("inpath", "1")]),
+            and(vec![t("d"), t("e"), kv("inpath", "0")]),
+        ]),
+    ); }
+    #[test] fn not_2() { assert_expr("a -(b e inpath:1) | -d e inpath:0",
+        or(vec![
+            and(vec![t("a"), not(and(vec![t("b"), t("e"), kv("inpath", "1")]))]),
+            and(vec![not(t("d")), t("e"), kv("inpath", "0")]),
+        ]),
+    ); }
+
     #[test]
     fn common_1() {
         assert_expr(
