@@ -1,4 +1,3 @@
-mod parser;
 mod query;
 mod repo;
 mod scan;
