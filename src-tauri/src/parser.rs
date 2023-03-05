@@ -1,12 +1,28 @@
 //! This code is based on nom's arithmetic example:
 //! https://github.com/rust-bakery/nom/blob/main/tests/arithmetic.rs
+//!
+//! TODO: Simplify expressions using
+//! [Disjunctive normal form](https://en.wikipedia.org/wiki/Disjunctive_normal_form). This
+//! simplifies expressions into many AND groups, joined by a single OR group.
+//!
+//! You can test DNF with Sympy:
+//!
+//! ```python
+//! from sympy.logic import simplify_logic
+//! a,b,c,d,e,f = symbols("a,b,c,d,e,f")
+//!
+//! eq = a & b | c & ( Symbol("inpath:src/") | d & e ) & f
+//!
+//! simplify_logic(eq, form='dnf', force=True)
+//! // => (a ∧ b) ∨ (c ∧ f ∧ inpath:src/) ∨ (c ∧ d ∧ e ∧ f)
+//! ```
 
 use nom::branch::alt;
 use nom::bytes::complete::{is_not, tag as nom_tag};
 use nom::character::complete::{char as nom_char, none_of, one_of, space0, space1};
 use nom::combinator::{map, opt, recognize, value};
-use nom::multi::{fold_many0, many0};
-use nom::sequence::{delimited, pair, preceded, separated_pair, tuple};
+use nom::multi::fold_many0;
+use nom::sequence::{delimited, pair, preceded, separated_pair};
 use nom::IResult;
 use std::borrow::Cow;
 
@@ -103,7 +119,11 @@ fn key_val<'a>(input: &'a str) -> IResult<&str, Expr<'a>> {
 ///
 /// parens = "(" or_terms ")"
 fn parens(input: &str) -> IResult<&str, Expr> {
-    delimited(pair(nom_char('('), space0), or_terms, pair(space0, nom_char(')')))(input)
+    delimited(
+        pair(nom_char('('), space0),
+        or_terms,
+        pair(space0, nom_char(')')),
+    )(input)
 }
 
 /// Parse a single "factor", which is a singular expression, whether that is a tag, key-value, or a
@@ -137,19 +157,36 @@ fn factor(input: &str) -> IResult<&str, Expr> {
 /// Process AND operators. This also handles implicit ANDs.
 /// (AND has the highest precedence)
 fn and_terms(input: &str) -> IResult<&str, Expr> {
-    // read an initial factor first
-    let (input, init) = factor(input)?;
+    // read an initial term first
+    let (input, first_term) = factor(input)?;
 
-    let (input, mut terms) = many0(preceded(space0, factor))(input)?;
+    let mut all_terms = vec![first_term];
 
-    match terms.len() {
-        0 => Ok((input, init)),
-        x if x > 0 => {
-            // push `init` to the front of the list
-            terms.splice(0..0, vec![init]);
-            Ok((input, Expr::And(terms)))
+    // read remaining terms (if any)
+    let (input, _) = fold_many0(
+        preceded(space0, factor),
+        || (),
+        |_, item| all_terms.push(item),
+    )(input)?;
+
+    if all_terms.len() == 1 {
+        // just return the first term
+        return Ok((input, all_terms.pop().unwrap()));
+    } else if all_terms.len() > 1 {
+        // wrap all terms with an AND group, flattening any inner AND groups
+        let mut flattened_terms = vec![];
+
+        for term in all_terms {
+            if let Expr::And(mut x) = term {
+                flattened_terms.append(&mut x);
+            } else {
+                flattened_terms.push(term);
+            }
         }
-        _ => unreachable!(),
+
+        Ok((input, Expr::And(flattened_terms)))
+    } else {
+        unreachable!();
     }
 }
 
@@ -157,19 +194,35 @@ fn and_terms(input: &str) -> IResult<&str, Expr> {
 /// Process OR operators.
 /// (OR has the lower precedence than AND, so it is the one that calls AND)
 fn or_terms(input: &str) -> IResult<&str, Expr> {
-    let (input, init) = and_terms(input)?;
+    let (input, first_term) = and_terms(input)?;
 
-    let (input, mut terms) =
-        many0(preceded(delimited(space1, nom_tag("|"), space1), and_terms))(input)?;
+    let mut all_terms = vec![first_term];
 
-    match terms.len() {
-        0 => Ok((input, init)),
-        x if x > 0 => {
-            // push `init` to the front of the list
-            terms.splice(0..0, vec![init]);
-            Ok((input, Expr::Or(terms)))
+    // read remaining terms (if any)
+    let (input, _) = fold_many0(
+        preceded(delimited(space1, nom_tag("|"), space1), and_terms),
+        || (),
+        |_, item| all_terms.push(item),
+    )(input)?;
+
+    if all_terms.len() == 1 {
+        // just return the first term
+        return Ok((input, all_terms.pop().unwrap()));
+    } else if all_terms.len() > 1 {
+        // wrap all terms with an OR group, flattening any inner OR groups
+        let mut flattened_terms = vec![];
+
+        for term in all_terms {
+            if let Expr::Or(mut x) = term {
+                flattened_terms.append(&mut x);
+            } else {
+                flattened_terms.push(term);
+            }
         }
-        _ => unreachable!(),
+
+        Ok((input, Expr::Or(flattened_terms)))
+    } else {
+        unreachable!();
     }
 }
 
@@ -304,6 +357,30 @@ mod expr_tests {
     #[test] fn just_or_2() { assert_expr("a | b | c", or(vec![tag("a"), tag("b"), tag("c")])); }
     #[test] fn just_or_3() { assert_expr("a | |b | c", or(vec![tag("a"), tag("|b"), tag("c")])); }
     #[test] fn just_or_4() { assert_expr("a|b | c", or(vec![tag("a|b"), tag("c")])); }
+
+    #[test] fn and_or_1() { assert_expr("a| b | c", or(vec![and(vec![tag("a|"), tag("b")]), tag("c")])); }
+    #[test] fn and_or_2() { assert_expr("a b | c | d e f", or(vec![and(vec![tag("a"), tag("b")]), tag("c"), and(vec![tag("d"), tag("e"), tag("f")])])); }
+
+    #[test] fn parens_1() { assert_expr("(a b) | c", or(vec![and(vec![tag("a"), tag("b")]), tag("c")])); }
+    #[test] fn parens_2() { assert_expr("(a b) c", and(vec![tag("a"), tag("b"), tag("c")])); }
+    #[test] fn parens_3() { assert_expr("( a b ) c", and(vec![tag("a"), tag("b"), tag("c")])); }
+    #[test] fn parens_4() { assert_expr("c ( a b )", and(vec![tag("c"), tag("a"), tag("b")])); }
+
+    #[test]
+    fn common_1() {
+        assert_expr(
+            "kick drum (black_octopus_sounds | inpath:'black octopus' | inpath:'black-octopus')",
+            and(vec![
+                tag("kick"),
+                tag("drum"),
+                or(vec![
+                    tag("black_octopus_sounds"),
+                    kv("inpath", "black octopus"),
+                    kv("inpath", "black-octopus"),
+                ]),
+            ]),
+        )
+    }
 
     #[test]
     fn complex_1() {
