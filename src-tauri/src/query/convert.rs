@@ -60,6 +60,10 @@ impl<'a> FTSPart<'a> {
 
 /// The main endpoint of this module.
 /// This receives the root of an expression tree and generates SQL where clauses.
+///
+/// NOTE: This assumes all AND and OR groups don't have nested groups of the same type. i.e. An
+/// AND group doesn't directly contain another AND group, but may contain an OR group (which can
+/// contain an AND group).
 fn generate_clause(root: Expr) -> WhereClause {
     match root {
         Expr::And(exprs) => {
@@ -279,6 +283,14 @@ mod tests {
         assert_clause(
             "-(inpath:a | -inpath:b) inpath:c",
             and(vec![not(or(vec![inpath("a"), not(inpath("b"))])), inpath("c")]),
+        );
+    }
+
+    #[test]
+    fn inpath_6() {
+        assert_clause(
+            "(((inpath:a inpath:b))) inpath:c",
+            and(vec![inpath("a"), inpath("b"), inpath("c")]),
         );
     }
 
