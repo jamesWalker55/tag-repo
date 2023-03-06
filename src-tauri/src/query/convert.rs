@@ -505,50 +505,50 @@ mod test_fts_query {
     #[test]
     fn and_1() { assert_fts_statement(
         "a b c",
-        r#"(tags:"a" AND tags:"b" AND tags:"c")"#); }
+        r#"(tags:"a" AND tags:"b" AND tags:"c")"#) }
 
     #[test]
     fn and_2() { assert_fts_statement(
         "a q ((b c))",
-        r#"(tags:"a" AND tags:"q" AND tags:"b" AND tags:"c")"#); }
+        r#"(tags:"a" AND tags:"q" AND tags:"b" AND tags:"c")"#) }
 
     #[test]
     fn or_1() { assert_fts_statement(
         "a | b c",
-        r#"(tags:"a" OR (tags:"b" AND tags:"c"))"#); }
+        r#"(tags:"a" OR (tags:"b" AND tags:"c"))"#) }
 
     #[test]
     fn or_2() { assert_fts_statement(
         "(a | b) c",
-        r#"((tags:"a" OR tags:"b") AND tags:"c")"#); }
+        r#"((tags:"a" OR tags:"b") AND tags:"c")"#) }
 
     #[test]
     fn neg_1() { assert_fts_statement(
         "a -b",
-        r#"(tags:"a" NOT tags:"b")"#); }
+        r#"(tags:"a" NOT tags:"b")"#) }
 
     #[test]
     fn neg_2() { assert_fts_statement(
         "a -b -c d",
-        r#"(tags:"a" AND tags:"d" NOT tags:"b" NOT tags:"c")"#); }
+        r#"(tags:"a" AND tags:"d" NOT tags:"b" NOT tags:"c")"#) }
 
     #[test]
     fn neg_3() { assert_fts_statement(
         "-b -c d",
-        r#"(tags:"d" NOT tags:"b" NOT tags:"c")"#); }
+        r#"(tags:"d" NOT tags:"b" NOT tags:"c")"#) }
 
     #[test]
     fn neg_4() { assert_fts_statement(
         "-b -c",
-        r#"(meta_tags:"all" NOT tags:"b" NOT tags:"c")"#); }
+        r#"(meta_tags:"all" NOT tags:"b" NOT tags:"c")"#) }
 
     #[test]
     fn neg_5() { assert_fts_statement(
         "(-a b) -(c d) | -e",
-        r#"((tags:"b" NOT tags:"a" NOT (tags:"c" AND tags:"d")) OR (meta_tags:"all" NOT tags:"e"))"#); }
+        r#"((tags:"b" NOT tags:"a" NOT (tags:"c" AND tags:"d")) OR (meta_tags:"all" NOT tags:"e"))"#) }
 
     #[test]
     fn complex_1() { assert_fts_statement(
         "-(a | b a -c -d) d | e",
-        r#"((tags:"d" NOT (tags:"a" OR (tags:"b" AND tags:"a" NOT tags:"c" NOT tags:"d"))) OR tags:"e")"#); }
+        r#"((tags:"d" NOT (tags:"a" OR (tags:"b" AND tags:"a" NOT tags:"c" NOT tags:"d"))) OR tags:"e")"#) }
 }
