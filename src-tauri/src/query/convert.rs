@@ -1,7 +1,7 @@
 // TODO: Make this module be able to handle complicated queries like in src/repo.rs:478
 
 use super::parser::{parse, Expr};
-use crate::helpers::sql::escape_fts5_string;
+use crate::helpers::sql::{escape_fts5_string, escape_like_pattern};
 use itertools::Itertools;
 use std::borrow::{Borrow, Cow};
 use std::cmp::Ordering;
@@ -13,6 +13,72 @@ enum WhereClause<'a> {
     And(Vec<WhereClause<'a>>),
     Or(Vec<WhereClause<'a>>),
     Not(Box<WhereClause<'a>>),
+}
+
+impl<'a> WhereClause<'a> {
+    fn to_sql_clause(&self, is_root: bool) -> String {
+        use WhereClause::*;
+
+        match self {
+            FTS(part) => {
+                let fts_query = part.to_fts_query();
+                if is_root {
+                    // only 1 FTS query is allowed to use this form in a SQL statement
+                    // we'll use it for the FTS query at the root level (there should only be 1)
+                    format!("tq.tag_query = '{}'", fts_query)
+                } else {
+                    format!("i.id IN ( SELECT id FROM tag_query('{}') )", fts_query)
+                }
+            }
+            InPath(path) => {
+                let escaped_path = escape_like_pattern(path, '\\');
+                format!("i.path LIKE '{}' ESCAPE '\\'", escaped_path)
+            }
+            And(clauses) => {
+                let mut texts = vec![];
+                for clause in clauses {
+                    match clause {
+                        FTS(_) => texts.push(clause.to_sql_clause(is_root)),
+                        clause => texts.push(clause.to_sql_clause(false)),
+                    }
+                }
+                texts.join(" AND ")
+            }
+            Or(clauses) => {
+                let mut texts = vec![];
+                for clause in clauses {
+                    match clause {
+                        FTS(_) => texts.push(clause.to_sql_clause(is_root)),
+                        clause => texts.push(clause.to_sql_clause(false)),
+                    }
+                }
+                texts.join(" OR ")
+            }
+            Not(clause) => {
+                let clause = clause.as_ref();
+                match clause {
+                    FTS(part) => {
+                        // TODO: Complicated situation!
+                        // i need to construct a new FTSPart that negates `part`
+                        // but i only have a reference, i can't create one without an owned part
+                        // so i'm copying the code directly from FTSPart::to_fts_query's "Not" block
+                        // please think of a way to fix this later, i'm not dealing with this now
+
+                        // code copied from: FTSPart::to_fts_query
+                        let fts_query = format!(r#"(meta_tags:"all" NOT {})"#, part.to_fts_query());
+
+                        // code copied from: WhereClause::to_sql_clause
+                        if is_root {
+                            format!("tq.tag_query = '{}'", fts_query)
+                        } else {
+                            format!("i.id IN ( SELECT id FROM tag_query('{}') )", fts_query)
+                        }
+                    }
+                    clause => clause.to_sql_clause(false),
+                }
+            }
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Eq)]
