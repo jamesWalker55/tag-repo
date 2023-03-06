@@ -11,10 +11,10 @@
 //! from sympy.logic import simplify_logic
 //! a,b,c,d,e,f = symbols("a,b,c,d,e,f")
 //!
-//! eq = a & b | c & ( Symbol("inpath:src/") | d & e ) & f
+//! eq = a & b | c & ( Symbol("in:src/") | d & e ) & f
 //!
 //! simplify_logic(eq, form='dnf', force=True)
-//! // => (a ∧ b) ∨ (c ∧ f ∧ inpath:src/) ∨ (c ∧ d ∧ e ∧ f)
+//! // => (a ∧ b) ∨ (c ∧ f ∧ in:src/) ∨ (c ∧ d ∧ e ∧ f)
 //! ```
 
 use nom::branch::alt;
@@ -102,9 +102,9 @@ fn tag(input: &str) -> IResult<&str, Expr> {
     map(string_or_literal, Expr::Tag)(input)
 }
 
-/// allowed_key = "inpath"
+/// allowed_key = "in"
 fn allowed_key(input: &str) -> IResult<&str, &str> {
-    nom_tag("inpath")(input)
+    nom_tag("in")(input)
 }
 
 /// key_val = allowed_key ":" (string | literal)
@@ -294,16 +294,16 @@ mod tests {
         }
 
         assert_parse(
-            r#"inpath:src/"#,
-            ("inpath", "src/"),
+            r#"in:src/"#,
+            ("in", "src/"),
         );
         assert_parse(
-            r#"inpath:"D:/Audio Samples/""#,
-            ("inpath", "D:/Audio Samples/"),
+            r#"in:"D:/Audio Samples/""#,
+            ("in", "D:/Audio Samples/"),
         );
         assert_parse(
-            r#"inpath:"quote in path for some reason""""#,
-            ("inpath", "quote in path for some reason\""),
+            r#"in:"quote in path for some reason""""#,
+            ("in", "quote in path for some reason\""),
         );
         assert_parse_fails(r#""spaced key":hello"#);
     }
@@ -390,30 +390,30 @@ mod expr_tests {
     #[test] fn string_tags_2() { assert_expr(r#""c ( 'a' b )""#, t("c ( 'a' b )")); }
     #[test] fn string_tags_3() { assert_expr(r#" as "#, t("as")); }
 
-    #[test] fn not_1() { assert_expr("a b -e inpath:1 | d e inpath:0",
+    #[test] fn not_1() { assert_expr("a b -e in:1 | d e in:0",
         or(vec![
-            and(vec![t("a"), t("b"), not(t("e")), kv("inpath", "1")]),
-            and(vec![t("d"), t("e"), kv("inpath", "0")]),
+            and(vec![t("a"), t("b"), not(t("e")), kv("in", "1")]),
+            and(vec![t("d"), t("e"), kv("in", "0")]),
         ]),
     ); }
-    #[test] fn not_2() { assert_expr("a -(b e inpath:1) | -d e inpath:0",
+    #[test] fn not_2() { assert_expr("a -(b e in:1) | -d e in:0",
         or(vec![
-            and(vec![t("a"), not(and(vec![t("b"), t("e"), kv("inpath", "1")]))]),
-            and(vec![not(t("d")), t("e"), kv("inpath", "0")]),
+            and(vec![t("a"), not(and(vec![t("b"), t("e"), kv("in", "1")]))]),
+            and(vec![not(t("d")), t("e"), kv("in", "0")]),
         ]),
     ); }
 
     #[test]
     fn common_1() {
         assert_expr(
-            "kick drum (black_octopus_sounds | inpath:'black octopus' | inpath:'black-octopus')",
+            "kick drum (black_octopus_sounds | in:'black octopus' | in:'black-octopus')",
             and(vec![
                 t("kick"),
                 t("drum"),
                 or(vec![
                     t("black_octopus_sounds"),
-                    kv("inpath", "black octopus"),
-                    kv("inpath", "black-octopus"),
+                    kv("in", "black octopus"),
+                    kv("in", "black-octopus"),
                 ]),
             ]),
         )
@@ -422,7 +422,7 @@ mod expr_tests {
     #[test]
     fn complex_1() {
         assert_expr(
-            "a & b | c ( inpath:src/ | d &e ) & f",
+            "a & b | c ( in:src/ | d &e ) & f",
             or(vec![
                 and(vec![
                     t("a"),
@@ -432,7 +432,7 @@ mod expr_tests {
                 and(vec![
                     t("c"),
                     or(vec![
-                        kv("inpath", "src/"),
+                        kv("in", "src/"),
                         and(vec![
                             t("d"),
                             t("&e"),

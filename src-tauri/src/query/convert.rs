@@ -302,7 +302,7 @@ pub(crate) fn generate_clause<'a>(root: &'a Expr<'a>) -> WhereClause<'a> {
             WhereClause::FTS(FTSPart::Phrase(Cow::from(name)))
         }
         Expr::KeyValue(key, val) => match key.as_ref() {
-            "inpath" => {
+            "in" => {
                 let val: &str = val.borrow();
                 WhereClause::InPath(Cow::from(val))
             }
@@ -410,7 +410,7 @@ mod test_clauses {
     #[test]
     fn inpath_1() {
         assert_clause(
-            "inpath:a",
+            "in:a",
             inpath("a"),
         );
     }
@@ -418,7 +418,7 @@ mod test_clauses {
     #[test]
     fn inpath_2() {
         assert_clause(
-            "inpath:a inpath:b inpath:c",
+            "in:a in:b in:c",
             and(vec![inpath("a"), inpath("b"), inpath("c")]),
         );
     }
@@ -426,7 +426,7 @@ mod test_clauses {
     #[test]
     fn inpath_3() {
         assert_clause(
-            "inpath:a | inpath:b inpath:c",
+            "in:a | in:b in:c",
             or(vec![inpath("a"), and(vec![inpath("b"), inpath("c")])]),
         );
     }
@@ -434,7 +434,7 @@ mod test_clauses {
     #[test]
     fn inpath_4() {
         assert_clause(
-            "(inpath:a | inpath:b) inpath:c",
+            "(in:a | in:b) in:c",
             and(vec![or(vec![inpath("a"), inpath("b")]), inpath("c")]),
         );
     }
@@ -442,7 +442,7 @@ mod test_clauses {
     #[test]
     fn inpath_5() {
         assert_clause(
-            "-(inpath:a | -inpath:b) inpath:c",
+            "-(in:a | -in:b) in:c",
             and(vec![not(or(vec![inpath("a"), not(inpath("b"))])), inpath("c")]),
         );
     }
@@ -450,7 +450,7 @@ mod test_clauses {
     #[test]
     fn inpath_6() {
         assert_clause(
-            "(((inpath:a inpath:b))) inpath:c",
+            "(((in:a in:b))) in:c",
             and(vec![inpath("a"), inpath("b"), inpath("c")]),
         );
     }
@@ -458,7 +458,7 @@ mod test_clauses {
     #[test]
     fn common_1() {
         assert_clause(
-            "a b inpath:c",
+            "a b in:c",
             and(vec![
                 fts(ftsand(vec![ftsphrase("a"), ftsphrase("b")])),
                 inpath("c"),
@@ -469,7 +469,7 @@ mod test_clauses {
     #[test]
     fn common_2() {
         assert_clause(
-            "a | b -inpath:c",
+            "a | b -in:c",
             or(vec![
                 fts(ftsphrase("a")),
                 and(vec![
@@ -483,7 +483,7 @@ mod test_clauses {
     #[test]
     fn common_3() {
         assert_clause(
-            "a -(b e inpath:1) | -d e inpath:0",
+            "a -(b e in:1) | -d e in:0",
             or(vec![
                 and(vec![
                     fts(ftsphrase("a")),
@@ -506,7 +506,7 @@ mod test_clauses {
     // #[test]
     // fn temp() {
     //     assert_clause(
-    //         "-(a -(b e inpath:1) | -d e inpath:0) inpath:0",
+    //         "-(a -(b e in:1) | -d e in:0) in:0",
     //         inpath("temp"),
     //     );
     // }
@@ -614,35 +614,35 @@ mod test_to_sql {
 
     #[test]
     fn inpath_1() { assert_sql(
-        "inpath:asd",
+        "in:asd",
         r#"i.path LIKE 'asd%' ESCAPE '\'"#) }
 
     #[test]
     fn inpath_2() { assert_sql(
-        r#"inpath:'c:\program files\'"#,
+        r#"in:'c:\program files\'"#,
         r#"i.path LIKE 'c:\\program files\\%' ESCAPE '\'"#) }
 
     #[test]
     fn inpath_3() { assert_sql(
-        r#"inpath:'path''/wi''th/q""uotes/'"#,
+        r#"in:'path''/wi''th/q""uotes/'"#,
         r#"i.path LIKE 'path''/wi''th/q""uotes/%' ESCAPE '\'"#) }
 
     #[test]
     fn inpath_4() { assert_sql(
-        r#"-inpath:asd"#,
+        r#"-in:asd"#,
         r#"NOT (i.path LIKE 'asd%' ESCAPE '\')"#) }
 
     #[test]
     fn inpath_5() { assert_sql(
-        r#"inpath:a -inpath:b"#,
+        r#"in:a -in:b"#,
         r#"(i.path LIKE 'a%' ESCAPE '\' AND NOT (i.path LIKE 'b%' ESCAPE '\'))"#) }
 
     #[test]
     fn common_1() { assert_sql(
-        r#"kick -snare inpath:'Rhodz Drum Collection\'"#,
+        r#"kick -snare in:'Rhodz Drum Collection\'"#,
         r#"(i.id IN (SELECT id FROM tag_query('(tags:"kick" NOT tags:"snare")')) AND i.path LIKE 'Rhodz Drum Collection\\%' ESCAPE '\')"#) }
 
     // #[test]
     // fn temp() { assert_sql(
-    //     r#"a -b | inpath:"item 2""#, "") }
+    //     r#"a -b | in:"item 2""#, "") }
 }

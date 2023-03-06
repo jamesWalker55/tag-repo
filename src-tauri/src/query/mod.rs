@@ -24,7 +24,7 @@ mod tests {
     #[test]
     fn common_2() {
         assert_eq!(
-            to_sql("a -b inpath:samples/").unwrap(),
+            to_sql("a -b in:samples/").unwrap(),
             r#"(i.id IN (SELECT id FROM tag_query('(tags:"a" NOT tags:"b")')) AND i.path LIKE 'samples/%' ESCAPE '\')"#,
         )
     }

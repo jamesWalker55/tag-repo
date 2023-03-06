@@ -464,7 +464,7 @@ mod tests {
 
         // The query:
         //
-        //     a b -e inpath:1 | d e inpath:0
+        //     a b -e in:1 | d e in:0
         //
         let sql = indoc! {r#"
             SELECT i.path, i.tags
