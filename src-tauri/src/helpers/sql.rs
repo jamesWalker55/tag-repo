@@ -37,7 +37,9 @@ pub(crate) fn escape_fts5_string<'a>(text: impl Into<Cow<'a, str>>) -> Cow<'a, s
 ///
 /// The returned string must be used in conjunction with the given `escape_char` as follows:
 ///
-///     WHERE column LIKE '<returned string>' ESCAPE '<escape char>'
+/// ```sql
+/// WHERE column LIKE '<returned string>' ESCAPE '<escape char>'
+/// ```
 pub(crate) fn escape_like_pattern(text: &str, escape_char: char) -> String {
     let mut result = String::with_capacity(text.len());
     for char in text.chars() {

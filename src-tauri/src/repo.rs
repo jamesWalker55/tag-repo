@@ -228,8 +228,8 @@ lazy_static! {
     #[rustfmt::skip]
     static ref MIGRATIONS: Migrations<'static> =
         Migrations::new(vec![
-            M::up(include_str!("migrations/01u_inital.sql"))
-            .down(include_str!("migrations/01d_inital.sql")),
+            M::up(include_str!("migrations/01u_initial.sql"))
+            .down(include_str!("migrations/01d_initial.sql")),
         ]);
 }
 
@@ -252,7 +252,7 @@ mod tests {
     use itertools::Itertools;
     use tempfile::{tempdir, TempDir};
 
-    use crate::testutils::assert_unordered_eq;
+    use crate::tests::utils::assert_unordered_eq;
 
     use super::*;
 
