@@ -122,7 +122,7 @@ impl<'a> FTSPart<'a> {
                 } else {
                     // only negative terms
                     format!(
-                        r#"("meta_tags": "all" NOT {})"#,
+                        r#"(meta_tags:"all" NOT {})"#,
                         parts
                             .iter()
                             .map(|x| {
@@ -140,7 +140,7 @@ impl<'a> FTSPart<'a> {
                 format!("({})", parts.iter().map(|x| x.to_fts_query()).join(" OR "))
             }
             Not(part) => {
-                format!(r#"(meta_tags: "all" NOT {})"#, part.to_fts_query())
+                format!(r#"(meta_tags:"all" NOT {})"#, part.to_fts_query())
             }
         }
     }
