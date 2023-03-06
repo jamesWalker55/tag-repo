@@ -241,11 +241,13 @@ pub fn open_database(db_path: impl AsRef<Path>) -> Result<Connection, OpenError>
 
     // https://www.sqlite.org/pragma.html
     // WAL is somehow slower. Play around with the benchmark test at the bottom of this file.
-    // conn.pragma_update(None, "journal_mode", "WAL").unwrap();
+    conn.pragma_update(None, "journal_mode", "WAL").unwrap();
     conn.pragma_update(None, "foreign_keys", "ON").unwrap();
     conn.pragma_update(None, "synchronous", "FULL").unwrap();
-    conn.pragma_update(None, "locking_mode", "EXCLUSIVE").unwrap();
-    conn.pragma_update(None, "case_sensitive_like", false).unwrap();
+    conn.pragma_update(None, "locking_mode", "EXCLUSIVE")
+        .unwrap();
+    conn.pragma_update(None, "case_sensitive_like", false)
+        .unwrap();
 
     MIGRATIONS
         .to_latest(&mut conn)
