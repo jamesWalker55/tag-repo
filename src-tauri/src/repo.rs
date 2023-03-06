@@ -6,6 +6,8 @@ use lazy_static::lazy_static;
 use rusqlite::Error::{QueryReturnedNoRows, SqliteFailure};
 use rusqlite::{params, Connection, ErrorCode, Row};
 use rusqlite_migration::{Migrations, M};
+#[cfg(test)]
+use tempfile::{tempdir, TempDir};
 
 #[derive(Debug)]
 pub enum OpenError {
@@ -42,7 +44,7 @@ pub struct Repo {
 }
 
 impl Repo {
-    fn open(repo_path: impl AsRef<Path>) -> Result<Repo, OpenError> {
+    pub(crate) fn open(repo_path: impl AsRef<Path>) -> Result<Repo, OpenError> {
         let repo_path = repo_path.as_ref();
         if !repo_path.exists() {
             return Err(OpenError::PathDoesNotExist);
@@ -60,7 +62,7 @@ impl Repo {
         Ok(repo)
     }
 
-    fn insert_item<T>(&self, path: T, tags: T) -> Result<Item, DatabaseError>
+    pub(crate) fn insert_item<T>(&self, path: T, tags: T) -> Result<Item, DatabaseError>
     where
         T: AsRef<str>,
     {
@@ -92,7 +94,7 @@ impl Repo {
         }
     }
 
-    fn insert_items<T>(
+    pub(crate) fn insert_items<T>(
         &mut self,
         items_params: impl Iterator<Item = (T, T)>,
     ) -> Result<(), DatabaseError>
@@ -115,7 +117,7 @@ impl Repo {
         Ok(())
     }
 
-    fn get_items(&self, query: Option<&str>) -> Result<Vec<Item>, DatabaseError> {
+    pub(crate) fn get_items(&self, query: Option<&str>) -> Result<Vec<Item>, DatabaseError> {
         let to_item_closure: fn(&Row) -> Result<Item, rusqlite::Error> = |row: &Row| {
             Ok(Item {
                 id: row.get::<_, i64>(0)?,
@@ -148,7 +150,7 @@ impl Repo {
         Ok(items)
     }
 
-    fn get_item_by_path(&self, path: impl AsRef<str>) -> Result<Item, DatabaseError> {
+    pub(crate) fn get_item_by_path(&self, path: impl AsRef<str>) -> Result<Item, DatabaseError> {
         let path = path.as_ref();
         let mut stmt = self
             .conn
@@ -168,7 +170,7 @@ impl Repo {
         Ok(item?)
     }
 
-    fn get_item_by_id(&self, id: i64) -> Result<Item, DatabaseError> {
+    pub(crate) fn get_item_by_id(&self, id: i64) -> Result<Item, DatabaseError> {
         let mut stmt = self
             .conn
             .prepare("SELECT id, path, tags, meta_tags FROM items WHERE id = :id LIMIT 1")?;
@@ -187,20 +189,20 @@ impl Repo {
         Ok(item?)
     }
 
-    fn remove_item_by_path(&self, path: impl AsRef<str>) -> Result<(), DatabaseError> {
+    pub(crate) fn remove_item_by_path(&self, path: impl AsRef<str>) -> Result<(), DatabaseError> {
         let path = path.as_ref();
         self.conn
             .execute("DELETE FROM items WHERE path = :path", [path])?;
         Ok(())
     }
 
-    fn remove_item_by_id(&self, id: i64) -> Result<(), DatabaseError> {
+    pub(crate) fn remove_item_by_id(&self, id: i64) -> Result<(), DatabaseError> {
         self.conn
             .execute("DELETE FROM items WHERE id = :id", [id])?;
         Ok(())
     }
 
-    fn update_tags(&self, item_id: i64, tags: impl AsRef<str>) -> Result<(), DatabaseError> {
+    pub(crate) fn update_tags(&self, item_id: i64, tags: impl AsRef<str>) -> Result<(), DatabaseError> {
         let rv = self.conn.execute(
             "UPDATE items SET tags = :tags WHERE id = :id",
             params![tags.as_ref(), item_id],
@@ -211,7 +213,7 @@ impl Repo {
         }
     }
 
-    fn update_path(&self, item_id: i64, path: impl AsRef<str>) -> Result<(), DatabaseError> {
+    pub(crate) fn update_path(&self, item_id: i64, path: impl AsRef<str>) -> Result<(), DatabaseError> {
         let path = path.as_ref();
         let rv = self.conn.execute(
             "UPDATE items SET path = :path WHERE id = :id",
@@ -252,33 +254,34 @@ pub fn open_database(db_path: impl AsRef<Path>) -> Result<Connection, OpenError>
     Ok(conn)
 }
 
+/// The only purpose of this struct is to bundle `Repo` and `TempDir` together. This ensures that
+/// `TempDir` is dropped AFTER `Repo`.
+///
+/// Otherwise, if `TempDir` drops first, it cannot delete the temp folder as `Repo` is still using
+/// the database.
+#[cfg(test)]
+pub(crate) struct TestRepo {
+    pub(crate) repo: Repo,
+    #[allow(dead_code)]
+    tempdir: TempDir,
+}
+
+#[cfg(test)]
+impl TestRepo {
+    pub(crate) fn new() -> Self {
+        let dir = tempdir().unwrap();
+        let repo = Repo::open(&dir).unwrap();
+        Self { repo, tempdir: dir }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use itertools::Itertools;
-    use tempfile::{tempdir, TempDir};
 
     use crate::tests::utils::assert_unordered_eq;
 
     use super::*;
-
-    /// The only purpose of this struct is to bundle `Repo` and `TempDir` together. This ensures that
-    /// `TempDir` is dropped AFTER `Repo`.
-    ///
-    /// Otherwise, if `TempDir` drops first, it cannot delete the temp folder as `Repo` is still using
-    /// the database.
-    struct TestRepo {
-        repo: Repo,
-        #[allow(dead_code)]
-        tempdir: TempDir,
-    }
-
-    impl TestRepo {
-        fn new() -> Self {
-            let dir = tempdir().unwrap();
-            let repo = Repo::open(&dir).unwrap();
-            Self { repo, tempdir: dir }
-        }
-    }
 
     fn empty_testrepo() -> TestRepo {
         TestRepo::new()
