@@ -23,7 +23,7 @@ impl<'a> WhereClause<'a> {
             FTS(part) => {
                 let fts_query = part.to_fts_query();
                 if is_root {
-                    // only 1 FTS query is allowed to use this form in a SQL statement
+                    // only 1 FTS query is allowed to use this form in an SQL statement
                     // we'll use it for the FTS query at the root level (there should only be 1)
                     format!("tq.tag_query = '{}'", fts_query)
                 } else {
@@ -32,28 +32,10 @@ impl<'a> WhereClause<'a> {
             }
             InPath(path) => {
                 let escaped_path = escape_like_pattern(path, '\\');
-                format!("i.path LIKE '{}' ESCAPE '\\'", escaped_path)
+                format!("i.path LIKE '{}%' ESCAPE '\\'", escaped_path)
             }
-            And(clauses) => {
-                let mut texts = vec![];
-                for clause in clauses {
-                    match clause {
-                        FTS(_) => texts.push(clause.to_sql_clause(is_root)),
-                        clause => texts.push(clause.to_sql_clause(false)),
-                    }
-                }
-                texts.join(" AND ")
-            }
-            Or(clauses) => {
-                let mut texts = vec![];
-                for clause in clauses {
-                    match clause {
-                        FTS(_) => texts.push(clause.to_sql_clause(is_root)),
-                        clause => texts.push(clause.to_sql_clause(false)),
-                    }
-                }
-                texts.join(" OR ")
-            }
+            And(clauses) => clauses.iter().map(|x| x.to_sql_clause(false)).join(" AND "),
+            Or(clauses) => clauses.iter().map(|x| x.to_sql_clause(false)).join(" OR "),
             Not(clause) => {
                 let clause = clause.as_ref();
                 match clause {
