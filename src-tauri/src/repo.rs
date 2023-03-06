@@ -252,7 +252,7 @@ mod tests {
     use itertools::Itertools;
     use tempfile::{tempdir, TempDir};
 
-    use crate::testutils::assert_unordered_eq;
+    use crate::tests::utils::assert_unordered_eq;
 
     use super::*;
 
