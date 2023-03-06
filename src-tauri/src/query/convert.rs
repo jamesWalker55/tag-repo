@@ -1,7 +1,10 @@
 // TODO: Make this module be able to handle complicated queries like in src/repo.rs:478
 
 use super::parser::{parse, Expr};
+use crate::helpers::sql::escape_fts5_string;
+use itertools::Itertools;
 use std::borrow::{Borrow, Cow};
+use std::cmp::Ordering;
 
 #[derive(Debug, PartialEq, Eq)]
 enum WhereClause<'a> {
@@ -54,6 +57,91 @@ impl<'a> FTSPart<'a> {
                 }
             }
             FTSPart::Or(group)
+        }
+    }
+
+    fn to_fts_query(&self) -> String {
+        use FTSPart::*;
+
+        match self {
+            Phrase(name) => {
+                format!("tags:\"{}\"", escape_fts5_string(name.as_ref()))
+            }
+            And(parts) => {
+                let mut parts_contain_pos = false;
+                let mut parts_contain_neg = false;
+                for p in parts {
+                    if parts_contain_pos && parts_contain_neg {
+                        break;
+                    }
+
+                    if matches!(p, Not(_)) {
+                        parts_contain_neg = true;
+                    } else {
+                        parts_contain_pos = true;
+                    }
+                }
+
+                if parts_contain_pos && parts_contain_neg {
+                    // both positive and negative terms
+                    let mut parts: Vec<&FTSPart> = parts.into_iter().collect();
+                    parts.sort_by(|x, y| {
+                        let x_is_neg = matches!(x, Not(_));
+                        let y_is_neg = matches!(y, Not(_));
+                        if x_is_neg == y_is_neg {
+                            Ordering::Equal
+                        } else if x_is_neg {
+                            Ordering::Greater
+                        } else {
+                            Ordering::Less
+                        }
+                    });
+                    let mut result = String::from("(");
+                    for (i, part) in parts.iter().enumerate() {
+                        if let Not(inner) = part {
+                            // is negative
+                            result.push_str(" NOT ");
+                            result.push_str(inner.to_fts_query().as_str());
+                        } else {
+                            // is positive
+                            if i == 0 {
+                                // first element
+                                result.push_str(part.to_fts_query().as_str());
+                            } else {
+                                // other elements
+                                result.push_str(" AND ");
+                                result.push_str(part.to_fts_query().as_str());
+                            }
+                        }
+                    }
+                    result.push(')');
+                    result
+                } else if parts_contain_pos {
+                    // only positive terms
+                    format!("({})", parts.iter().map(|x| x.to_fts_query()).join(" AND "))
+                } else {
+                    // only negative terms
+                    format!(
+                        r#"("meta_tags": "all" NOT {})"#,
+                        parts
+                            .iter()
+                            .map(|x| {
+                                if let Not(inner) = x {
+                                    inner.to_fts_query()
+                                } else {
+                                    unreachable!("There should only be negative terms here")
+                                }
+                            })
+                            .join(" NOT ")
+                    )
+                }
+            }
+            Or(parts) => {
+                format!("({})", parts.iter().map(|x| x.to_fts_query()).join(" OR "))
+            }
+            Not(part) => {
+                format!(r#"(meta_tags: "all" NOT {})"#, part.to_fts_query())
+            }
         }
     }
 }
@@ -179,6 +267,18 @@ mod tests {
         let expr = parse(query).unwrap();
         let clause = generate_clause(&expr);
         assert_eq!(clause, expected);
+    }
+
+    #[test]
+    fn asd() {
+        let query = "-(a | b a -c -d) d | e";
+        let expr = parse(query).unwrap();
+        let clause = generate_clause(&expr);
+        if let WhereClause::FTS(ftspart) = clause {
+            println!("{}", ftspart.to_fts_query());
+        } else {
+            panic!("Query isn't a pure FTS query: {}", query);
+        }
     }
 
     #[test]
