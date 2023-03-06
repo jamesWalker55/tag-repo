@@ -102,14 +102,47 @@ mod test_like {
         assert_eq!(escape_like_pattern(text, ESC_CHAR), expected);
     }
 
-    #[test] fn no_quotes() { assert_escaped("asd", "asd"); }
-    #[test] fn single_quotes() { assert_escaped("'as'd", "''as''d"); }
-    #[test] fn double_quotes() { assert_escaped(r#""as"d"#, r#""as"d"#); }
-    #[test] fn both_quotes() { assert_escaped(r#""a's"d'"#, r#""a''s"d''"#); }
-    #[test] fn percent_1() { assert_escaped(r#"100% free range"#, r#"100\% free range"#); }
-    #[test] fn percent_2() { assert_escaped(r#"100%% free range%"#, r#"100\%\% free range\%"#); }
-    #[test] fn underscore_1() { assert_escaped(r#"foo_bar"#, r#"foo\_bar"#); }
-    #[test] fn underscore_2() { assert_escaped(r#"foo__bar"#, r#"foo\_\_bar"#); }
-    #[test] fn escape_char_1() { assert_escaped(r#"C:\Program Files"#, r#"C:\\Program Files"#); }
-    #[test] fn escape_char_2() { assert_escaped(r#"D:\Audio Samples\Drum Kit"#, r#"D:\\Audio Samples\\Drum Kit"#); }
+    #[test]
+    fn no_quotes() {
+        assert_escaped("asd", "asd");
+    }
+    #[test]
+    fn single_quotes() {
+        assert_escaped("'as'd", "''as''d");
+    }
+    #[test]
+    fn double_quotes() {
+        assert_escaped(r#""as"d"#, r#""as"d"#);
+    }
+    #[test]
+    fn both_quotes() {
+        assert_escaped(r#""a's"d'"#, r#""a''s"d''"#);
+    }
+    #[test]
+    fn percent_1() {
+        assert_escaped(r#"100% free range"#, r#"100\% free range"#);
+    }
+    #[test]
+    fn percent_2() {
+        assert_escaped(r#"100%% free range%"#, r#"100\%\% free range\%"#);
+    }
+    #[test]
+    fn underscore_1() {
+        assert_escaped(r#"foo_bar"#, r#"foo\_bar"#);
+    }
+    #[test]
+    fn underscore_2() {
+        assert_escaped(r#"foo__bar"#, r#"foo\_\_bar"#);
+    }
+    #[test]
+    fn escape_char_1() {
+        assert_escaped(r#"C:\Program Files"#, r#"C:\\Program Files"#);
+    }
+    #[test]
+    fn escape_char_2() {
+        assert_escaped(
+            r#"D:\Audio Samples\Drum Kit"#,
+            r#"D:\\Audio Samples\\Drum Kit"#,
+        );
+    }
 }

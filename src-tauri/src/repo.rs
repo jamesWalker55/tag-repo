@@ -202,7 +202,11 @@ impl Repo {
         Ok(())
     }
 
-    pub(crate) fn update_tags(&self, item_id: i64, tags: impl AsRef<str>) -> Result<(), DatabaseError> {
+    pub(crate) fn update_tags(
+        &self,
+        item_id: i64,
+        tags: impl AsRef<str>,
+    ) -> Result<(), DatabaseError> {
         let rv = self.conn.execute(
             "UPDATE items SET tags = :tags WHERE id = :id",
             params![tags.as_ref(), item_id],
@@ -213,7 +217,11 @@ impl Repo {
         }
     }
 
-    pub(crate) fn update_path(&self, item_id: i64, path: impl AsRef<str>) -> Result<(), DatabaseError> {
+    pub(crate) fn update_path(
+        &self,
+        item_id: i64,
+        path: impl AsRef<str>,
+    ) -> Result<(), DatabaseError> {
         let path = path.as_ref();
         let rv = self.conn.execute(
             "UPDATE items SET path = :path WHERE id = :id",
