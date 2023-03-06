@@ -27,15 +27,21 @@ impl<'a> WhereClause<'a> {
                     // we'll use it for the FTS query at the root level (there should only be 1)
                     format!("tq.tag_query = '{}'", fts_query)
                 } else {
-                    format!("i.id IN ( SELECT id FROM tag_query('{}') )", fts_query)
+                    format!("i.id IN (SELECT id FROM tag_query('{}'))", fts_query)
                 }
             }
             InPath(path) => {
                 let escaped_path = escape_like_pattern(path, '\\');
                 format!("i.path LIKE '{}%' ESCAPE '\\'", escaped_path)
             }
-            And(clauses) => clauses.iter().map(|x| x.to_sql_clause(false)).join(" AND "),
-            Or(clauses) => clauses.iter().map(|x| x.to_sql_clause(false)).join(" OR "),
+            And(clauses) => {
+                let inner = clauses.iter().map(|x| x.to_sql_clause(false)).join(" AND ");
+                format!("({})", inner)
+            }
+            Or(clauses) => {
+                let inner = clauses.iter().map(|x| x.to_sql_clause(false)).join(" OR ");
+                format!("({})", inner)
+            }
             Not(clause) => {
                 let clause = clause.as_ref();
                 match clause {
@@ -56,7 +62,10 @@ impl<'a> WhereClause<'a> {
                             format!("i.id IN ( SELECT id FROM tag_query('{}') )", fts_query)
                         }
                     }
-                    clause => clause.to_sql_clause(false),
+                    clause => {
+                        let sql = clause.to_sql_clause(false);
+                        format!("NOT ({})", sql)
+                    }
                 }
             }
         }
@@ -483,6 +492,14 @@ mod test_clauses {
             ]),
         );
     }
+
+    // #[test]
+    // fn temp() {
+    //     assert_clause(
+    //         "-(a -(b e inpath:1) | -d e inpath:0) inpath:0",
+    //         inpath("temp"),
+    //     );
+    // }
 }
 
 #[rustfmt::skip]
@@ -551,4 +568,71 @@ mod test_fts_query {
     fn complex_1() { assert_fts_statement(
         "-(a | b a -c -d) d | e",
         r#"((tags:"d" NOT (tags:"a" OR (tags:"b" AND tags:"a" NOT tags:"c" NOT tags:"d"))) OR tags:"e")"#) }
+
+    // #[test]
+    // fn temp() { assert_fts_statement(
+    //     "-(a '12''3' qw\"e)",
+    //     r#""#); }
+}
+
+#[rustfmt::skip]
+#[cfg(test)]
+mod test_to_sql {
+    use super::*;
+
+    fn assert_sql(query: &str, expected: &str) {
+        let expr = parse(query).unwrap();
+        let clause = generate_clause(&expr);
+        let sql_clause = clause.to_sql_clause(true);
+        assert_eq!(sql_clause, expected);
+    }
+
+    #[test]
+    fn fts_1() { assert_sql(
+        "a b",
+        r#"tq.tag_query = '(tags:"a" AND tags:"b")'"#) }
+
+    #[test]
+    fn fts_2() { assert_sql(
+        "-(a b)",
+        r#"tq.tag_query = '(meta_tags:"all" NOT (tags:"a" AND tags:"b"))'"#) }
+
+    #[test]
+    fn fts_3() { assert_sql(
+        "'mc''donalds' b",
+        r#"tq.tag_query = '(tags:"mc''donalds" AND tags:"b")'"#) }
+
+    #[test]
+    fn inpath_1() { assert_sql(
+        "inpath:asd",
+        r#"i.path LIKE 'asd%' ESCAPE '\'"#) }
+
+    #[test]
+    fn inpath_2() { assert_sql(
+        r#"inpath:'c:\program files\'"#,
+        r#"i.path LIKE 'c:\\program files\\%' ESCAPE '\'"#) }
+
+    #[test]
+    fn inpath_3() { assert_sql(
+        r#"inpath:'path''/wi''th/q""uotes/'"#,
+        r#"i.path LIKE 'path''/wi''th/q""uotes/%' ESCAPE '\'"#) }
+
+    #[test]
+    fn inpath_4() { assert_sql(
+        r#"-inpath:asd"#,
+        r#"NOT (i.path LIKE 'asd%' ESCAPE '\')"#) }
+
+    #[test]
+    fn inpath_5() { assert_sql(
+        r#"inpath:a -inpath:b"#,
+        r#"(i.path LIKE 'a%' ESCAPE '\' AND NOT (i.path LIKE 'b%' ESCAPE '\'))"#) }
+
+    #[test]
+    fn common_1() { assert_sql(
+        r#"kick -snare inpath:'Rhodz Drum Collection\'"#,
+        r#"(i.id IN (SELECT id FROM tag_query('(tags:"kick" NOT tags:"snare")')) AND i.path LIKE 'Rhodz Drum Collection\\%' ESCAPE '\')"#) }
+
+    // #[test]
+    // fn temp() { assert_sql(
+    //     r#"a -b | inpath:"item 2""#, "") }
 }
