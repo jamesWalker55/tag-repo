@@ -249,7 +249,7 @@ fn generate_clause<'a>(root: &'a Expr<'a>) -> WhereClause<'a> {
 
 #[rustfmt::skip]
 #[cfg(test)]
-mod tests {
+mod test_clauses {
     use super::*;
 
     fn fts(part: FTSPart) -> WhereClause { WhereClause::FTS(part) }
@@ -267,18 +267,6 @@ mod tests {
         let expr = parse(query).unwrap();
         let clause = generate_clause(&expr);
         assert_eq!(clause, expected);
-    }
-
-    #[test]
-    fn asd() {
-        let query = "-(a | b a -c -d) d | e";
-        let expr = parse(query).unwrap();
-        let clause = generate_clause(&expr);
-        if let WhereClause::FTS(ftspart) = clause {
-            println!("{}", ftspart.to_fts_query());
-        } else {
-            panic!("Query isn't a pure FTS query: {}", query);
-        }
     }
 
     #[test]
@@ -447,4 +435,72 @@ mod tests {
             ]),
         );
     }
+}
+
+#[rustfmt::skip]
+#[cfg(test)]
+mod test_fts_query {
+    use super::*;
+
+    fn assert_fts_statement(query: &str, expected: &str) {
+        let expr = parse(query).unwrap();
+        let clause = generate_clause(&expr);
+        if let WhereClause::FTS(ftspart) = clause {
+            let fts_query = ftspart.to_fts_query();
+            println!("{}", fts_query);
+            assert_eq!(fts_query, expected);
+        } else {
+            panic!("Query isn't a pure FTS query: {}", query);
+        }
+    }
+
+    #[test]
+    fn and_1() { assert_fts_statement(
+        "a b c",
+        r#"(tags:"a" AND tags:"b" AND tags:"c")"#); }
+
+    #[test]
+    fn and_2() { assert_fts_statement(
+        "a q ((b c))",
+        r#"(tags:"a" AND tags:"q" AND tags:"b" AND tags:"c")"#); }
+
+    #[test]
+    fn or_1() { assert_fts_statement(
+        "a | b c",
+        r#"(tags:"a" OR (tags:"b" AND tags:"c"))"#); }
+
+    #[test]
+    fn or_2() { assert_fts_statement(
+        "(a | b) c",
+        r#"((tags:"a" OR tags:"b") AND tags:"c")"#); }
+
+    #[test]
+    fn neg_1() { assert_fts_statement(
+        "a -b",
+        r#"(tags:"a" NOT tags:"b")"#); }
+
+    #[test]
+    fn neg_2() { assert_fts_statement(
+        "a -b -c d",
+        r#"(tags:"a" AND tags:"d" NOT tags:"b" NOT tags:"c")"#); }
+
+    #[test]
+    fn neg_3() { assert_fts_statement(
+        "-b -c d",
+        r#"(tags:"d" NOT tags:"b" NOT tags:"c")"#); }
+
+    #[test]
+    fn neg_4() { assert_fts_statement(
+        "-b -c",
+        r#"(meta_tags:"all" NOT tags:"b" NOT tags:"c")"#); }
+
+    #[test]
+    fn neg_5() { assert_fts_statement(
+        "(-a b) -(c d) | -e",
+        r#"((tags:"b" NOT tags:"a" NOT (tags:"c" AND tags:"d")) OR (meta_tags:"all" NOT tags:"e"))"#); }
+
+    #[test]
+    fn complex_1() { assert_fts_statement(
+        "-(a | b a -c -d) d | e",
+        r#"((tags:"d" NOT (tags:"a" OR (tags:"b" AND tags:"a" NOT tags:"c" NOT tags:"d"))) OR tags:"e")"#); }
 }
