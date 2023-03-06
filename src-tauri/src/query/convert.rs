@@ -7,7 +7,7 @@ use std::borrow::{Borrow, Cow};
 use std::cmp::Ordering;
 
 #[derive(Debug, PartialEq, Eq)]
-enum WhereClause<'a> {
+pub(crate) enum WhereClause<'a> {
     FTS(FTSPart<'a>),
     InPath(Cow<'a, str>),
     And(Vec<WhereClause<'a>>),
@@ -16,7 +16,11 @@ enum WhereClause<'a> {
 }
 
 impl<'a> WhereClause<'a> {
-    fn to_sql_clause(&self, is_root: bool) -> String {
+    pub(crate) fn to_sql_clause(&self) -> String {
+        self.to_sql_subclause(true)
+    }
+
+    fn to_sql_subclause(&self, is_root: bool) -> String {
         use WhereClause::*;
 
         match self {
@@ -35,11 +39,17 @@ impl<'a> WhereClause<'a> {
                 format!("i.path LIKE '{}%' ESCAPE '\\'", escaped_path)
             }
             And(clauses) => {
-                let inner = clauses.iter().map(|x| x.to_sql_clause(false)).join(" AND ");
+                let inner = clauses
+                    .iter()
+                    .map(|x| x.to_sql_subclause(false))
+                    .join(" AND ");
                 format!("({})", inner)
             }
             Or(clauses) => {
-                let inner = clauses.iter().map(|x| x.to_sql_clause(false)).join(" OR ");
+                let inner = clauses
+                    .iter()
+                    .map(|x| x.to_sql_subclause(false))
+                    .join(" OR ");
                 format!("({})", inner)
             }
             Not(clause) => {
@@ -63,7 +73,7 @@ impl<'a> WhereClause<'a> {
                         }
                     }
                     clause => {
-                        let sql = clause.to_sql_clause(false);
+                        let sql = clause.to_sql_subclause(false);
                         format!("NOT ({})", sql)
                     }
                 }
@@ -73,7 +83,7 @@ impl<'a> WhereClause<'a> {
 }
 
 #[derive(Debug, PartialEq, Eq)]
-enum FTSPart<'a> {
+pub(crate) enum FTSPart<'a> {
     Phrase(Cow<'a, str>),
     And(Vec<FTSPart<'a>>),
     Or(Vec<FTSPart<'a>>),
@@ -209,7 +219,7 @@ impl<'a> FTSPart<'a> {
 /// NOTE: This assumes all AND and OR groups don't have nested groups of the same type. i.e. An
 /// AND group doesn't directly contain another AND group, but may contain an OR group (which can
 /// contain an AND group).
-fn generate_clause<'a>(root: &'a Expr<'a>) -> WhereClause<'a> {
+pub(crate) fn generate_clause<'a>(root: &'a Expr<'a>) -> WhereClause<'a> {
     match root {
         Expr::And(exprs) => {
             // this vector must be non-empty
@@ -583,7 +593,7 @@ mod test_to_sql {
     fn assert_sql(query: &str, expected: &str) {
         let expr = parse(query).unwrap();
         let clause = generate_clause(&expr);
-        let sql_clause = clause.to_sql_clause(true);
+        let sql_clause = clause.to_sql_subclause(true);
         assert_eq!(sql_clause, expected);
     }
 
