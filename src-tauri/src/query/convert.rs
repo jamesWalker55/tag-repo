@@ -639,8 +639,8 @@ mod test_to_sql {
 
     #[test]
     fn common_1() { assert_sql(
-        r#"kick -snare in:'Rhodz Drum Collection\'"#,
-        r#"(i.id IN (SELECT id FROM tag_query('(tags:"kick" NOT tags:"snare")')) AND i.path LIKE 'Rhodz Drum Collection\\%' ESCAPE '\')"#) }
+        r#"kick -snare in:'Drum Collection\'"#,
+        r#"(i.id IN (SELECT id FROM tag_query('(tags:"kick" NOT tags:"snare")')) AND i.path LIKE 'Drum Collection\\%' ESCAPE '\')"#) }
 
     // #[test]
     // fn temp() { assert_sql(
