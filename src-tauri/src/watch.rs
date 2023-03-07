@@ -27,13 +27,12 @@ async fn async_watch(path: impl AsRef<Path>) -> notify::Result<()> {
     Ok(())
 }
 
-fn main() {
-    let path = r"D:\Programming\rust-learning\temp";
+#[tokio::main]
+async fn main() {
+    let path = r"C:\Files\temp\fs";
     println!("watching {}", path);
 
-    futures::executor::block_on(async {
-        if let Err(e) = async_watch(path).await {
-            println!("error: {:?}", e)
-        }
-    });
+    if let Err(e) = async_watch(path).await {
+        println!("error: {:?}", e)
+    }
 }
