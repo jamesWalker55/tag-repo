@@ -44,6 +44,22 @@ pub struct Repo {
 }
 
 impl Repo {
+    /// Common function used to convert a query row into an item.
+    ///
+    /// Queried columns must be:
+    ///
+    /// ```sql
+    /// SELECT i.id, i.path, i.tags, i.meta_tags
+    /// ```
+    fn to_item(row: &Row) -> Result<Item, rusqlite::Error> {
+        Ok(Item {
+            id: row.get::<_, i64>(0)?,
+            path: row.get::<_, String>(1)?,
+            tags: row.get::<_, String>(2)?,
+            meta_tags: row.get::<_, String>(3)?,
+        })
+    }
+
     pub(crate) fn open(repo_path: impl AsRef<Path>) -> Result<Repo, OpenError> {
         let repo_path = repo_path.as_ref();
         if !repo_path.exists() {
@@ -118,15 +134,6 @@ impl Repo {
     }
 
     pub(crate) fn get_items(&self, query: Option<&str>) -> Result<Vec<Item>, DatabaseError> {
-        let to_item_closure: fn(&Row) -> Result<Item, rusqlite::Error> = |row: &Row| {
-            Ok(Item {
-                id: row.get::<_, i64>(0)?,
-                path: row.get::<_, String>(1)?,
-                tags: row.get::<_, String>(2)?,
-                meta_tags: row.get::<_, String>(3)?,
-            })
-        };
-
         let mut stmt;
 
         let mapped_rows = match query {
@@ -137,13 +144,13 @@ impl Repo {
                         INNER JOIN tag_query tq ON i.id = tq.id
                     WHERE tq.tag_query MATCH :query
                 "})?;
-                stmt.query_map(&[(":query", query)], to_item_closure)
+                stmt.query_map(&[(":query", query)], Self::to_item)
             }
             None => {
                 stmt = self.conn.prepare(indoc! {"
                     SELECT i.id, i.path, i.tags, i.meta_tags FROM items i
                 "})?;
-                stmt.query_map([], to_item_closure)
+                stmt.query_map([], Self::to_item)
             }
         }?;
         let items: Vec<Item> = mapped_rows.flatten().collect();
@@ -155,14 +162,7 @@ impl Repo {
         let mut stmt = self
             .conn
             .prepare("SELECT id, path, tags, meta_tags FROM items WHERE path = :path LIMIT 1")?;
-        let item = stmt.query_row([&path], |row| {
-            Ok(Item {
-                id: row.get::<_, i64>(0)?,
-                path: row.get::<_, String>(1)?,
-                tags: row.get::<_, String>(2)?,
-                meta_tags: row.get::<_, String>(3)?,
-            })
-        });
+        let item = stmt.query_row([&path], Self::to_item);
         if let Err(QueryReturnedNoRows) = item {
             return Err(DatabaseError::ItemNotFound);
         }
@@ -174,14 +174,7 @@ impl Repo {
         let mut stmt = self
             .conn
             .prepare("SELECT id, path, tags, meta_tags FROM items WHERE id = :id LIMIT 1")?;
-        let item = stmt.query_row([id], |row| {
-            Ok(Item {
-                id: row.get::<_, i64>(0)?,
-                path: row.get::<_, String>(1)?,
-                tags: row.get::<_, String>(2)?,
-                meta_tags: row.get::<_, String>(3)?,
-            })
-        });
+        let item = stmt.query_row([id], Self::to_item);
         if let Err(QueryReturnedNoRows) = item {
             return Err(DatabaseError::ItemNotFound);
         }
