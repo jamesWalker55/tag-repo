@@ -1,6 +1,8 @@
 use std::fs::create_dir;
 use std::path::{Path, PathBuf};
 
+use crate::query::to_sql;
+use crate::query::ParseError;
 use indoc::indoc;
 use lazy_static::lazy_static;
 use rusqlite::Error::{QueryReturnedNoRows, SqliteFailure};
@@ -22,11 +24,18 @@ pub(crate) enum DatabaseError<'a> {
     DuplicatePathError(String),
     ItemNotFound,
     BackendError(rusqlite::Error),
+    InvalidQuery(ParseError<'a>),
 }
 
-impl From<rusqlite::Error> for DatabaseError {
+impl<'a> From<rusqlite::Error> for DatabaseError<'a> {
     fn from(error: rusqlite::Error) -> Self {
         DatabaseError::BackendError(error)
+    }
+}
+
+impl<'a> From<ParseError<'a>> for DatabaseError<'a> {
+    fn from(error: ParseError<'a>) -> Self {
+        DatabaseError::InvalidQuery(error)
     }
 }
 
@@ -224,6 +233,24 @@ impl Repo {
             Ok(_) => Ok(()),
             Err(e) => Err(DatabaseError::BackendError(e)),
         }
+    }
+
+    pub(crate) fn query_items<'a>(&'a self, query: &'a str) -> Result<Vec<Item>, DatabaseError> {
+        let where_clause = to_sql(query)?;
+        let sql = format!(
+            indoc! {"
+                SELECT i.id, i.path, i.tags, i.meta_tags
+                FROM items i
+                INNER JOIN
+                    tag_query tq ON tq.id = i.id
+                WHERE {}
+            "},
+            where_clause
+        );
+        let mut stmt = self.conn.prepare_cached(sql.as_str())?;
+        let mapped_rows = stmt.query_map([], Self::to_item)?;
+        let items: Result<Vec<_>, _> = mapped_rows.collect();
+        Ok(items?)
     }
 }
 
@@ -509,6 +536,13 @@ mod tests {
         println!("Got {} rows.", count);
 
         ()
+    }
+
+    #[test]
+    fn query_test_2() {
+        let tr = testrepo_2();
+        let items = tr.repo.query_items("a b -c").unwrap();
+        dbg!(items);
     }
 
     // #[test]
