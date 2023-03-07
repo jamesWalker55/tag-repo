@@ -1,7 +1,7 @@
 mod convert;
 mod parser;
 
-use parser::ParseError;
+pub(crate) use parser::ParseError;
 
 pub(crate) fn to_sql(query: &str) -> Result<String, ParseError> {
     let expr = parser::parse(query)?;

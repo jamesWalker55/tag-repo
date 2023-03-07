@@ -10,7 +10,7 @@ use rusqlite_migration::{Migrations, M};
 use tempfile::{tempdir, TempDir};
 
 #[derive(Debug)]
-pub enum OpenError {
+pub(crate) enum OpenError {
     PathDoesNotExist,
     FailedToCreateRepo(std::io::Error),
     FailedToCreateDatabase(rusqlite::Error),
@@ -18,7 +18,7 @@ pub enum OpenError {
 }
 
 #[derive(Debug)]
-pub enum DatabaseError {
+pub(crate) enum DatabaseError<'a> {
     DuplicatePathError(String),
     ItemNotFound,
     BackendError(rusqlite::Error),
@@ -32,10 +32,10 @@ impl From<rusqlite::Error> for DatabaseError {
 
 #[derive(Debug)]
 pub struct Item {
-    id: i64,
-    path: String,
-    tags: String,
-    meta_tags: String,
+    pub(crate) id: i64,
+    pub(crate) path: String,
+    pub(crate) tags: String,
+    pub(crate) meta_tags: String,
 }
 
 pub struct Repo {
@@ -243,7 +243,7 @@ lazy_static! {
         ]);
 }
 
-pub fn open_database(db_path: impl AsRef<Path>) -> Result<Connection, OpenError> {
+pub(crate) fn open_database(db_path: impl AsRef<Path>) -> Result<Connection, OpenError> {
     let db_path = db_path.as_ref();
     let mut conn = Connection::open(db_path).map_err(OpenError::FailedToCreateDatabase)?;
 
