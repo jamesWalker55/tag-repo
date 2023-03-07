@@ -49,3 +49,33 @@ fn query_1() {
         ],
     );
 }
+
+#[test]
+fn query_2() {
+    assert_query(
+        PresetRepo::drum_collection().repo,
+        "drum loops -fast",
+        vec![
+            "Drum Collection/Loops/110 Electro.wav",
+            "Drum Collection/Loops/110 Glitch Hop.wav",
+            "Drum Collection/Loops/128 Electro House.wav",
+        ],
+    );
+}
+
+#[test]
+fn query_3() {
+    assert_query(PresetRepo::drum_collection().repo, "kick -drum", vec![]);
+}
+
+#[test]
+fn query_4() {
+    assert_query(
+        PresetRepo::drum_collection().repo,
+        "in:'Drum Collection/Loops' fast",
+        vec![
+            "Drum Collection/Loops/150 Bass Music.wav",
+            "Drum Collection/Loops/160 Future Bass.wav",
+        ],
+    );
+}
