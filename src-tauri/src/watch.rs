@@ -1,17 +1,16 @@
-use futures::{
-    channel::mpsc::{unbounded, UnboundedReceiver},
-    SinkExt, StreamExt,
-};
-use notify::{Config, Event, RecommendedWatcher, RecursiveMode, Watcher};
+use notify::{Config, RecommendedWatcher, RecursiveMode, Watcher};
 use std::path::Path;
+use tokio::runtime::Handle;
+use tokio::sync::mpsc::unbounded_channel;
 
 async fn async_watch(path: impl AsRef<Path>) -> notify::Result<()> {
-    let (mut tx, mut rx) = unbounded();
+    let (tx, mut rx) = unbounded_channel();
+    let tokio_handle = Handle::current();
 
     let mut watcher = RecommendedWatcher::new(
         move |res| {
-            futures::executor::block_on(async {
-                tx.send(res).await.unwrap();
+            tokio_handle.block_on(async {
+                tx.send(res).unwrap();
             })
         },
         Config::default(),
@@ -19,7 +18,7 @@ async fn async_watch(path: impl AsRef<Path>) -> notify::Result<()> {
 
     watcher.watch(path.as_ref(), RecursiveMode::Recursive)?;
 
-    while let Some(res) = rx.next().await {
+    while let Some(res) = rx.recv().await {
         let res = res.unwrap();
         println!("{:?}", res);
     }
@@ -29,7 +28,7 @@ async fn async_watch(path: impl AsRef<Path>) -> notify::Result<()> {
 
 #[tokio::main]
 async fn main() {
-    let path = r"C:\Files\temp\fs";
+    let path = r"D:\Programming\rust-learning\temp";
     println!("watching {}", path);
 
     if let Err(e) = async_watch(path).await {
