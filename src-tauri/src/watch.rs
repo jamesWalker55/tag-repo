@@ -2,21 +2,8 @@ use futures::{
     channel::mpsc::{unbounded, UnboundedReceiver},
     SinkExt, StreamExt,
 };
-use notify::event::ModifyKind::Name;
-use notify::EventKind::Modify;
 use notify::{Config, Event, RecommendedWatcher, RecursiveMode, Watcher};
-use std::path::{Path, PathBuf};
-
-// #[derive(Debug)]
-// pub enum FSEvent {
-//   /// File creation event. This should never be used for file renames.
-//   Create(PathBuf),
-//   /// File removal event. This should never be used for file renames.
-//   Remove(PathBuf),
-//   /// File rename event.
-//   Rename(PathBuf, PathBuf),
-//   // Modify(PathBuf),
-// }
+use std::path::Path;
 
 fn async_watcher() -> notify::Result<(RecommendedWatcher, UnboundedReceiver<notify::Result<Event>>)>
 {
@@ -37,51 +24,15 @@ fn async_watcher() -> notify::Result<(RecommendedWatcher, UnboundedReceiver<noti
 }
 
 async fn async_watch(path: impl AsRef<Path>) -> notify::Result<()> {
-    use notify::EventKind::*;
-
     let (mut watcher, mut rx) = async_watcher()?;
 
     // Add a path to be watched. All files and directories at that path and
     // below will be monitored for changes.
     watcher.watch(path.as_ref(), RecursiveMode::Recursive)?;
 
-    let last_rename_from: Option<PathBuf> = None;
-
     while let Some(res) = rx.next().await {
-        let fsevent: Option<FSEvent> = match res {
-            Ok(Event {
-                kind: Create(kind),
-                paths,
-                attrs,
-            }) => {
-                let path = paths.get(0)?;
-            }
-            // Ok(event) => {
-            //   let action = match event.kind {
-            //     EventKind::Any => "Any",
-            //     EventKind::Access(access_kind) => {
-            //       access_kind
-            //       "Access"
-            //     },
-            //     EventKind::Create(create_kind) => {
-            //       "Create"
-            //     },
-            //     EventKind::Modify(modify_kind) => {
-            //       "Modify"
-            //     },
-            //     EventKind::Remove(remove_kind) => {
-            //       "Remove"
-            //     },
-            //     EventKind::Other => "Other",
-            //   };
-            //   println!("changed: {:?}", event)
-            // },
-        };
-        // print the fsevent if it exists
-        match fsevent {
-            Some(fsevent) => println!("{:?}", fsevent),
-            None => (),
-        }
+        let res = res.unwrap();
+        println!("{:?}", res);
     }
 
     Ok(())
