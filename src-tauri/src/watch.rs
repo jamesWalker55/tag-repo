@@ -31,6 +31,9 @@ async fn async_watch(path: impl AsRef<Path>) -> notify::Result<()> {
             ..
         } = evt
         {
+            if let Some(_) = last_rename_from {
+                panic!("Got multiple 'Rename From' events in a row!")
+            }
             let path = paths.pop().unwrap();
             last_rename_from = Some(path);
             continue;
