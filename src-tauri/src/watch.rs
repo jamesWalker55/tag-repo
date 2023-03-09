@@ -17,117 +17,15 @@ use tokio::sync::{RwLock, RwLockWriteGuard};
 use tokio::task;
 use tokio::time::{timeout, timeout_at, Instant};
 
-enum RenamePartialPath<'a> {
-    CreatedPath { path: &'a Path, waker: Waker },
-    RemovedPath { path: &'a Path, waker: Waker },
+enum PathRecordAction {
+    Created,
+    Removed,
 }
-
-// type RenamePathResolverDB<'a> = HashMap<&'a str, Vec<&'a PathBuf>>;
-
-// enum RenamePathResolverState<'a> {
-//     Initial,
-//     WaitingDBWriteLock(
-//         Option<Pin<Box<dyn Future<Output = RwLockWriteGuard<'a, RenamePathResolverDB<'a>>>>>>,
-//     ),
-// }
-//
-// struct RenamePathResolver<'a> {
-//     path_info: RenamePartialPath<'a>,
-//     path_info_db: Arc<RwLock<HashMap<&'a str, Vec<&'a PathBuf>>>>,
-//     current_state: RenamePathResolverState<'a>,
-// }
-//
-// impl<'a> Future for RenamePathResolver<'a> {
-//     type Output = Option<&'a PathBuf>;
-//
-//     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
-//         match &self.current_state {
-//             RenamePathResolverState::Initial => {
-//                 let future = self.path_info_db.write();
-//                 future.poll(cx);
-//                 self.current_state =
-//                     RenamePathResolverState::WaitingDBWriteLock(Some(Box::pin(future)));
-//                 // future.poll(cx)
-//             }
-//             RenamePathResolverState::WaitingDBWriteLock(lock) => {
-//                 todo!()
-//             }
-//         }
-//         // let x = cx.waker().clone();
-//         todo!()
-//     }
-// }
-
-// enum ResolveRenameError {
-//     InvalidPath,
-// }
-//
-// type AsyncPathList<'a> = RwLock<Vec<&'a PathBuf>>;
-//
-// struct TemporaryPathPusher<'a> {
-//     path: &'a PathBuf,
-//     vec: AsyncPathList<'a>,
-//     already_pushed: bool,
-// }
-//
-// impl<'a> TemporaryPathPusher<'a> {
-//     fn new(path: &PathBuf, vec: AsyncPathList) -> Self {
-//         Self {
-//             path,
-//             vec,
-//             already_pushed: false,
-//         }
-//     }
-//
-//     fn activate(&mut self) {
-//         if self.already_pushed {
-//             panic!()
-//         }
-//         let w = self.vec.write().push(self.path);
-//         self.already_pushed = true;
-//     }
-// }
-//
-// impl<'a> Drop for TemporaryPathPusher<'a> {
-//     fn drop(&mut self) {
-//         let idx = self.vec.iter().position(|x| x == &self.path).unwrap();
-//         self.vec.remove(idx);
-//     }
-// }
-//
-// type RenamePathResolverDB<'a> = HashMap<&'a OsStr, AsyncPathList<'a>>;
-//
-// async fn resolve_create_to_rename_path<'a>(
-//     created_path: &'a PathBuf,
-//     rename_path_resolver: Arc<RwLock<RenamePathResolverDB<'a>>>,
-// ) -> Result<Option<&'a PathBuf>, ResolveRenameError> {
-//     let created_filename = created_path
-//         .file_name()
-//         .ok_or(ResolveRenameError::InvalidPath)?;
-//     let mut path_pusher = None;
-//     {
-//         let mut rename_path_resolver = rename_path_resolver.write().await;
-//         match rename_path_resolver.get_mut(created_filename) {
-//             Some(paths) => {
-//                 path_pusher = Some(TemporaryPathPusher {
-//                     path: created_path,
-//                     vec: paths,
-//                     already_pushed: false,
-//                 })
-//             }
-//             None => {
-//                 let mut paths = vec![];
-//                 paths.push(created_path);
-//                 rename_path_resolver.insert(created_filename, paths);
-//             }
-//         }
-//     }
-//     Err(ResolveRenameError::InvalidPath)
-// }
 
 struct PathRecord<'a> {
     path: &'a Path,
     file_name: &'a OsStr,
+    action: PathRecordAction,
     sender: oneshot::Sender<ManagerResponse<'a>>,
     expires_at: Instant,
 }
@@ -190,7 +88,10 @@ async fn path_records_manager<'a>(mut rx: UnboundedReceiver<PathRecord<'a>>) {
                 // Scan records to find match
                 let mut idx_to_remove = None;
                 for (i, other_record) in db.iter().enumerate() {
-                    if record.file_name == other_record.file_name {
+                    // If both have the same path, and one is Created and other is Removed...
+                    if record.file_name == other_record.file_name
+                        && record.action != other_record.action
+                    {
                         idx_to_remove = Some(i);
                         break;
                     }
