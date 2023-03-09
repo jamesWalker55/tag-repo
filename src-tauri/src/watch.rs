@@ -17,6 +17,7 @@ use tokio::sync::{RwLock, RwLockWriteGuard};
 use tokio::task;
 use tokio::time::{timeout, timeout_at, Instant};
 
+#[derive(Eq, PartialEq)]
 enum PathRecordAction {
     Created,
     Removed,
@@ -30,15 +31,59 @@ struct PathRecord<'a> {
     expires_at: Instant,
 }
 
-// impl PathRecord {
-//     fn create(path: &Path, sender: oneshot::Sender<ManagerResponse>) {
-//         let file_name = path.file_name();
-//         Self {
-//             path,
-//             file_name: path.file_name().expect()
-//         }
-//     }
-// }
+enum PathRecordCreationError {
+    InvalidPath,
+    InvalidEvent,
+}
+
+impl<'a> PathRecord<'a> {
+    fn create(
+        evt: &'a Event,
+        sender: oneshot::Sender<ManagerResponse<'a>>,
+    ) -> Result<Self, PathRecordCreationError> {
+        let (path, action) = match evt {
+            Event {
+                kind: Remove(RemoveKind::Any),
+                paths: removed_paths,
+                ..
+            } => (
+                removed_paths
+                    .get(0)
+                    .expect("No paths in this event?!")
+                    .as_path(),
+                PathRecordAction::Removed,
+            ),
+            Event {
+                kind: Create(CreateKind::Any),
+                paths: created_paths,
+                ..
+            } => (
+                created_paths
+                    .get(0)
+                    .expect("No paths in this event?!")
+                    .as_path(),
+                PathRecordAction::Created,
+            ),
+            _ => {
+                Err(PathRecordCreationError::InvalidEvent)?;
+                unreachable!();
+            }
+        };
+
+        let expires_at = Instant::now() + Duration::from_millis(100);
+        let file_name = path
+            .file_name()
+            .ok_or(PathRecordCreationError::InvalidPath)?;
+
+        Ok(Self {
+            path,
+            file_name,
+            action,
+            sender,
+            expires_at,
+        })
+    }
+}
 
 enum ManagerResponse<'a> {
     /// Respond that "This event is not a rename, treat it as the original create/remove event.
