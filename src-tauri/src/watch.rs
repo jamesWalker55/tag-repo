@@ -17,7 +17,7 @@ use tokio::sync::{RwLock, RwLockWriteGuard};
 use tokio::task;
 use tokio::time::{timeout, timeout_at, Instant};
 
-#[derive(Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq)]
 enum PathRecordAction {
     Created,
     Removed,
