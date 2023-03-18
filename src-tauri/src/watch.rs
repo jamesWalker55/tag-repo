@@ -150,6 +150,99 @@ async fn path_records_manager<'a>(mut rx: UnboundedReceiver<PathRecord>) {
     }
 }
 
+/// A normalised watcher. All watchers that implement this should behave the same across different
+/// operating systems. E.g. Same events for file renames, file moves.
+#[async_trait]
+trait NormWatcher {
+    /// Add a path to be watched. This should just be a wrapper for the watcher's #watch method
+    fn watch(&mut self, path: &Path, recursive_mode: RecursiveMode) -> notify::Result<()>;
+
+    /// Receive the next event. This function will always succeed (even if it waits forever, it must
+    /// never fail)
+    async fn recv(&mut self) -> Event;
+}
+
+/// A wrapper for `ReadDirectoryChangesWatcher`.
+///
+/// The structure of this wrapper is like this:
+///
+/// ```plain
+/// Watcher
+///    |
+///    v
+/// Handler -> Manager
+///    |          |
+///    |          |
+///    +> Output <+
+/// ```
+///
+/// The **watcher** is a `Watcher` from the `notify` crate. It spawns events to be processed by the
+/// **handler**.
+///
+/// The **handler** processes incoming events from the watcher. What it does depends on the kind of
+/// event it received:
+///
+/// - Create/Delete events: It sends these events to the **manager** to be further processed. This
+///   is because Windows shows file move events as Create/Delete events. The **manager** will
+///   attempt to resolve these Create/Delete events into Rename events if possible, otherwise the
+///   manager returns the original Create/Delete events.
+/// - Other events: It returns the events as-is, without sending them to the manager
+///
+/// The **manager** maintains a list of recently-created/deleted paths. When a new path is
+/// created/deleted, it scans this list to check if there are any similar deleted/created path. If
+/// so, it treats the event as a rename event. If not found, it adds the path to the list, then
+/// returns the original event as-is.
+struct ReadDirectoryChangesNormWatcher {
+    /// The actual watcher instance
+    watcher: ReadDirectoryChangesWatcher,
+    /// A receiver that receives raw, unprocessed events from the watcher
+    watcher_rx: UnboundedReceiver<notify::Result<Event>>,
+    /// A sender that sends new PathRecords to the path record manager / debouncer thing
+    manager_tx: UnboundedSender<PathRecord>,
+    /// Handle for the path record manager / debouncer thing. Its only purpose is to keep the handle
+    /// in memory and only drop it when this struct is dropped.
+    manager_handle: JoinHandle<()>,
+    /// Storage for the last-seen "renamed from" path
+    last_rename_from: Option<PathBuf>,
+}
+
+impl ReadDirectoryChangesNormWatcher {
+    fn new() -> notify::Result<Self> {
+        // Spawn the watcher
+        let (watcher_tx, mut watcher_rx) = unbounded_channel();
+
+        let mut watcher = ReadDirectoryChangesWatcher::new(
+            move |res| watcher_tx.send(res).unwrap(),
+            Config::default(),
+        )?;
+
+        // Spawn the path manager
+        let (manager_tx, manager_rx) = unbounded_channel();
+        let manager_handle = tokio::spawn(async move {
+            path_records_manager(manager_rx).await;
+        });
+
+        Ok(Self {
+            watcher,
+            watcher_rx,
+            manager_tx,
+            manager_handle,
+            last_rename_from: None,
+        })
+    }
+}
+
+#[async_trait]
+impl NormWatcher for ReadDirectoryChangesNormWatcher {
+    fn watch(&mut self, path: &Path, recursive_mode: RecursiveMode) -> notify::Result<()> {
+        self.watcher.watch(path.as_ref(), recursive_mode)
+    }
+
+    async fn recv(&mut self) -> Event {
+        todo!()
+    }
+}
+
 async fn async_watch(path: impl AsRef<Path>) -> notify::Result<()> {
     // Spawn the watcher
 
