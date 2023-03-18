@@ -46,8 +46,10 @@ mod tests {
                     mut paths,
                     ..
                 } => {
-                    println!("Moved  : {:?}", paths.pop().unwrap());
-                    println!("      -> {:?}", paths.pop().unwrap());
+                    let dest = paths.pop().unwrap();
+                    let src = paths.pop().unwrap();
+                    println!("Moved  : {:?}", src);
+                    println!("      -> {:?}", dest);
                 }
                 Event { kind: Modify(ModifyKind::Any), mut paths, .. } => {
                     println!("       m {:?}", paths.pop().unwrap());
