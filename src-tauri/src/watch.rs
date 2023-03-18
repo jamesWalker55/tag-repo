@@ -121,9 +121,6 @@ async fn path_records_manager<'a>(mut rx: UnboundedReceiver<PathRecord>) {
             Some(record) => {
                 // Got instructions to match this path record
 
-                // Clear expired records from database
-                clear_expired_records(&mut db);
-
                 // Scan records to find match
                 let mut idx_to_remove = None;
                 for (i, other_record) in db.iter().enumerate() {
@@ -144,6 +141,9 @@ async fn path_records_manager<'a>(mut rx: UnboundedReceiver<PathRecord>) {
                     // No match, add to database
                     db.push(record);
                 }
+
+                // Clear expired records from database
+                clear_expired_records(&mut db);
             }
             None => {
                 // No more instructions, all senders have been dropped
