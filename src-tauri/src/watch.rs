@@ -45,7 +45,8 @@ impl PathRecord {
         sender: oneshot::Sender<ManagerResponse>,
     ) -> Result<Self, PathRecordCreationError> {
         // verify that path is valid
-        path.file_name().ok_or(PathRecordCreationError::InvalidPath)?;
+        path.file_name()
+            .ok_or(PathRecordCreationError::InvalidPath)?;
 
         let expires_at = Instant::now() + Duration::from_millis(100);
 
@@ -58,6 +59,7 @@ impl PathRecord {
     }
 }
 
+#[derive(Debug)]
 enum ManagerResponse {
     /// Respond that "This event is not a rename, treat it as the original create/remove event.
     NotRename,
@@ -139,8 +141,8 @@ async fn path_records_manager<'a>(mut rx: UnboundedReceiver<PathRecord>) {
                 if let Some(i) = idx_to_remove {
                     // Found match, send responses and remove from database
                     let other_record = db.remove(i);
-                    record.sender.send(CreateRename(other_record.path));
-                    other_record.sender.send(IgnoreRename);
+                    record.sender.send(CreateRename(other_record.path)).unwrap();
+                    other_record.sender.send(IgnoreRename).unwrap();
                 } else {
                     // No match, add to database
                     db.push(record);
