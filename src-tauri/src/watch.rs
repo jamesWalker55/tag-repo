@@ -172,149 +172,149 @@ async fn async_watch(path: impl AsRef<Path>) -> notify::Result<()> {
     let mut last_rename_from: Option<PathBuf> = None;
     while let Some(evt) = watcher_rx.recv().await {
         let evt = evt.unwrap();
-        if let Event {
-            kind: Modify(Name(RenameMode::From)),
-            mut paths,
-            ..
-        } = evt
-        {
-            if let Some(_) = last_rename_from {
-                panic!("Got multiple 'Rename From' events in a row!")
+        match evt {
+            Event {
+                kind: Modify(Name(RenameMode::From)),
+                mut paths,
+                ..
+            } => {
+                if let Some(_) = last_rename_from {
+                    panic!("Got multiple 'Rename From' events in a row!")
+                }
+                let path = paths.pop().unwrap();
+                last_rename_from = Some(path);
+                continue;
             }
-            let path = paths.pop().unwrap();
-            last_rename_from = Some(path);
-            continue;
-        } else if let Event {
-            kind: Modify(Name(RenameMode::To)),
-            mut paths,
-            ..
-        } = evt
-        {
-            let from_path = last_rename_from
-                .take()
-                .expect("Got 'Rename To' event, but no 'Rename From' event happened before this!");
-            let to_path = paths.pop().unwrap();
-            let evt = Event {
-                kind: Modify(Name(RenameMode::Both)),
-                paths: vec![from_path, to_path],
-                attrs: evt.attrs.clone(),
-            };
-            println!("{:?}", evt);
-        } else if let Event {
-            kind: Remove(RemoveKind::Any),
-            paths: mut removed_paths,
-            attrs,
-        } = evt
-        {
-            assert_eq!(
-                removed_paths.len(),
-                1,
-                "Number of created paths is not 1: {}",
-                removed_paths.len()
-            );
-            let removed_path = removed_paths.pop().unwrap();
-            let (path_tx, path_rx) = oneshot::channel();
-            let record =
-                PathRecord::create(removed_path.clone(), PathRecordAction::Removed, path_tx)
-                    .unwrap();
-            manager_tx.send(record).unwrap();
+            Event {
+                kind: Modify(Name(RenameMode::To)),
+                mut paths,
+                ..
+            } => {
+                let from_path = last_rename_from.take().expect(
+                    "Got 'Rename To' event, but no 'Rename From' event happened before this!",
+                );
+                let to_path = paths.pop().unwrap();
+                let evt = Event {
+                    kind: Modify(Name(RenameMode::Both)),
+                    paths: vec![from_path, to_path],
+                    attrs: evt.attrs.clone(),
+                };
+                println!("{:?}", evt);
+            }
+            Event {
+                kind: Remove(RemoveKind::Any),
+                paths: mut removed_paths,
+                attrs,
+            } => {
+                assert_eq!(
+                    removed_paths.len(),
+                    1,
+                    "Number of created paths is not 1: {}",
+                    removed_paths.len()
+                );
+                let removed_path = removed_paths.pop().unwrap();
+                let (path_tx, path_rx) = oneshot::channel();
+                let record =
+                    PathRecord::create(removed_path.clone(), PathRecordAction::Removed, path_tx)
+                        .unwrap();
+                manager_tx.send(record).unwrap();
 
-            task::spawn(async move {
-                match path_rx.await {
-                    Ok(ManagerResponse::CreateRename(created_path)) => {
-                        // found matching create, this is a file-move event
-                        // we got a path, meaning we should handle this event
-                        // we'll create a rename event:
-                        let evt = Event {
-                            kind: Modify(Name(RenameMode::Both)),
-                            paths: vec![removed_path, created_path.to_path_buf()],
-                            attrs,
-                        };
-                        println!("{:?}", evt);
+                task::spawn(async move {
+                    match path_rx.await {
+                        Ok(ManagerResponse::CreateRename(created_path)) => {
+                            // found matching create, this is a file-move event
+                            // we got a path, meaning we should handle this event
+                            // we'll create a rename event:
+                            let evt = Event {
+                                kind: Modify(Name(RenameMode::Both)),
+                                paths: vec![removed_path, created_path.to_path_buf()],
+                                attrs,
+                            };
+                            println!("{:?}", evt);
+                        }
+                        Ok(ManagerResponse::IgnoreRename) => {
+                            // found matching create, this is a file-move event
+                            // however we didn't get a path, meaning the paired create event will handle this
+                            // we'll do nothing here
+                        }
+                        Ok(ManagerResponse::NotRename) => {
+                            // no paired path found
+                            // treat this as a remove
+                            let evt = Event {
+                                kind: Remove(RemoveKind::Any),
+                                paths: vec![removed_path],
+                                attrs,
+                            };
+                            println!("{:?}", evt);
+                        }
+                        Err(_) => {
+                            // the sender got dropped somehow?
+                            panic!();
+                        }
                     }
-                    Ok(ManagerResponse::IgnoreRename) => {
-                        // found matching create, this is a file-move event
-                        // however we didn't get a path, meaning the paired create event will handle this
-                        // we'll do nothing here
-                    }
-                    Ok(ManagerResponse::NotRename) => {
-                        // no paired path found
-                        // treat this as a remove
-                        let evt = Event {
-                            kind: Remove(RemoveKind::Any),
-                            paths: vec![removed_path],
-                            attrs,
-                        };
-                        println!("{:?}", evt);
-                    }
-                    Err(_) => {
-                        // the sender got dropped somehow?
-                        panic!();
-                    }
-                }
-            });
-        } else if let Event {
-            kind: Create(CreateKind::Any),
-            paths: created_paths,
-            attrs,
-        } = evt
-        {
-            assert_eq!(
-                created_paths.len(),
-                1,
-                "Number of created paths is not 1: {}",
-                created_paths.len()
-            );
-            let created_path = created_paths.get(0).unwrap().clone();
-            let (path_tx, path_rx) = oneshot::channel();
-            let record =
-                PathRecord::create(created_path.clone(), PathRecordAction::Created, path_tx)
-                    .unwrap();
-            manager_tx.send(record).unwrap();
+                });
+            }
+            Event {
+                kind: Create(CreateKind::Any),
+                paths: created_paths,
+                attrs,
+            } => {
+                assert_eq!(
+                    created_paths.len(),
+                    1,
+                    "Number of created paths is not 1: {}",
+                    created_paths.len()
+                );
+                let created_path = created_paths.get(0).unwrap().clone();
+                let (path_tx, path_rx) = oneshot::channel();
+                let record =
+                    PathRecord::create(created_path.clone(), PathRecordAction::Created, path_tx)
+                        .unwrap();
+                manager_tx.send(record).unwrap();
 
-            task::spawn(async move {
-                match path_rx.await {
-                    Ok(ManagerResponse::CreateRename(removed_path)) => {
-                        // found matching remove, this is a file-move event
-                        // we got a path, meaning we should handle this event
-                        // we'll create a rename event:
-                        let evt = Event {
-                            kind: Modify(Name(RenameMode::Both)),
-                            paths: vec![removed_path, created_path],
-                            attrs,
-                        };
-                        println!("{:?}", evt);
+                task::spawn(async move {
+                    match path_rx.await {
+                        Ok(ManagerResponse::CreateRename(removed_path)) => {
+                            // found matching remove, this is a file-move event
+                            // we got a path, meaning we should handle this event
+                            // we'll create a rename event:
+                            let evt = Event {
+                                kind: Modify(Name(RenameMode::Both)),
+                                paths: vec![removed_path, created_path],
+                                attrs,
+                            };
+                            println!("{:?}", evt);
+                        }
+                        Ok(ManagerResponse::IgnoreRename) => {
+                            // found matching remove, this is a file-move event
+                            // however we didn't get a path, meaning the paired remove event will handle this
+                            // we'll do nothing here
+                        }
+                        Ok(ManagerResponse::NotRename) => {
+                            // no paired path found
+                            // treat this as a create
+                            let evt = Event {
+                                kind: Create(CreateKind::Any),
+                                paths: vec![created_path.to_path_buf()],
+                                attrs,
+                            };
+                            println!("{:?}", evt);
+                        }
+                        Err(_) => {
+                            // the sender got dropped somehow?
+                            panic!();
+                        }
                     }
-                    Ok(ManagerResponse::IgnoreRename) => {
-                        // found matching remove, this is a file-move event
-                        // however we didn't get a path, meaning the paired remove event will handle this
-                        // we'll do nothing here
-                    }
-                    Ok(ManagerResponse::NotRename) => {
-                        // no paired path found
-                        // treat this as a create
-                        let evt = Event {
-                            kind: Create(CreateKind::Any),
-                            paths: vec![created_path.to_path_buf()],
-                            attrs,
-                        };
-                        println!("{:?}", evt);
-                    }
-                    Err(_) => {
-                        // the sender got dropped somehow?
-                        panic!();
-                    }
-                }
-            });
-        } else if let Event {
-            kind: Modify(ModifyKind::Any),
-            ..
-        } = evt
-        {
-            // ignore
-            // println!("{:?}", evt);
-        } else {
-            println!("{:?}", evt);
+                });
+            }
+            Event {
+                kind: Modify(ModifyKind::Any),
+                ..
+            } => {
+                // ignore
+                // println!("{:?}", evt);
+            }
+            _ => println!("{:?}", evt),
         }
     }
 
