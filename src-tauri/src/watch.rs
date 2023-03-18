@@ -99,7 +99,7 @@ async fn path_records_manager<'a>(mut rx: UnboundedReceiver<PathRecord>) {
     }
 
     let mut db: Vec<PathRecord> = vec![];
-    let mut res = None;
+    let mut res;
 
     loop {
         // If we have paths in the database, timeout until the next path's instant
