@@ -193,16 +193,18 @@ trait NormWatcher {
 /// so, it treats the event as a rename event. If not found, it adds the path to the list, then
 /// returns the original event as-is.
 struct ReadDirectoryChangesNormWatcher {
-    /// The actual watcher instance
+    /// The actual watcher instance.
     watcher: ReadDirectoryChangesWatcher,
-    /// A receiver that receives raw, unprocessed events from the watcher
-    watcher_rx: UnboundedReceiver<notify::Result<Event>>,
-    /// A sender that sends new PathRecords to the path record manager / debouncer thing
-    manager_tx: UnboundedSender<PathRecord>,
     /// Handle for the path record manager / debouncer thing. Its only purpose is to keep the handle
     /// in memory and only drop it when this struct is dropped.
     manager_handle: JoinHandle<()>,
-    /// Storage for the last-seen "renamed from" path
+    /// A receiver that receives processed events from the event handler. As the name suggests,
+    /// these events are final ("output") events.
+    output_rx: UnboundedReceiver<notify::Result<Event>>,
+    /// Handle for the event handler. Its only purpose is to keep the handle in memory and only drop
+    /// it when this struct is dropped.
+    event_handler_handle: JoinHandle<()>,
+    /// Storage for the last-seen "renamed from" path.
     last_rename_from: Option<PathBuf>,
 }
 
@@ -222,11 +224,17 @@ impl ReadDirectoryChangesNormWatcher {
             path_records_manager(manager_rx).await;
         });
 
+        // Spawn the event handler
+        let (output_tx, mut output_rx) = unbounded_channel();
+        let event_handler_handle = tokio::spawn(async move {
+            event_handler(watcher_rx, manager_tx, output_tx).await;
+        });
+
         Ok(Self {
             watcher,
-            watcher_rx,
-            manager_tx,
             manager_handle,
+            output_rx,
+            event_handler_handle,
             last_rename_from: None,
         })
     }
@@ -267,6 +275,7 @@ async fn async_watch(path: impl AsRef<Path>) -> notify::Result<()> {
 
     // Loop through events
     while let Some(evt) = output_rx.recv().await {
+        let evt = evt.unwrap();
         match evt {
             Event {
                 kind: Modify(Name(RenameMode::Both)), mut paths, ..
@@ -305,10 +314,14 @@ async fn async_watch(path: impl AsRef<Path>) -> notify::Result<()> {
 async fn event_handler(
     mut watcher_rx: UnboundedReceiver<notify::Result<Event>>,
     manager_tx: UnboundedSender<PathRecord>,
-    output_tx: UnboundedSender<Event>,
+    output_tx: UnboundedSender<notify::Result<Event>>,
 ) {
     let mut last_rename_from: Option<PathBuf> = None;
     while let Some(evt) = watcher_rx.recv().await {
+        if evt.is_err() {
+            output_tx.send(evt).unwrap();
+            continue;
+        }
         let evt = evt.unwrap();
         match evt {
             Event {
@@ -331,7 +344,7 @@ async fn event_handler(
                     paths: vec![from_path, to_path],
                     attrs: evt.attrs.clone(),
                 };
-                output_tx.send(evt).unwrap();
+                output_tx.send(Ok(evt)).unwrap();
             }
             Event { kind: Remove(RemoveKind::Any), mut paths, attrs } => {
                 assert_eq!(
@@ -359,7 +372,7 @@ async fn event_handler(
                                 paths: vec![removed_path, created_path.to_path_buf()],
                                 attrs,
                             };
-                            output_tx.send(evt).unwrap();
+                            output_tx.send(Ok(evt)).unwrap();
                         }
                         Ok(ManagerResponse::IgnoreRename) => {
                             // found matching create, this is a file-move event
@@ -374,7 +387,7 @@ async fn event_handler(
                                 paths: vec![removed_path],
                                 attrs,
                             };
-                            output_tx.send(evt).unwrap();
+                            output_tx.send(Ok(evt)).unwrap();
                         }
                         Err(_) => {
                             // the sender got dropped somehow?
@@ -409,7 +422,7 @@ async fn event_handler(
                                 paths: vec![removed_path, created_path],
                                 attrs,
                             };
-                            output_tx.send(evt).unwrap();
+                            output_tx.send(Ok(evt)).unwrap();
                         }
                         Ok(ManagerResponse::IgnoreRename) => {
                             // found matching remove, this is a file-move event
@@ -424,7 +437,7 @@ async fn event_handler(
                                 paths: vec![created_path.to_path_buf()],
                                 attrs,
                             };
-                            output_tx.send(evt).unwrap();
+                            output_tx.send(Ok(evt)).unwrap();
                         }
                         Err(_) => {
                             // the sender got dropped somehow?
@@ -434,9 +447,9 @@ async fn event_handler(
                 });
             }
             Event { kind: Modify(ModifyKind::Any), .. } => {
-                output_tx.send(evt).unwrap();
+                output_tx.send(Ok(evt)).unwrap();
             }
-            _ => output_tx.send(evt).unwrap(),
+            _ => output_tx.send(Ok(evt)).unwrap(),
         }
     }
 }
