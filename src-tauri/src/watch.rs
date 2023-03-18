@@ -289,6 +289,12 @@ async fn async_watch(path: impl AsRef<Path>) -> notify::Result<()> {
         }
     }
 
+    // drop the watcher first
+    //
+    // this will cause the other tasks to naturally end since those tasks are receiving events
+    // from this watcher
+    drop(watcher);
+
     // wait for handlers to stop
     manager_handle.await.unwrap();
     event_handler_handle.await.unwrap();
