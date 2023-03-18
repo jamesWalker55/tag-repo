@@ -159,7 +159,7 @@ trait NormWatcher {
 
     /// Receive the next event. This function will always succeed (even if it waits forever, it must
     /// never fail)
-    async fn recv(&mut self) -> Event;
+    async fn recv(&mut self) -> Option<notify::Result<Event>>;
 }
 
 /// A wrapper for `ReadDirectoryChangesWatcher`.
@@ -168,12 +168,13 @@ trait NormWatcher {
 ///
 /// ```plain
 /// Watcher
-///    |
-///    v
+///   |
+///   v
 /// Handler -> Manager
-///    |          |
-///    |          |
-///    +> Output <+
+///   |   ^      |
+///   |   +------+
+///   v
+/// Output
 /// ```
 ///
 /// The **watcher** is a `Watcher` from the `notify` crate. It spawns events to be processed by the
@@ -182,16 +183,30 @@ trait NormWatcher {
 /// The **handler** processes incoming events from the watcher. What it does depends on the kind of
 /// event it received:
 ///
-/// - Create/Delete events: It sends these events to the **manager** to be further processed. This
-///   is because Windows shows file move events as Create/Delete events. The **manager** will
+/// - Create/Delete events: It sends these events to the **manager** to be further processed. It
+///   later receives back a message from the **manager** then returns an event according to the
+///   message.
+///
+///   This is because Windows shows file move events as Create/Delete events. The **manager** will
 ///   attempt to resolve these Create/Delete events into Rename events if possible, otherwise the
 ///   manager returns the original Create/Delete events.
+///
 /// - Other events: It returns the events as-is, without sending them to the manager
 ///
 /// The **manager** maintains a list of recently-created/deleted paths. When a new path is
 /// created/deleted, it scans this list to check if there are any similar deleted/created path. If
-/// so, it treats the event as a rename event. If not found, it adds the path to the list, then
-/// returns the original event as-is.
+/// so, it tells the **handler** to treat the event as a rename event. If not found, it adds the
+/// path to the list, then tells the **handler** to return the original event as-is.
+///
+/// ## How to stop watching
+///
+/// Just drop this struct. It should automatically clean up everything. If you really need to drop
+/// it manually, here are some instructions / information:
+///
+/// - Drop the `notify` watcher first. Since the other tasks depend on receiving events from the
+///   `notify` watcher, terminating the watcher will naturally cause the tasks to terminate
+/// - Then `await` on the two task handlers. You want to ensure that the tasks have really
+///   ended.
 struct ReadDirectoryChangesNormWatcher {
     /// The actual watcher instance.
     watcher: ReadDirectoryChangesWatcher,
@@ -246,35 +261,17 @@ impl NormWatcher for ReadDirectoryChangesNormWatcher {
         self.watcher.watch(path.as_ref(), recursive_mode)
     }
 
-    async fn recv(&mut self) -> Event {
-        todo!()
+    async fn recv(&mut self) -> Option<notify::Result<Event>> {
+        return self.output_rx.recv().await;
     }
 }
 
 async fn async_watch(path: impl AsRef<Path>) -> notify::Result<()> {
-    // Spawn the watcher
-
-    let (watcher_tx, watcher_rx) = unbounded_channel();
-
-    let mut watcher =
-        RecommendedWatcher::new(move |res| watcher_tx.send(res).unwrap(), Config::default())?;
-
+    let mut watcher = ReadDirectoryChangesNormWatcher::new()?;
     watcher.watch(path.as_ref(), RecursiveMode::Recursive)?;
 
-    // Spawn the path manager
-    let (manager_tx, manager_rx) = unbounded_channel();
-    let manager_handle = tokio::spawn(async move {
-        path_records_manager(manager_rx).await;
-    });
-
-    // Spawn the event handler
-    let (output_tx, mut output_rx) = unbounded_channel();
-    let event_handler_handle = tokio::spawn(async move {
-        event_handler(watcher_rx, manager_tx, output_tx).await;
-    });
-
     // Loop through events
-    while let Some(evt) = output_rx.recv().await {
+    while let Some(evt) = watcher.recv().await {
         let evt = evt.unwrap();
         match evt {
             Event {
@@ -297,16 +294,6 @@ async fn async_watch(path: impl AsRef<Path>) -> notify::Result<()> {
             }
         }
     }
-
-    // drop the watcher first
-    //
-    // this will cause the other tasks to naturally end since those tasks are receiving events
-    // from this watcher
-    drop(watcher);
-
-    // wait for handlers to stop
-    manager_handle.await.unwrap();
-    event_handler_handle.await.unwrap();
 
     Ok(())
 }
