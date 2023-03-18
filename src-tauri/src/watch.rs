@@ -18,7 +18,7 @@ enum PathRecordAction {
 #[derive(Debug)]
 enum PathRecordCreationError {
     InvalidPath,
-    InvalidEvent,
+    // InvalidEvent,
 }
 
 #[derive(Debug)]
