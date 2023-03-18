@@ -1,12 +1,16 @@
+use async_trait::async_trait;
 use futures::channel::oneshot;
 use notify::event::ModifyKind::Name;
 use notify::event::{CreateKind, ModifyKind, RemoveKind, RenameMode};
 use notify::EventKind::{Create, Modify, Remove};
-use notify::{Config, Event, RecommendedWatcher, RecursiveMode, Watcher};
+use notify::{
+    Config, Event, ReadDirectoryChangesWatcher, RecommendedWatcher, RecursiveMode, Watcher,
+};
 use std::path::{Path, PathBuf};
 use std::time::Duration;
-use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver};
+use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender};
 use tokio::task;
+use tokio::task::JoinHandle;
 use tokio::time::{timeout_at, Instant};
 
 #[derive(Debug, Eq, PartialEq)]
@@ -149,7 +153,7 @@ async fn path_records_manager<'a>(mut rx: UnboundedReceiver<PathRecord>) {
 async fn async_watch(path: impl AsRef<Path>) -> notify::Result<()> {
     // Spawn the watcher
 
-    let (watcher_tx, mut watcher_rx) = unbounded_channel();
+    let (watcher_tx, watcher_rx) = unbounded_channel();
 
     let mut watcher =
         RecommendedWatcher::new(move |res| watcher_tx.send(res).unwrap(), Config::default())?;
@@ -162,8 +166,48 @@ async fn async_watch(path: impl AsRef<Path>) -> notify::Result<()> {
         path_records_manager(manager_rx).await;
     });
 
-    // Begin watching for events
+    // Spawn the event handler
+    let (output_tx, mut output_rx) = unbounded_channel();
+    let event_handler_handle = tokio::spawn(async move {
+        event_handler(watcher_rx, manager_tx, output_tx).await;
+    });
 
+    // Loop through events
+    while let Some(evt) = output_rx.recv().await {
+        match evt {
+            Event {
+                kind: Modify(Name(RenameMode::Both)), mut paths, ..
+            } => {
+                println!("Moved  : {:?}", paths.pop().unwrap());
+                println!("      -> {:?}", paths.pop().unwrap());
+            }
+            Event { kind: Modify(ModifyKind::Any), mut paths, .. } => {
+                println!("       m {:?}", paths.pop().unwrap());
+            }
+            Event { kind: Remove(RemoveKind::Any), mut paths, .. } => {
+                println!("Deleted: {:?}", paths.pop().unwrap());
+            }
+            Event { kind: Create(CreateKind::Any), mut paths, .. } => {
+                println!("Created: {:?}", paths.pop().unwrap());
+            }
+            evt => {
+                println!("UNKNOWN EVENT: {:?}", evt)
+            }
+        }
+    }
+
+    // wait for handlers to stop
+    manager_handle.await.unwrap();
+    event_handler_handle.await.unwrap();
+
+    Ok(())
+}
+
+async fn event_handler(
+    mut watcher_rx: UnboundedReceiver<notify::Result<Event>>,
+    manager_tx: UnboundedSender<PathRecord>,
+    output_tx: UnboundedSender<Event>,
+) {
     let mut last_rename_from: Option<PathBuf> = None;
     while let Some(evt) = watcher_rx.recv().await {
         let evt = evt.unwrap();
@@ -188,7 +232,7 @@ async fn async_watch(path: impl AsRef<Path>) -> notify::Result<()> {
                     paths: vec![from_path, to_path],
                     attrs: evt.attrs.clone(),
                 };
-                println!("{:?}", evt);
+                output_tx.send(evt).unwrap();
             }
             Event { kind: Remove(RemoveKind::Any), mut paths, attrs } => {
                 assert_eq!(
@@ -203,6 +247,7 @@ async fn async_watch(path: impl AsRef<Path>) -> notify::Result<()> {
                     PathRecord::create(removed_path.clone(), PathRecordAction::Removed, path_tx)
                         .unwrap();
                 manager_tx.send(record).unwrap();
+                let output_tx = output_tx.clone();
 
                 task::spawn(async move {
                     match path_rx.await {
@@ -215,7 +260,7 @@ async fn async_watch(path: impl AsRef<Path>) -> notify::Result<()> {
                                 paths: vec![removed_path, created_path.to_path_buf()],
                                 attrs,
                             };
-                            println!("{:?}", evt);
+                            output_tx.send(evt).unwrap();
                         }
                         Ok(ManagerResponse::IgnoreRename) => {
                             // found matching create, this is a file-move event
@@ -230,7 +275,7 @@ async fn async_watch(path: impl AsRef<Path>) -> notify::Result<()> {
                                 paths: vec![removed_path],
                                 attrs,
                             };
-                            println!("{:?}", evt);
+                            output_tx.send(evt).unwrap();
                         }
                         Err(_) => {
                             // the sender got dropped somehow?
@@ -239,7 +284,7 @@ async fn async_watch(path: impl AsRef<Path>) -> notify::Result<()> {
                     }
                 });
             }
-            Event { kind: Create(CreateKind::Any), paths: paths, attrs } => {
+            Event { kind: Create(CreateKind::Any), paths, attrs } => {
                 assert_eq!(
                     paths.len(),
                     1,
@@ -252,6 +297,7 @@ async fn async_watch(path: impl AsRef<Path>) -> notify::Result<()> {
                     PathRecord::create(created_path.clone(), PathRecordAction::Created, path_tx)
                         .unwrap();
                 manager_tx.send(record).unwrap();
+                let output_tx = output_tx.clone();
 
                 task::spawn(async move {
                     match path_rx.await {
@@ -264,7 +310,7 @@ async fn async_watch(path: impl AsRef<Path>) -> notify::Result<()> {
                                 paths: vec![removed_path, created_path],
                                 attrs,
                             };
-                            println!("{:?}", evt);
+                            output_tx.send(evt).unwrap();
                         }
                         Ok(ManagerResponse::IgnoreRename) => {
                             // found matching remove, this is a file-move event
@@ -279,7 +325,7 @@ async fn async_watch(path: impl AsRef<Path>) -> notify::Result<()> {
                                 paths: vec![created_path.to_path_buf()],
                                 attrs,
                             };
-                            println!("{:?}", evt);
+                            output_tx.send(evt).unwrap();
                         }
                         Err(_) => {
                             // the sender got dropped somehow?
@@ -289,17 +335,11 @@ async fn async_watch(path: impl AsRef<Path>) -> notify::Result<()> {
                 });
             }
             Event { kind: Modify(ModifyKind::Any), .. } => {
-                // ignore
-                // println!("{:?}", evt);
+                output_tx.send(evt).unwrap();
             }
-            _ => println!("{:?}", evt),
+            _ => output_tx.send(evt).unwrap(),
         }
     }
-
-    // wait for manager to stop
-    manager_handle.await.unwrap();
-
-    Ok(())
 }
 
 #[tokio::main]
