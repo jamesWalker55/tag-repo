@@ -67,6 +67,33 @@ enum ManagerResponse {
 async fn path_records_manager<'a>(mut rx: UnboundedReceiver<PathRecord>) {
     use ManagerResponse::*;
 
+    fn clear_expired_records(db: &mut Vec<PathRecord>) {
+        let now = Instant::now();
+        let mut i = 0;
+        loop {
+            if i == db.len() {
+                break;
+            }
+            let mut is_expired = false;
+            {
+                let x = db.get(i).unwrap();
+                if x.expires_at <= now {
+                    // record has expired, prepare to remove this record
+                    // DON'T increment i to next record
+                    is_expired = true;
+                } else {
+                    // not expired, move on to next record
+                    i += 1;
+                }
+            }
+            if is_expired {
+                let x = db.remove(i);
+                // send event, don't care if the receiver has been dropped
+                let _ = x.sender.send(NotRename);
+            }
+        }
+    }
+
     let mut db: Vec<PathRecord> = vec![];
     let mut res = None;
 
@@ -81,8 +108,7 @@ async fn path_records_manager<'a>(mut rx: UnboundedReceiver<PathRecord>) {
                 }
                 Err(_) => {
                     // Timeout occurred, clear expired records from database and wait again
-                    let now = Instant::now();
-                    db.retain(|x| x.expires_at >= now);
+                    clear_expired_records(&mut db);
                     continue;
                 }
             }
@@ -96,8 +122,7 @@ async fn path_records_manager<'a>(mut rx: UnboundedReceiver<PathRecord>) {
                 // Got instructions to match this path record
 
                 // Clear expired records from database
-                let now = Instant::now();
-                db.retain(|x| x.expires_at >= now);
+                clear_expired_records(&mut db);
 
                 // Scan records to find match
                 let mut idx_to_remove = None;
