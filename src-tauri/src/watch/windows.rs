@@ -208,8 +208,6 @@ pub struct ReadDirectoryChangesNormWatcher {
     /// Handle for the event handler. Its only purpose is to keep the handle in memory and only drop
     /// it when this struct is dropped.
     event_handler_handle: JoinHandle<()>,
-    /// Storage for the last-seen "renamed from" path.
-    last_rename_from: Option<PathBuf>,
 }
 
 impl ReadDirectoryChangesNormWatcher {
@@ -239,7 +237,6 @@ impl ReadDirectoryChangesNormWatcher {
             manager_handle,
             output_rx,
             event_handler_handle,
-            last_rename_from: None,
         })
     }
 }
@@ -253,38 +250,6 @@ impl NormWatcher for ReadDirectoryChangesNormWatcher {
     async fn recv(&mut self) -> Option<notify::Result<Event>> {
         return self.output_rx.recv().await;
     }
-}
-
-async fn async_watch(path: impl AsRef<Path>) -> notify::Result<()> {
-    let mut watcher = ReadDirectoryChangesNormWatcher::new()?;
-    watcher.watch(path.as_ref(), RecursiveMode::Recursive)?;
-
-    // Loop through events
-    while let Some(evt) = watcher.recv().await {
-        let evt = evt.unwrap();
-        match evt {
-            Event {
-                kind: Modify(Name(RenameMode::Both)), mut paths, ..
-            } => {
-                println!("Moved  : {:?}", paths.pop().unwrap());
-                println!("      -> {:?}", paths.pop().unwrap());
-            }
-            Event { kind: Modify(ModifyKind::Any), mut paths, .. } => {
-                println!("       m {:?}", paths.pop().unwrap());
-            }
-            Event { kind: Remove(RemoveKind::Any), mut paths, .. } => {
-                println!("Deleted: {:?}", paths.pop().unwrap());
-            }
-            Event { kind: Create(CreateKind::Any), mut paths, .. } => {
-                println!("Created: {:?}", paths.pop().unwrap());
-            }
-            evt => {
-                println!("UNKNOWN EVENT: {:?}", evt)
-            }
-        }
-    }
-
-    Ok(())
 }
 
 async fn event_handler(
@@ -427,16 +392,5 @@ async fn event_handler(
             }
             _ => output_tx.send(Ok(evt)).unwrap(),
         }
-    }
-}
-
-#[tokio::main]
-#[allow(dead_code)]
-async fn main() {
-    let path = r"D:\Programming\rust-learning\temp";
-    println!("watching {}", path);
-
-    if let Err(e) = async_watch(path).await {
-        println!("error: {:?}", e)
     }
 }
