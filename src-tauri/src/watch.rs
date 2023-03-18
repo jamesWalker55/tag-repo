@@ -30,28 +30,23 @@ enum PathRecordCreationError {
 }
 
 #[derive(Debug)]
-struct PathRecord<'a> {
-    path: &'a Path,
-    file_name: &'a OsStr,
+struct PathRecord {
+    path: PathBuf,
     action: PathRecordAction,
-    sender: oneshot::Sender<ManagerResponse<'a>>,
+    sender: oneshot::Sender<ManagerResponse>,
     expires_at: Instant,
 }
 
-impl<'a> PathRecord<'a> {
+impl PathRecord {
     fn create(
-        path: &'a Path,
+        path: PathBuf,
         action: PathRecordAction,
-        sender: oneshot::Sender<ManagerResponse<'a>>,
+        sender: oneshot::Sender<ManagerResponse>,
     ) -> Result<Self, PathRecordCreationError> {
         let expires_at = Instant::now() + Duration::from_millis(100);
-        let file_name = path
-            .file_name()
-            .ok_or(PathRecordCreationError::InvalidPath)?;
 
         Ok(Self {
             path,
-            file_name,
             action,
             sender,
             expires_at,
@@ -59,20 +54,20 @@ impl<'a> PathRecord<'a> {
     }
 }
 
-enum ManagerResponse<'a> {
+enum ManagerResponse {
     /// Respond that "This event is not a rename, treat it as the original create/remove event.
     NotRename,
     /// Respond that "This event is a rename, and create a new rename event".
-    CreateRename(&'a Path),
+    CreateRename(PathBuf),
     /// Respond that "This event is a rename, but skip this event", implying the pairing event will
     /// handle this.
     IgnoreRename,
 }
 
-async fn path_records_manager<'a>(mut rx: UnboundedReceiver<PathRecord<'a>>) {
+async fn path_records_manager<'a>(mut rx: UnboundedReceiver<PathRecord>) {
     use ManagerResponse::*;
 
-    let mut db: Vec<PathRecord<'a>> = vec![];
+    let mut db: Vec<PathRecord> = vec![];
     let mut res = None;
 
     loop {
@@ -108,9 +103,9 @@ async fn path_records_manager<'a>(mut rx: UnboundedReceiver<PathRecord<'a>>) {
                 let mut idx_to_remove = None;
                 for (i, other_record) in db.iter().enumerate() {
                     // If both have the same path, and one is Created and other is Removed...
-                    if record.file_name == other_record.file_name
-                        && record.action != other_record.action
-                    {
+                    let name_a = record.path.file_name().expect("Path has no filename");
+                    let name_b = other_record.path.file_name().expect("Path has no filename");
+                    if name_a == name_b && record.action != other_record.action {
                         idx_to_remove = Some(i);
                         break;
                     }
@@ -192,7 +187,7 @@ async fn async_watch(path: impl AsRef<Path>) -> notify::Result<()> {
         } else if let Event {
             kind: Remove(RemoveKind::Any),
             paths: mut removed_paths,
-            ..
+            attrs,
         } = evt
         {
             assert_eq!(
@@ -204,7 +199,8 @@ async fn async_watch(path: impl AsRef<Path>) -> notify::Result<()> {
             let removed_path = removed_paths.pop().unwrap();
             let (path_tx, path_rx) = oneshot::channel();
             let record =
-                PathRecord::create(removed_path.as_path(), PathRecordAction::Removed, path_tx).unwrap();
+                PathRecord::create(removed_path.clone(), PathRecordAction::Removed, path_tx)
+                    .unwrap();
             manager_tx.send(record).unwrap();
 
             task::spawn(async move {
@@ -216,7 +212,7 @@ async fn async_watch(path: impl AsRef<Path>) -> notify::Result<()> {
                         let evt = Event {
                             kind: Modify(Name(RenameMode::Both)),
                             paths: vec![removed_path, created_path.to_path_buf()],
-                            attrs: evt.attrs.clone(),
+                            attrs,
                         };
                         println!("{:?}", evt);
                     }
@@ -228,6 +224,11 @@ async fn async_watch(path: impl AsRef<Path>) -> notify::Result<()> {
                     Ok(ManagerResponse::NotRename) => {
                         // no paired path found
                         // treat this as a remove
+                        let evt = Event {
+                            kind: Remove(RemoveKind::Any),
+                            paths: vec![removed_path],
+                            attrs,
+                        };
                         println!("{:?}", evt);
                     }
                     Err(e) => {
@@ -239,7 +240,7 @@ async fn async_watch(path: impl AsRef<Path>) -> notify::Result<()> {
         } else if let Event {
             kind: Create(CreateKind::Any),
             paths: created_paths,
-            ..
+            attrs,
         } = evt
         {
             assert_eq!(
@@ -248,10 +249,11 @@ async fn async_watch(path: impl AsRef<Path>) -> notify::Result<()> {
                 "Number of created paths is not 1: {}",
                 created_paths.len()
             );
-            let created_path = created_paths.get(0).unwrap().as_path();
+            let created_path = created_paths.get(0).unwrap().clone();
             let (path_tx, path_rx) = oneshot::channel();
             let record =
-                PathRecord::create(created_path, PathRecordAction::Created, path_tx).unwrap();
+                PathRecord::create(created_path.clone(), PathRecordAction::Created, path_tx)
+                    .unwrap();
             manager_tx.send(record).unwrap();
 
             task::spawn(async move {
@@ -262,8 +264,8 @@ async fn async_watch(path: impl AsRef<Path>) -> notify::Result<()> {
                         // we'll create a rename event:
                         let evt = Event {
                             kind: Modify(Name(RenameMode::Both)),
-                            paths: vec![removed_path.to_path_buf(), created_path.to_path_buf()],
-                            attrs: evt.attrs.clone(),
+                            paths: vec![removed_path, created_path],
+                            attrs,
                         };
                         println!("{:?}", evt);
                     }
@@ -275,6 +277,11 @@ async fn async_watch(path: impl AsRef<Path>) -> notify::Result<()> {
                     Ok(ManagerResponse::NotRename) => {
                         // no paired path found
                         // treat this as a create
+                        let evt = Event {
+                            kind: Create(CreateKind::Any),
+                            paths: vec![created_path.to_path_buf()],
+                            attrs,
+                        };
                         println!("{:?}", evt);
                     }
                     Err(e) => {
