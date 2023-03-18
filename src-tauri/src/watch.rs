@@ -320,6 +320,9 @@ async fn async_watch(path: impl AsRef<Path>) -> notify::Result<()> {
         }
     }
 
+    // wait for manager to stop
+    manager_handle.await.unwrap();
+
     Ok(())
 }
 
