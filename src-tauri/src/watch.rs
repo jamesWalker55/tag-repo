@@ -325,6 +325,7 @@ async fn async_watch(path: impl AsRef<Path>) -> notify::Result<()> {
 }
 
 #[tokio::main]
+#[allow(dead_code)]
 async fn main() {
     let path = r"D:\Programming\rust-learning\temp";
     println!("watching {}", path);
