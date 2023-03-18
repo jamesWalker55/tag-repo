@@ -157,16 +157,9 @@ async fn async_watch(path: impl AsRef<Path>) -> notify::Result<()> {
     // Spawn the watcher
 
     let (watcher_tx, mut watcher_rx) = unbounded_channel();
-    let tokio_handle = Handle::current();
 
-    let mut watcher = RecommendedWatcher::new(
-        move |res| {
-            tokio_handle.block_on(async {
-                watcher_tx.send(res).unwrap();
-            })
-        },
-        Config::default(),
-    )?;
+    let mut watcher =
+        RecommendedWatcher::new(move |res| watcher_tx.send(res).unwrap(), Config::default())?;
 
     watcher.watch(path.as_ref(), RecursiveMode::Recursive)?;
 
