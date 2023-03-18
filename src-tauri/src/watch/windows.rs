@@ -1,17 +1,20 @@
+use std::path::{Path, PathBuf};
+use std::time::Duration;
+
 use async_trait::async_trait;
 use futures::channel::oneshot;
-use notify::event::ModifyKind::Name;
-use notify::event::{CreateKind, ModifyKind, RemoveKind, RenameMode};
-use notify::EventKind::{Create, Modify, Remove};
 use notify::{
     Config, Event, ReadDirectoryChangesWatcher, RecommendedWatcher, RecursiveMode, Watcher,
 };
-use std::path::{Path, PathBuf};
-use std::time::Duration;
+use notify::event::{CreateKind, ModifyKind, RemoveKind, RenameMode};
+use notify::event::ModifyKind::Name;
+use notify::EventKind::{Create, Modify, Remove};
 use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender};
 use tokio::task;
 use tokio::task::JoinHandle;
-use tokio::time::{timeout_at, Instant};
+use tokio::time::{Instant, timeout_at};
+
+use crate::watch::NormWatcher;
 
 #[derive(Debug, Eq, PartialEq)]
 enum PathRecordAction {
@@ -150,18 +153,6 @@ async fn path_records_manager<'a>(mut rx: UnboundedReceiver<PathRecord>) {
     }
 }
 
-/// A normalised watcher. All watchers that implement this should behave the same across different
-/// operating systems. E.g. Same events for file renames, file moves.
-#[async_trait]
-trait NormWatcher {
-    /// Add a path to be watched. This should just be a wrapper for the watcher's #watch method
-    fn watch(&mut self, path: &Path, recursive_mode: RecursiveMode) -> notify::Result<()>;
-
-    /// Receive the next event. This function will always succeed (even if it waits forever, it must
-    /// never fail)
-    async fn recv(&mut self) -> Option<notify::Result<Event>>;
-}
-
 /// A wrapper for `ReadDirectoryChangesWatcher`.
 ///
 /// The structure of this wrapper is like this:
@@ -207,7 +198,7 @@ trait NormWatcher {
 ///   `notify` watcher, terminating the watcher will naturally cause the tasks to terminate
 /// - Then `await` on the two task handlers. You want to ensure that the tasks have really
 ///   ended.
-struct ReadDirectoryChangesNormWatcher {
+pub struct ReadDirectoryChangesNormWatcher {
     /// The actual watcher instance.
     watcher: ReadDirectoryChangesWatcher,
     /// Handle for the path record manager / debouncer thing. Its only purpose is to keep the handle
@@ -224,7 +215,7 @@ struct ReadDirectoryChangesNormWatcher {
 }
 
 impl ReadDirectoryChangesNormWatcher {
-    fn new() -> notify::Result<Self> {
+    pub fn new() -> notify::Result<Self> {
         // Spawn the watcher
         let (watcher_tx, mut watcher_rx) = unbounded_channel();
 
