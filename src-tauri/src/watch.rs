@@ -31,6 +31,7 @@ enum PathRecordCreationError {
 
 #[derive(Debug)]
 struct PathRecord {
+    /// Any path that gets stored here MUST allow calling #file_name without error
     path: PathBuf,
     action: PathRecordAction,
     sender: oneshot::Sender<ManagerResponse>,
@@ -43,6 +44,9 @@ impl PathRecord {
         action: PathRecordAction,
         sender: oneshot::Sender<ManagerResponse>,
     ) -> Result<Self, PathRecordCreationError> {
+        // verify that path is valid
+        path.file_name().ok_or(PathRecordCreationError::InvalidPath)?;
+
         let expires_at = Instant::now() + Duration::from_millis(100);
 
         Ok(Self {
