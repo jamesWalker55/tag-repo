@@ -320,19 +320,16 @@ async fn event_handler(
                             // however we didn't get a path, meaning the paired create event will handle this
                             // we'll do nothing here
                         }
-                        Ok(ManagerResponse::NotRename) => {
-                            // no paired path found
-                            // treat this as a remove
+                        Ok(ManagerResponse::NotRename) | Err(_) => {
+                            // Case (a): no paired path found, treat this as a remove
+                            // Case (b): sender got dropped, the watcher has likely been dropped,
+                            //           just treat it as a normal event
                             let evt = Event {
                                 kind: Remove(RemoveKind::Any),
                                 paths: vec![removed_path],
                                 attrs,
                             };
                             output_tx.send(Ok(evt)).unwrap();
-                        }
-                        Err(_) => {
-                            // the sender got dropped somehow?
-                            panic!();
                         }
                     }
                 });
@@ -370,19 +367,16 @@ async fn event_handler(
                             // however we didn't get a path, meaning the paired remove event will handle this
                             // we'll do nothing here
                         }
-                        Ok(ManagerResponse::NotRename) => {
-                            // no paired path found
-                            // treat this as a create
+                        Ok(ManagerResponse::NotRename) | Err(_) => {
+                            // Case (a): no paired path found, treat this as a create
+                            // Case (b): sender got dropped, the watcher has likely been dropped,
+                            //           just treat it as a normal event
                             let evt = Event {
                                 kind: Create(CreateKind::Any),
                                 paths: vec![created_path.to_path_buf()],
                                 attrs,
                             };
                             output_tx.send(Ok(evt)).unwrap();
-                        }
-                        Err(_) => {
-                            // the sender got dropped somehow?
-                            panic!();
                         }
                     }
                 });
