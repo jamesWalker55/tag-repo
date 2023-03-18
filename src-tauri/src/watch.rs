@@ -255,7 +255,7 @@ async fn async_watch(path: impl AsRef<Path>) -> notify::Result<()> {
                         };
                         println!("{:?}", evt);
                     }
-                    Err(e) => {
+                    Err(_) => {
                         // the sender got dropped somehow?
                         panic!();
                     }
@@ -308,7 +308,7 @@ async fn async_watch(path: impl AsRef<Path>) -> notify::Result<()> {
                         };
                         println!("{:?}", evt);
                     }
-                    Err(e) => {
+                    Err(_) => {
                         // the sender got dropped somehow?
                         panic!();
                     }
