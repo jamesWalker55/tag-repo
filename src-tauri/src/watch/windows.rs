@@ -3,16 +3,14 @@ use std::time::Duration;
 
 use async_trait::async_trait;
 use futures::channel::oneshot;
-use notify::{
-    Config, Event, ReadDirectoryChangesWatcher, RecommendedWatcher, RecursiveMode, Watcher,
-};
-use notify::event::{CreateKind, ModifyKind, RemoveKind, RenameMode};
 use notify::event::ModifyKind::Name;
+use notify::event::{CreateKind, ModifyKind, RemoveKind, RenameMode};
 use notify::EventKind::{Create, Modify, Remove};
+use notify::{Config, Event, ReadDirectoryChangesWatcher, RecursiveMode, Watcher};
 use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender};
 use tokio::task;
 use tokio::task::JoinHandle;
-use tokio::time::{Instant, timeout_at};
+use tokio::time::{timeout_at, Instant};
 
 use crate::watch::NormWatcher;
 
@@ -217,9 +215,9 @@ pub struct ReadDirectoryChangesNormWatcher {
 impl ReadDirectoryChangesNormWatcher {
     pub fn new() -> notify::Result<Self> {
         // Spawn the watcher
-        let (watcher_tx, mut watcher_rx) = unbounded_channel();
+        let (watcher_tx, watcher_rx) = unbounded_channel();
 
-        let mut watcher = ReadDirectoryChangesWatcher::new(
+        let watcher = ReadDirectoryChangesWatcher::new(
             move |res| watcher_tx.send(res).unwrap(),
             Config::default(),
         )?;
@@ -231,7 +229,7 @@ impl ReadDirectoryChangesNormWatcher {
         });
 
         // Spawn the event handler
-        let (output_tx, mut output_rx) = unbounded_channel();
+        let (output_tx, output_rx) = unbounded_channel();
         let event_handler_handle = tokio::spawn(async move {
             event_handler(watcher_rx, manager_tx, output_tx).await;
         });
