@@ -3,19 +3,11 @@ use notify::event::ModifyKind::Name;
 use notify::event::{CreateKind, ModifyKind, RemoveKind, RenameMode};
 use notify::EventKind::{Create, Modify, Remove};
 use notify::{Config, Event, RecommendedWatcher, RecursiveMode, Watcher};
-use std::collections::HashMap;
-use std::ffi::OsStr;
-use std::future::Future;
 use std::path::{Path, PathBuf};
-use std::pin::Pin;
-use std::sync::Arc;
-use std::task::{Context, Poll, Waker};
 use std::time::Duration;
-use tokio::runtime::Handle;
 use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver};
-use tokio::sync::{RwLock, RwLockWriteGuard};
 use tokio::task;
-use tokio::time::{timeout, timeout_at, Instant};
+use tokio::time::{timeout_at, Instant};
 
 #[derive(Debug, Eq, PartialEq)]
 enum PathRecordAction {
