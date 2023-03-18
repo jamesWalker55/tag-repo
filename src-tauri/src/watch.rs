@@ -42,12 +42,7 @@ impl PathRecord {
 
         let expires_at = Instant::now() + Duration::from_millis(100);
 
-        Ok(Self {
-            path,
-            action,
-            sender,
-            expires_at,
-        })
+        Ok(Self { path, action, sender, expires_at })
     }
 }
 
@@ -174,9 +169,7 @@ async fn async_watch(path: impl AsRef<Path>) -> notify::Result<()> {
         let evt = evt.unwrap();
         match evt {
             Event {
-                kind: Modify(Name(RenameMode::From)),
-                mut paths,
-                ..
+                kind: Modify(Name(RenameMode::From)), mut paths, ..
             } => {
                 if let Some(_) = last_rename_from {
                     panic!("Got multiple 'Rename From' events in a row!")
@@ -185,11 +178,7 @@ async fn async_watch(path: impl AsRef<Path>) -> notify::Result<()> {
                 last_rename_from = Some(path);
                 continue;
             }
-            Event {
-                kind: Modify(Name(RenameMode::To)),
-                mut paths,
-                ..
-            } => {
+            Event { kind: Modify(Name(RenameMode::To)), mut paths, .. } => {
                 let from_path = last_rename_from.take().expect(
                     "Got 'Rename To' event, but no 'Rename From' event happened before this!",
                 );
@@ -201,18 +190,14 @@ async fn async_watch(path: impl AsRef<Path>) -> notify::Result<()> {
                 };
                 println!("{:?}", evt);
             }
-            Event {
-                kind: Remove(RemoveKind::Any),
-                paths: mut removed_paths,
-                attrs,
-            } => {
+            Event { kind: Remove(RemoveKind::Any), mut paths, attrs } => {
                 assert_eq!(
-                    removed_paths.len(),
+                    paths.len(),
                     1,
                     "Number of created paths is not 1: {}",
-                    removed_paths.len()
+                    paths.len()
                 );
-                let removed_path = removed_paths.pop().unwrap();
+                let removed_path = paths.pop().unwrap();
                 let (path_tx, path_rx) = oneshot::channel();
                 let record =
                     PathRecord::create(removed_path.clone(), PathRecordAction::Removed, path_tx)
@@ -254,18 +239,14 @@ async fn async_watch(path: impl AsRef<Path>) -> notify::Result<()> {
                     }
                 });
             }
-            Event {
-                kind: Create(CreateKind::Any),
-                paths: created_paths,
-                attrs,
-            } => {
+            Event { kind: Create(CreateKind::Any), paths: paths, attrs } => {
                 assert_eq!(
-                    created_paths.len(),
+                    paths.len(),
                     1,
                     "Number of created paths is not 1: {}",
-                    created_paths.len()
+                    paths.len()
                 );
-                let created_path = created_paths.get(0).unwrap().clone();
+                let created_path = paths.get(0).unwrap().clone();
                 let (path_tx, path_rx) = oneshot::channel();
                 let record =
                     PathRecord::create(created_path.clone(), PathRecordAction::Created, path_tx)
@@ -307,10 +288,7 @@ async fn async_watch(path: impl AsRef<Path>) -> notify::Result<()> {
                     }
                 });
             }
-            Event {
-                kind: Modify(ModifyKind::Any),
-                ..
-            } => {
+            Event { kind: Modify(ModifyKind::Any), .. } => {
                 // ignore
                 // println!("{:?}", evt);
             }
