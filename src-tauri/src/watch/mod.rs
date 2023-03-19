@@ -102,9 +102,20 @@ mod tests {
         ) -> Self {
             let mut events = VecDeque::new();
             watcher.stop_watching();
-            while let Some(evt) = watcher.recv().await {
-                let evt = evt.unwrap();
-                events.push_back(evt);
+            if ignore_modify_any {
+                while let Some(evt) = watcher.recv().await {
+                    let evt = evt.unwrap();
+                    if let Modify(ModifyKind::Any) = evt.kind {
+                        // do nothing
+                    } else {
+                        events.push_back(evt);
+                    }
+                }
+            } else {
+                while let Some(evt) = watcher.recv().await {
+                    let evt = evt.unwrap();
+                    events.push_back(evt);
+                }
             }
             Self {
                 base_path: base_path.as_ref().to_path_buf(),
@@ -112,25 +123,8 @@ mod tests {
                 ignore_modify_any,
             }
         }
-        fn discard_modify_anys(&mut self) {
-            while self.events.len() > 0 {
-                if let Event { kind: Modify(ModifyKind::Any), .. } = self.events.get(0).unwrap() {
-                    println!("Discarded modify::any");
-                    self.events.pop_front();
-                } else {
-                    break;
-                }
-            }
-        }
-        fn try_discard_modify_anys(&mut self) {
-            if self.ignore_modify_any {
-                self.discard_modify_anys();
-            }
-        }
         fn create(&mut self, expected_path: &str) -> Result<(), EventsVerifierError> {
             let expected_path = self.base_path.join(expected_path);
-
-            self.try_discard_modify_anys();
 
             if self.events.len() == 0 {
                 Err(EventsVerifierError::NoMoreEvents)
@@ -149,8 +143,6 @@ mod tests {
         }
         fn remove(&mut self, expected_path: &str) -> Result<(), EventsVerifierError> {
             let expected_path = self.base_path.join(expected_path);
-
-            self.try_discard_modify_anys();
 
             if self.events.len() == 0 {
                 Err(EventsVerifierError::NoMoreEvents)
@@ -175,8 +167,6 @@ mod tests {
             let expected_a = self.base_path.join(expected_a);
             let expected_b = self.base_path.join(expected_b);
 
-            self.try_discard_modify_anys();
-
             if self.events.len() == 0 {
                 Err(EventsVerifierError::NoMoreEvents)
             } else if let Event { kind: Modify(Name(RenameMode::Both)), paths, .. } =
@@ -200,8 +190,6 @@ mod tests {
             }
         }
         fn end(&mut self) -> Result<(), EventsVerifierError> {
-            self.try_discard_modify_anys();
-
             if self.events.len() == 0 {
                 Ok(())
             } else {
