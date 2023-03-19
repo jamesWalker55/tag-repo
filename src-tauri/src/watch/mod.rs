@@ -167,7 +167,7 @@ mod tests {
     }
 
     /// Run this test with `--nocapture` to see the output
-    #[tokio::test]
+    // #[tokio::test]
     async fn watch_a_path() {
         let path = r"D:\Programming\rust-learning\temp";
         println!("watching {}", path);
