@@ -361,7 +361,6 @@ mod tests {
         op.rename("sub", "hello");
 
         let mut verify = EventsVerifier::new(dir.path(), watcher, true).await;
-        dbg!(&verify.events);
         verify.create("a").unwrap();
         verify.create("b").unwrap();
         verify.create("c").unwrap();
