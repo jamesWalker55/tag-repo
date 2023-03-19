@@ -21,7 +21,6 @@ use crate::watch::NormWatcher;
 ///   v
 /// Handler
 ///   |
-///   |
 ///   v
 /// Output
 /// ```
