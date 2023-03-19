@@ -16,11 +16,18 @@ pub trait NormWatcher {
 
     /// Receive the next event. This should just be a wrapper for a receiver's #recv method
     async fn recv(&mut self) -> Option<notify::Result<Event>>;
+
+    #[cfg(test)]
+    /// Stop the watcher immediately. After calling this, #recv must not suspend forever and
+    /// eventually return None. This is used by the test suite to gather a list of all events
+    /// after suspending the watcher.
+    fn stop_watching(&mut self);
 }
 
 #[cfg(test)]
 mod tests {
     use notify::event::{CreateKind, ModifyKind, RemoveKind, RenameMode};
+    use notify::EventKind;
     use notify::EventKind::{Create, Modify, Remove};
     use std::collections::VecDeque;
     use std::fs;
@@ -58,6 +65,14 @@ mod tests {
         }
     }
 
+    #[derive(Debug)]
+    enum EventsVerifierError {
+        NoMoreEvents,
+        StillHasEvents,
+        PathNotEqual(PathBuf),
+        UnexpectedEventType(EventKind),
+    }
+
     struct EventsVerifier {
         base_path: PathBuf,
         events: VecDeque<Event>,
@@ -71,10 +86,11 @@ mod tests {
             ignore_modify_any: bool,
         ) -> Self {
             let mut events = VecDeque::new();
-            while let Ok(Some(Ok(evt))) = timeout(Duration::from_millis(10), watcher.recv()).await {
+            watcher.stop_watching();
+            while let Some(evt) = watcher.recv().await {
+                let evt = evt.unwrap();
                 events.push_back(evt);
             }
-            println!("Created verifier with events: {:?}", events);
             Self {
                 base_path: base_path.as_ref().to_path_buf(),
                 events,
@@ -91,13 +107,18 @@ mod tests {
                 }
             }
         }
-        fn create(&mut self, relpath: &str) -> Result<(), ()> {
-            let relpath = PathBuf::from(relpath);
+        fn try_discard_modify_anys(&mut self) {
             if self.ignore_modify_any {
                 self.discard_modify_anys();
             }
+        }
+        fn create(&mut self, relpath: &str) -> Result<(), EventsVerifierError> {
+            let relpath = PathBuf::from(relpath);
+
+            self.try_discard_modify_anys();
+
             if self.events.len() == 0 {
-                Err(())
+                Err(EventsVerifierError::NoMoreEvents)
             } else if let Event { kind: Create(_), paths, .. } = self.events.get(0).unwrap() {
                 let path = paths.get(0).unwrap();
                 let expected_path = self.base_path.join(relpath);
@@ -105,19 +126,20 @@ mod tests {
                     self.events.pop_front();
                     Ok(())
                 } else {
-                    Err(())
+                    Err(EventsVerifierError::PathNotEqual(path.clone()))
                 }
             } else {
-                Err(())
+                let evt = self.events.get(0).unwrap();
+                Err(EventsVerifierError::UnexpectedEventType(evt.kind.clone()))
             }
         }
-        fn remove(&mut self, relpath: &str) -> Result<(), ()> {
+        fn remove(&mut self, relpath: &str) -> Result<(), EventsVerifierError> {
             let relpath = PathBuf::from(relpath);
-            if self.ignore_modify_any {
-                self.discard_modify_anys();
-            }
+
+            self.try_discard_modify_anys();
+
             if self.events.len() == 0 {
-                Err(())
+                Err(EventsVerifierError::NoMoreEvents)
             } else if let Event { kind: Remove(_), paths, .. } = self.events.get(0).unwrap() {
                 let path = paths.get(0).unwrap();
                 let expected_path = self.base_path.join(relpath);
@@ -125,10 +147,20 @@ mod tests {
                     self.events.pop_front();
                     Ok(())
                 } else {
-                    Err(())
+                    Err(EventsVerifierError::PathNotEqual(path.clone()))
                 }
             } else {
-                Err(())
+                let evt = self.events.get(0).unwrap();
+                Err(EventsVerifierError::UnexpectedEventType(evt.kind.clone()))
+            }
+        }
+        fn end(&mut self) -> Result<(), EventsVerifierError> {
+            self.try_discard_modify_anys();
+
+            if self.events.len() == 0 {
+                Ok(())
+            } else {
+                Err(EventsVerifierError::StillHasEvents)
             }
         }
     }
@@ -156,6 +188,7 @@ mod tests {
 
         let mut verify = EventsVerifier::new(dir.path(), watcher, true).await;
         verify.create("hello world").unwrap();
+        verify.end().unwrap();
     }
 
     #[tokio::test]
@@ -170,6 +203,24 @@ mod tests {
         verify.create("a").unwrap();
         verify.create("b").unwrap();
         verify.create("c").unwrap();
+        verify.end().unwrap();
+    }
+
+    #[tokio::test]
+    async fn file_creations_02() {
+        let (dir, mut watcher, op) = setup().await;
+
+        op.create("a");
+        op.create("b");
+        op.create_dir("sub");
+        op.create("sub/c");
+
+        let mut verify = EventsVerifier::new(dir.path(), watcher, true).await;
+        verify.create("a").unwrap();
+        verify.create("b").unwrap();
+        verify.create("sub").unwrap();
+        verify.create("sub/c").unwrap();
+        verify.end().unwrap();
     }
 
     /// Run this test with `--nocapture` to see the output

@@ -249,7 +249,14 @@ impl NormWatcher for ReadDirectoryChangesNormWatcher {
     }
 
     async fn recv(&mut self) -> Option<notify::Result<Event>> {
-        return self.output_rx.recv().await;
+        self.output_rx.recv().await
+    }
+
+    #[cfg(test)]
+    fn stop_watching(&mut self) {
+        let temp_watcher = ReadDirectoryChangesWatcher::new(|_res| {}, Config::default()).unwrap();
+        let real_watcher = std::mem::replace(&mut self.watcher, temp_watcher);
+        drop(real_watcher);
     }
 }
 
