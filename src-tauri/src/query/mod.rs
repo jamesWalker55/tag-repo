@@ -32,4 +32,20 @@ mod tests {
             r#"(i.id IN (SELECT id FROM tag_query('(tags:"a" NOT tags:"b")')) AND i.path LIKE 'samples/%' ESCAPE '\')"#,
         )
     }
+
+    #[test]
+    fn common_3() {
+        assert_eq!(
+            to_sql("   a    - b   in:samples/    ").unwrap(),
+            r#"(i.id IN (SELECT id FROM tag_query('(tags:"a" NOT tags:"b")')) AND i.path LIKE 'samples/%' ESCAPE '\')"#,
+        )
+    }
+
+    #[test]
+    fn empty() {
+        assert_eq!(
+            to_sql("").unwrap(),
+            r#"true"#,
+        )
+    }
 }
