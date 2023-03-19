@@ -4,9 +4,13 @@ mod parser;
 pub(crate) use parser::ParseError;
 
 pub(crate) fn to_sql(query: &str) -> Result<String, ParseError> {
-    let expr = parser::parse(query)?;
-    let clause = convert::generate_clause(&expr);
-    Ok(clause.to_sql_clause())
+    if query.trim().is_empty() {
+        Ok(String::from("true"))
+    } else {
+        let expr = parser::parse(query)?;
+        let clause = convert::generate_clause(&expr);
+        Ok(clause.to_sql_clause())
+    }
 }
 
 #[cfg(test)]
