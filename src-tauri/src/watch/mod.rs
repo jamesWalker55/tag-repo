@@ -26,14 +26,16 @@ pub trait NormWatcher {
 
 #[cfg(test)]
 mod tests {
-    use notify::event::{CreateKind, ModifyKind, RemoveKind, RenameMode};
-    use notify::EventKind;
-    use notify::EventKind::{Create, Modify, Remove};
     use std::collections::VecDeque;
     use std::fs;
     use std::fs::File;
     use std::path::PathBuf;
     use std::time::Duration;
+
+    use notify::event::ModifyKind::Name;
+    use notify::event::{CreateKind, ModifyKind, RemoveKind, RenameMode};
+    use notify::EventKind;
+    use notify::EventKind::{Create, Modify, Remove};
     use tempfile::{tempdir, TempDir};
     use tokio::time::timeout;
 
@@ -177,7 +179,9 @@ mod tests {
 
             if self.events.len() == 0 {
                 Err(EventsVerifierError::NoMoreEvents)
-            } else if let Event { kind: Remove(_), paths, .. } = self.events.get(0).unwrap() {
+            } else if let Event { kind: Modify(Name(RenameMode::Both)), paths, .. } =
+                self.events.get(0).unwrap()
+            {
                 let a = paths.get(0).unwrap();
                 let b = paths.get(1).unwrap();
                 if a.as_path() == expected_a && b.as_path() == expected_b {
@@ -281,10 +285,12 @@ mod tests {
         let mut verify = EventsVerifier::new(dir.path(), watcher, true).await;
         verify.create("a").unwrap();
         verify.create("b").unwrap();
-        verify.remove("b").unwrap();
         verify.create("sub").unwrap();
         verify.create("sub/c").unwrap();
         verify.create("sub/d").unwrap();
+        // because of our rename handling code, remove events are delayed by a few ms
+        // so they end up in the end
+        verify.remove("b").unwrap();
         verify.remove("sub/c").unwrap();
         verify.end().unwrap();
     }
@@ -304,13 +310,13 @@ mod tests {
         let mut verify = EventsVerifier::new(dir.path(), watcher, true).await;
         verify.create("a").unwrap();
         verify.create("b").unwrap();
-        verify.remove("b").unwrap();
         verify.create("sub").unwrap();
         verify.create("sub/c").unwrap();
         verify.create("sub/d").unwrap();
-        verify.remove("sub").unwrap();
+        verify.remove("b").unwrap();
         verify.remove("sub/c").unwrap();
         verify.remove("sub/d").unwrap();
+        verify.remove("sub").unwrap();
         verify.end().unwrap();
     }
 
@@ -341,16 +347,16 @@ mod tests {
         op.create_dir("sub");
         op.create("sub/a");
         op.create("sub/b");
-        op.rename("sub/a", "hello");
+        op.rename("sub/a", "sub/hello");
 
         let mut verify = EventsVerifier::new(dir.path(), watcher, true).await;
         verify.create("a").unwrap();
         verify.create("b").unwrap();
         verify.create("c").unwrap();
-        verify.create("sub/a").unwrap();
+        verify.create("sub").unwrap();
         verify.create("sub/a").unwrap();
         verify.create("sub/b").unwrap();
-        verify.rename("sub/a", "hello").unwrap();
+        verify.rename("sub/a", "sub/hello").unwrap();
         verify.end().unwrap();
     }
 
@@ -367,9 +373,11 @@ mod tests {
         op.rename("sub", "hello");
 
         let mut verify = EventsVerifier::new(dir.path(), watcher, true).await;
+        dbg!(&verify.events);
         verify.create("a").unwrap();
         verify.create("b").unwrap();
         verify.create("c").unwrap();
+        verify.create("sub").unwrap();
         verify.create("sub/a").unwrap();
         verify.create("sub/b").unwrap();
         verify.rename("sub", "hello").unwrap();
