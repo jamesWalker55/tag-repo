@@ -4,4 +4,4 @@ mod repo;
 mod scan;
 #[cfg(test)]
 mod tests;
-mod watch;
+pub(crate) mod watch;
