@@ -142,30 +142,6 @@ impl Repo {
         Ok(())
     }
 
-    pub(crate) fn get_items(&self, query: Option<&str>) -> Result<Vec<Item>, DatabaseError> {
-        let mut stmt;
-
-        let mapped_rows = match query {
-            Some(query) => {
-                stmt = self.conn.prepare(indoc! {"
-                    SELECT i.id, i.path, i.tags, i.meta_tags
-                    FROM items i
-                        INNER JOIN tag_query tq ON i.id = tq.id
-                    WHERE tq.tag_query MATCH :query
-                "})?;
-                stmt.query_map(&[(":query", query)], Self::to_item)
-            }
-            None => {
-                stmt = self.conn.prepare(indoc! {"
-                    SELECT i.id, i.path, i.tags, i.meta_tags FROM items i
-                "})?;
-                stmt.query_map([], Self::to_item)
-            }
-        }?;
-        let items: Vec<Item> = mapped_rows.flatten().collect();
-        Ok(items)
-    }
-
     pub(crate) fn get_item_by_path(&self, path: impl AsRef<str>) -> Result<Item, DatabaseError> {
         let path = path.as_ref();
         let mut stmt = self
@@ -405,7 +381,7 @@ mod tests {
     #[test]
     fn can_query_items() {
         fn expect_query(repo: &Repo, query: &str, expected: Vec<&str>) {
-            let items = repo.get_items(Some(query)).unwrap();
+            let items = repo.query_items(query).unwrap();
 
             assert_unordered_eq(items.iter().map(|x| x.path.as_str()), expected);
         }
@@ -422,7 +398,7 @@ mod tests {
     fn can_get_all_items() {
         let mut tr = testrepo_1();
         let repo = &mut tr.repo;
-        let items = repo.get_items(None).unwrap();
+        let items = repo.query_items("").unwrap();
         assert_unordered_eq(
             items.iter().map(|x| x.path.as_str()),
             ["apple", "bee", "cat", "dog", "egg"],
