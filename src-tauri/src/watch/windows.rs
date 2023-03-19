@@ -92,6 +92,7 @@ async fn path_records_manager<'a>(mut rx: UnboundedReceiver<PathRecord>) {
         }
     }
 
+    // TODO: Replace list with a binary heap
     let mut db: Vec<PathRecord> = vec![];
     let mut res;
 
