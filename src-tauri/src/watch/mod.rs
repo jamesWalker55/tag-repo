@@ -55,6 +55,19 @@ mod tests {
             let dest = self.base_path.join(path);
             fs::remove_file(dest).unwrap();
         }
+        fn rename(&self, a: &str, b: &str) {
+            let a = self.base_path.join(a);
+            let b = self.base_path.join(b);
+            if b.exists() {
+                Err::<(), _>(std::io::Error::new(
+                    std::io::ErrorKind::AlreadyExists,
+                    b.to_string_lossy(),
+                ))
+                .unwrap();
+            } else {
+                fs::rename(a, b).unwrap();
+            }
+        }
         fn create_dir(&self, path: &str) {
             let dest = self.base_path.join(path);
             fs::create_dir(dest).unwrap();
@@ -112,8 +125,8 @@ mod tests {
                 self.discard_modify_anys();
             }
         }
-        fn create(&mut self, relpath: &str) -> Result<(), EventsVerifierError> {
-            let relpath = PathBuf::from(relpath);
+        fn create(&mut self, expected_path: &str) -> Result<(), EventsVerifierError> {
+            let expected_path = self.base_path.join(expected_path);
 
             self.try_discard_modify_anys();
 
@@ -121,7 +134,6 @@ mod tests {
                 Err(EventsVerifierError::NoMoreEvents)
             } else if let Event { kind: Create(_), paths, .. } = self.events.get(0).unwrap() {
                 let path = paths.get(0).unwrap();
-                let expected_path = self.base_path.join(relpath);
                 if path.as_path() == expected_path {
                     self.events.pop_front();
                     Ok(())
@@ -133,8 +145,8 @@ mod tests {
                 Err(EventsVerifierError::UnexpectedEventType(evt.kind.clone()))
             }
         }
-        fn remove(&mut self, relpath: &str) -> Result<(), EventsVerifierError> {
-            let relpath = PathBuf::from(relpath);
+        fn remove(&mut self, expected_path: &str) -> Result<(), EventsVerifierError> {
+            let expected_path = self.base_path.join(expected_path);
 
             self.try_discard_modify_anys();
 
@@ -142,12 +154,41 @@ mod tests {
                 Err(EventsVerifierError::NoMoreEvents)
             } else if let Event { kind: Remove(_), paths, .. } = self.events.get(0).unwrap() {
                 let path = paths.get(0).unwrap();
-                let expected_path = self.base_path.join(relpath);
                 if path.as_path() == expected_path {
                     self.events.pop_front();
                     Ok(())
                 } else {
                     Err(EventsVerifierError::PathNotEqual(path.clone()))
+                }
+            } else {
+                let evt = self.events.get(0).unwrap();
+                Err(EventsVerifierError::UnexpectedEventType(evt.kind.clone()))
+            }
+        }
+        fn rename(
+            &mut self,
+            expected_a: &str,
+            expected_b: &str,
+        ) -> Result<(), EventsVerifierError> {
+            let expected_a = self.base_path.join(expected_a);
+            let expected_b = self.base_path.join(expected_b);
+
+            self.try_discard_modify_anys();
+
+            if self.events.len() == 0 {
+                Err(EventsVerifierError::NoMoreEvents)
+            } else if let Event { kind: Remove(_), paths, .. } = self.events.get(0).unwrap() {
+                let a = paths.get(0).unwrap();
+                let b = paths.get(1).unwrap();
+                if a.as_path() == expected_a && b.as_path() == expected_b {
+                    self.events.pop_front();
+                    Ok(())
+                } else if a.as_path() != expected_a {
+                    Err(EventsVerifierError::PathNotEqual(a.clone()))
+                } else if b.as_path() != expected_b {
+                    Err(EventsVerifierError::PathNotEqual(b.clone()))
+                } else {
+                    unreachable!()
                 }
             } else {
                 let evt = self.events.get(0).unwrap();
@@ -214,12 +255,124 @@ mod tests {
         op.create("b");
         op.create_dir("sub");
         op.create("sub/c");
+        op.create("sub/d");
 
         let mut verify = EventsVerifier::new(dir.path(), watcher, true).await;
         verify.create("a").unwrap();
         verify.create("b").unwrap();
         verify.create("sub").unwrap();
         verify.create("sub/c").unwrap();
+        verify.create("sub/d").unwrap();
+        verify.end().unwrap();
+    }
+
+    #[tokio::test]
+    async fn file_removes_01() {
+        let (dir, mut watcher, op) = setup().await;
+
+        op.create("a");
+        op.create("b");
+        op.remove("b");
+        op.create_dir("sub");
+        op.create("sub/c");
+        op.create("sub/d");
+        op.remove("sub/c");
+
+        let mut verify = EventsVerifier::new(dir.path(), watcher, true).await;
+        verify.create("a").unwrap();
+        verify.create("b").unwrap();
+        verify.remove("b").unwrap();
+        verify.create("sub").unwrap();
+        verify.create("sub/c").unwrap();
+        verify.create("sub/d").unwrap();
+        verify.remove("sub/c").unwrap();
+        verify.end().unwrap();
+    }
+
+    #[tokio::test]
+    async fn file_removes_02() {
+        let (dir, mut watcher, op) = setup().await;
+
+        op.create("a");
+        op.create("b");
+        op.remove("b");
+        op.create_dir("sub");
+        op.create("sub/c");
+        op.create("sub/d");
+        op.remove_dir("sub");
+
+        let mut verify = EventsVerifier::new(dir.path(), watcher, true).await;
+        verify.create("a").unwrap();
+        verify.create("b").unwrap();
+        verify.remove("b").unwrap();
+        verify.create("sub").unwrap();
+        verify.create("sub/c").unwrap();
+        verify.create("sub/d").unwrap();
+        verify.remove("sub").unwrap();
+        verify.remove("sub/c").unwrap();
+        verify.remove("sub/d").unwrap();
+        verify.end().unwrap();
+    }
+
+    #[tokio::test]
+    async fn file_renames_01() {
+        let (dir, mut watcher, op) = setup().await;
+
+        op.create("a");
+        op.create("b");
+        op.create("c");
+        op.rename("c", "apple");
+
+        let mut verify = EventsVerifier::new(dir.path(), watcher, true).await;
+        verify.create("a").unwrap();
+        verify.create("b").unwrap();
+        verify.create("c").unwrap();
+        verify.rename("c", "apple").unwrap();
+        verify.end().unwrap();
+    }
+
+    #[tokio::test]
+    async fn file_renames_02() {
+        let (dir, mut watcher, op) = setup().await;
+
+        op.create("a");
+        op.create("b");
+        op.create("c");
+        op.create_dir("sub");
+        op.create("sub/a");
+        op.create("sub/b");
+        op.rename("sub/a", "hello");
+
+        let mut verify = EventsVerifier::new(dir.path(), watcher, true).await;
+        verify.create("a").unwrap();
+        verify.create("b").unwrap();
+        verify.create("c").unwrap();
+        verify.create("sub/a").unwrap();
+        verify.create("sub/a").unwrap();
+        verify.create("sub/b").unwrap();
+        verify.rename("sub/a", "hello").unwrap();
+        verify.end().unwrap();
+    }
+
+    #[tokio::test]
+    async fn file_renames_03() {
+        let (dir, mut watcher, op) = setup().await;
+
+        op.create("a");
+        op.create("b");
+        op.create("c");
+        op.create_dir("sub");
+        op.create("sub/a");
+        op.create("sub/b");
+        op.rename("sub", "hello");
+
+        let mut verify = EventsVerifier::new(dir.path(), watcher, true).await;
+        verify.create("a").unwrap();
+        verify.create("b").unwrap();
+        verify.create("c").unwrap();
+        verify.create("sub/a").unwrap();
+        verify.create("sub/b").unwrap();
+        verify.rename("sub", "hello").unwrap();
         verify.end().unwrap();
     }
 
