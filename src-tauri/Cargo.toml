@@ -46,7 +46,7 @@ custom-protocol = ["tauri/custom-protocol"]
 # If you're only working on the lib, comment out this section to stop the error when running `cargo test`
 [[bin]]
 name = "main"
-path = "src/main_tauri.rs"
+path = "src/main.rs"
 
 [lib]
 name = "lib"
