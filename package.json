@@ -18,7 +18,7 @@
   },
   "devDependencies": {
     "@iconify/json": "^2.1.139",
-    "@tauri-apps/cli": "^1.2.0",
+    "@tauri-apps/cli": "^1.2.3",
     "@types/node": "^18.7.10",
     "@types/path-browserify": "^1.0.0",
     "@vitejs/plugin-vue": "^3.0.1",
