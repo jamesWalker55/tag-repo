@@ -128,7 +128,7 @@ async fn event_handler(
         // If we have paths in the database, timeout until the next path's instant
         if recent_deleted_paths.len() > 0 {
             let next_wake_time = recent_deleted_paths.get(0).unwrap().0;
-            match timeout_at(next_wake_time.clone(), watcher_rx.recv()).await {
+            match timeout_at(next_wake_time, watcher_rx.recv()).await {
                 Ok(x) => {
                     // Didn't timeout, assign the return value to res
                     res = x;
@@ -161,7 +161,11 @@ async fn event_handler(
                         last_rename_from = Some(path);
                         continue;
                     }
-                    Event { kind: Modify(Name(RenameMode::To)), mut paths, .. } => {
+                    Event {
+                        kind: Modify(Name(RenameMode::To)),
+                        mut paths,
+                        attrs,
+                    } => {
                         let from_path = last_rename_from.take().expect(
                         "Got 'Rename To' event, but no 'Rename From' event happened before this!",
                     );
@@ -169,7 +173,7 @@ async fn event_handler(
                         let evt = Event {
                             kind: Modify(Name(RenameMode::Both)),
                             paths: vec![from_path, to_path],
-                            attrs: evt.attrs.clone(),
+                            attrs,
                         };
                         output_tx.send(Ok(evt)).unwrap();
                     }
@@ -184,14 +188,14 @@ async fn event_handler(
                         let expires_at = Instant::now() + Duration::from_millis(10);
                         recent_deleted_paths.push((expires_at, removed_path, attrs));
                     }
-                    Event { kind: Create(CreateKind::Any), paths, attrs } => {
+                    Event { kind: Create(CreateKind::Any), mut paths, attrs } => {
                         assert_eq!(
                             paths.len(),
                             1,
                             "Number of created paths is not 1: {}",
                             paths.len()
                         );
-                        let created_path = paths.get(0).unwrap().clone();
+                        let created_path = paths.pop().unwrap();
                         let mut deleted_path_match_id: Option<usize> = None;
                         for i in 0..recent_deleted_paths.len() {
                             let deleted_path = &recent_deleted_paths.get(i).unwrap().1;
@@ -211,7 +215,7 @@ async fn event_handler(
                                 let deleted_path_match = recent_deleted_paths.remove(i).1;
                                 let evt = Event {
                                     kind: Modify(Name(RenameMode::Both)),
-                                    paths: vec![deleted_path_match, created_path.to_path_buf()],
+                                    paths: vec![deleted_path_match, created_path],
                                     attrs,
                                 };
                                 output_tx.send(Ok(evt)).unwrap();
