@@ -1,8 +1,5 @@
-import {createApp} from 'vue';
-import './style.css';
-import App from './App.vue';
-import VueClickAway from "vue3-click-away";
+import { createApp } from "vue";
+import "./styles.css";
+import App from "./App.vue";
 
-const app = createApp(App);
-app.use(VueClickAway);
-app.mount('#app');
+createApp(App).mount("#app");

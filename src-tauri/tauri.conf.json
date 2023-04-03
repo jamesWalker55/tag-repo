@@ -1,13 +1,13 @@
 {
   "build": {
-    "beforeDevCommand": "npm run dev",
-    "beforeBuildCommand": "npm run build",
+    "beforeDevCommand": "yarn dev",
+    "beforeBuildCommand": "yarn build",
     "devPath": "http://localhost:1420",
     "distDir": "../dist",
     "withGlobalTauri": false
   },
   "package": {
-    "productName": "tag-repo",
+    "productName": "tauri-app",
     "version": "0.0.0"
   },
   "tauri": {
@@ -16,12 +16,6 @@
     },
     "bundle": {
       "active": true,
-      "category": "DeveloperTool",
-      "copyright": "",
-      "deb": {
-        "depends": []
-      },
-      "externalBin": [],
       "icon": [
         "icons/32x32.png",
         "icons/128x128.png",
@@ -30,22 +24,7 @@
         "icons/icon.ico"
       ],
       "identifier": "com.jamesWalker.tag-repo",
-      "longDescription": "",
-      "macOS": {
-        "entitlements": null,
-        "exceptionDomain": "",
-        "frameworks": [],
-        "providerShortName": null,
-        "signingIdentity": null
-      },
-      "resources": [],
-      "shortDescription": "",
-      "targets": "all",
-      "windows": {
-        "certificateThumbprint": null,
-        "digestAlgorithm": "sha256",
-        "timestampUrl": ""
-      }
+      "targets": "all"
     },
     "security": {
       "csp": null
@@ -55,13 +34,13 @@
     },
     "windows": [
       {
-        "visible": false,
-        "decorations": false,
         "fullscreen": false,
-        "height": 600,
         "resizable": true,
+        "decorations": false,
+        "visible": false,
         "title": "tag-repo",
-        "width": 800
+        "width": 800,
+        "height": 600
       }
     ]
   }
