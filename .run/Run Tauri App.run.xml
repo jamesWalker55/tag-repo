@@ -1,19 +1,13 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="Run Tauri App" type="CargoCommandRunConfiguration" factoryName="Cargo Command">
-    <option name="command" value="tauri dev" />
-    <option name="workingDirectory" value="file://$PROJECT_DIR$" />
-    <option name="channel" value="DEFAULT" />
-    <option name="requiredFeatures" value="true" />
-    <option name="allFeatures" value="false" />
-    <option name="emulateTerminal" value="false" />
-    <option name="withSudo" value="false" />
-    <option name="buildTarget" value="REMOTE" />
-    <option name="backtrace" value="SHORT" />
+  <configuration default="false" name="Run Tauri App" type="js.build_tools.npm">
+    <package-json value="$PROJECT_DIR$/package.json" />
+    <command value="run" />
+    <scripts>
+      <script value="tauri" />
+    </scripts>
+    <arguments value="dev" />
+    <node-interpreter value="project" />
     <envs />
-    <option name="isRedirectInput" value="false" />
-    <option name="redirectInputPath" value="" />
-    <method v="2">
-      <option name="CARGO.BUILD_TASK_PROVIDER" enabled="true" />
-    </method>
+    <method v="2" />
   </configuration>
 </component>
