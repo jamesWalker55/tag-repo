@@ -1,0 +1,4 @@
+# The only purpose of this file is to allow Clion to run commands at the root directory.
+# Without this file, you'll have to `cd` into the `src-tauri` folder before running any cargo commands.
+[workspace]
+members = ["src-tauri"]
