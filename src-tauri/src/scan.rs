@@ -1,3 +1,4 @@
+use path_slash::PathBufExt;
 use std::fs;
 use std::fs::DirEntry;
 use std::io::Error;
@@ -15,7 +16,7 @@ pub enum ScanError {
 }
 
 /// Scan a given folder, return a vector of paths `Vec<PathBuf>`
-pub fn scan_dir(path: impl AsRef<Path>) -> Result<Vec<PathBuf>, ScanError> {
+pub fn scan_dir(path: impl AsRef<Path>) -> Result<Vec<String>, ScanError> {
     let path = path.as_ref();
 
     // make sure path is a directory
@@ -42,7 +43,7 @@ pub fn scan_dir(path: impl AsRef<Path>) -> Result<Vec<PathBuf>, ScanError> {
 }
 
 /// Classify incoming DirEntries as either items or folders to be further scanned.
-fn classify_dir_items<T>(dir_iter: T, items: &mut Vec<PathBuf>, unscanned_dirs: &mut Vec<PathBuf>)
+fn classify_dir_items<T>(dir_iter: T, items: &mut Vec<String>, unscanned_dirs: &mut Vec<PathBuf>)
 where
     T: Iterator<Item = DirEntry>,
 {
@@ -51,7 +52,10 @@ where
             if metadata.is_dir() {
                 unscanned_dirs.push(entry.path());
             } else {
-                items.push(entry.path());
+                match entry.path().to_slash() {
+                    Some(path_slash) => items.push(path_slash.to_string()),
+                    None => (),
+                }
             }
         }
     }
@@ -88,9 +92,9 @@ mod tests {
         let dir = test_folder_1();
 
         let expected = vec![
-            dir.path().join("apple"),
-            dir.path().join("bee"),
-            dir.path().join("cat"),
+            dir.path().join("apple").to_slash_lossy().to_string(),
+            dir.path().join("bee").to_slash_lossy().to_string(),
+            dir.path().join("cat").to_slash_lossy().to_string(),
         ];
 
         let scanned_paths = scan_dir(dir).unwrap();
