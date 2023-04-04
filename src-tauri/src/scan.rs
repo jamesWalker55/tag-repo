@@ -63,6 +63,7 @@ where
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashSet;
     use std::fs::File;
     use std::time::Instant;
 
@@ -100,6 +101,22 @@ mod tests {
         let scanned_paths = scan_dir(dir).unwrap();
 
         assert_unordered_eq(scanned_paths, expected)
+    }
+
+    #[test]
+    fn set_benchmark() -> () {
+        let path = PathBuf::from(r#"D:\Audio Samples\"#);
+        let start = Instant::now();
+        let paths = scan_dir(path).unwrap();
+        let duration = start.elapsed();
+        println!("Time elapsed for scan: {:?}", duration);
+        println!("Number of paths: {}", paths.len());
+
+        let start = Instant::now();
+        let paths: HashSet<String> = HashSet::from_iter(paths);
+        let duration = start.elapsed();
+        println!("Time elapsed for set: {:?}", duration);
+        println!("Number of paths: {}", paths.len());
     }
 
     #[test]
