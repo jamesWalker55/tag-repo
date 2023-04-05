@@ -1,13 +1,10 @@
-use path_slash::PathBufExt;
+use path_slash::{PathBufExt, PathExt};
+use relative_path::RelativePathBuf;
 use std::fs;
 use std::fs::DirEntry;
 use std::io::Error;
 use std::path::{Path, PathBuf};
-
-// pub enum Filter {
-//   ExcludeName(PathBuf),
-//   ExcludeContainsItem(PathBuf),
-// }
+use tracing::{debug, info, warn};
 
 #[derive(Debug)]
 pub enum ScanError {
@@ -15,8 +12,29 @@ pub enum ScanError {
     IOError(Error),
 }
 
+#[derive(Debug)]
+pub struct Options {
+    /// Ignored paths, relative to the root folder.
+    excluded_paths: Vec<RelativePathBuf>,
+    /// Ignored filenames, these are checked in all subfolders.
+    excluded_names: Vec<String>,
+}
+
+impl Default for Options {
+    fn default() -> Self {
+        Options {
+            excluded_paths: vec![RelativePathBuf::from(".tagrepo")],
+            excluded_names: vec![],
+        }
+    }
+}
+
 /// Scan a given folder, return a vector of paths `Vec<PathBuf>`
-pub fn scan_dir(path: impl AsRef<Path>) -> Result<Vec<String>, ScanError> {
+#[tracing::instrument(skip(path), fields(path = path.as_ref().to_string_lossy().to_string()))]
+pub fn scan_dir(
+    path: impl AsRef<Path>,
+    options: Options,
+) -> Result<Vec<RelativePathBuf>, ScanError> {
     let path = path.as_ref();
 
     // make sure path is a directory
@@ -30,12 +48,15 @@ pub fn scan_dir(path: impl AsRef<Path>) -> Result<Vec<String>, ScanError> {
 
     // scan the path for initial list of folders
     let dir_iter = fs::read_dir(path).map_err(ScanError::IOError)?;
-    classify_dir_items(dir_iter.flatten(), &mut items, &mut unscanned_dirs);
+    classify_dir_items(dir_iter, &mut items, &mut unscanned_dirs, &path, &options);
 
     // scan remaining folders
     while !unscanned_dirs.is_empty() {
-        if let Ok(dir_iter) = fs::read_dir(unscanned_dirs.pop().unwrap()) {
-            classify_dir_items(dir_iter.flatten(), &mut items, &mut unscanned_dirs);
+        match fs::read_dir(unscanned_dirs.pop().unwrap()) {
+            Ok(dir_iter) => {
+                classify_dir_items(dir_iter, &mut items, &mut unscanned_dirs, &path, &options)
+            }
+            Err(err) => warn!("Failed to scan folder: {}", err),
         }
     }
 
@@ -43,20 +64,53 @@ pub fn scan_dir(path: impl AsRef<Path>) -> Result<Vec<String>, ScanError> {
 }
 
 /// Classify incoming DirEntries as either items or folders to be further scanned.
-fn classify_dir_items<T>(dir_iter: T, items: &mut Vec<String>, unscanned_dirs: &mut Vec<PathBuf>)
-where
-    T: Iterator<Item = DirEntry>,
+fn classify_dir_items<T>(
+    dir_iter: T,
+    items: &mut Vec<RelativePathBuf>,
+    unscanned_dirs: &mut Vec<PathBuf>,
+    root_path: &Path,
+    options: &Options,
+) where
+    T: Iterator<Item = Result<DirEntry, Error>>,
 {
     for entry in dir_iter {
-        if let Ok(metadata) = entry.metadata() {
-            if metadata.is_dir() {
-                unscanned_dirs.push(entry.path());
-            } else {
-                match entry.path().to_slash() {
-                    Some(path_slash) => items.push(path_slash.to_string()),
-                    None => (),
-                }
+        let Ok(entry) = entry else {
+            warn!("Failed to scan entry: {:?}", entry);
+            continue;
+        };
+
+        let Ok(metadata) = entry.metadata() else {
+            warn!("Failed to get entry metadata: {:?}", entry.metadata());
+            continue;
+        };
+
+        if metadata.is_dir() {
+            unscanned_dirs.push(entry.path());
+        } else {
+            // convert to relative path
+            let path = entry.path();
+            let path = path
+                .strip_prefix(root_path)
+                .expect("failed to strip prefix from path");
+            let path =
+                RelativePathBuf::from_path(path).expect("failed to convert to RelativePathBuf");
+
+            if options.excluded_paths.contains(&path) {
+                debug!("Skipping excluded path: {}", path);
+                continue;
             }
+
+            let file_name = path.file_name().expect("path doesn't have file name");
+            if options
+                .excluded_names
+                .iter()
+                .any(|name| name.as_str() == file_name)
+            {
+                debug!("Skipping excluded file name: {}", path);
+                continue;
+            }
+
+            items.push(path)
         }
     }
 }
@@ -92,28 +146,38 @@ mod tests {
     fn scans_files_in_folder() {
         let dir = test_folder_1();
 
-        let expected = vec![
-            dir.path().join("apple").to_slash_lossy().to_string(),
-            dir.path().join("bee").to_slash_lossy().to_string(),
-            dir.path().join("cat").to_slash_lossy().to_string(),
-        ];
+        let expected = vec!["apple", "bee", "cat"];
 
-        let scanned_paths = scan_dir(dir).unwrap();
+        let scanned_paths = scan_dir(dir, Options::default()).unwrap();
 
-        assert_unordered_eq(scanned_paths, expected)
+        assert_unordered_eq(scanned_paths.iter().map(|x| x.as_str()), expected)
+    }
+
+    #[test]
+    fn ignores_files_in_folder() {
+        let dir = test_folder_1();
+
+        let mut options = Options::default();
+        options.excluded_paths.push(RelativePathBuf::from("apple"));
+
+        let expected = vec!["bee", "cat"];
+
+        let scanned_paths = scan_dir(dir, options).unwrap();
+
+        assert_unordered_eq(scanned_paths.iter().map(|x| x.as_str()), expected)
     }
 
     #[test]
     fn set_benchmark() -> () {
         let path = PathBuf::from(r#"D:\Audio Samples\"#);
         let start = Instant::now();
-        let paths = scan_dir(path).unwrap();
+        let paths = scan_dir(path, Options::default()).unwrap();
         let duration = start.elapsed();
         println!("Time elapsed for scan: {:?}", duration);
         println!("Number of paths: {}", paths.len());
 
         let start = Instant::now();
-        let paths: HashSet<String> = HashSet::from_iter(paths);
+        let paths: HashSet<String> = HashSet::from_iter(paths.iter().map(|x| x.to_string()));
         let duration = start.elapsed();
         println!("Time elapsed for set: {:?}", duration);
         println!("Number of paths: {}", paths.len());
@@ -123,7 +187,7 @@ mod tests {
     fn benchmark() -> () {
         let path = PathBuf::from(r#"D:\Audio Samples\"#);
         let start = Instant::now();
-        let r = scan_dir(path);
+        let r = scan_dir(path, Options::default());
         let duration = start.elapsed();
 
         println!("Time elapsed: {:?}", duration);

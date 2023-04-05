@@ -3,8 +3,10 @@ use std::path::{Path, PathBuf};
 
 use crate::query::to_sql;
 use crate::query::ParseError;
+use crate::scan::{scan_dir, Options};
 use indoc::indoc;
 use lazy_static::lazy_static;
+use relative_path::RelativePathBuf;
 use rusqlite::Error::{QueryReturnedNoRows, SqliteFailure};
 use rusqlite::{params, Connection, ErrorCode, Row};
 use rusqlite_migration::{Migrations, M};
@@ -545,13 +547,13 @@ mod tests {
 
             println!("Scanning dir");
             let start = Instant::now();
-            let paths = scan_dir(r#"D:\Audio Samples\"#).unwrap();
+            let paths = scan_dir(r#"D:\Audio Samples\"#, Options::default()).unwrap();
             println!("  Took: {:?}", start.elapsed());
 
             println!("Adding paths");
             println!("  Inserting {} paths...", paths.len());
             let start = Instant::now();
-            repo.insert_items(paths.iter().map(|p| (p.to_str().unwrap(), "asd")))
+            repo.insert_items(paths.iter().map(|p| (p.as_str(), "asd")))
                 .unwrap();
             println!("  Took: {:?}", start.elapsed());
             println!("Done!");
