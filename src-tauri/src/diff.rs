@@ -9,10 +9,11 @@ pub(crate) enum DiffError {
     InvalidPath(RelativePathBuf),
 }
 
+#[derive(Debug)]
 pub(crate) struct DiffPaths<'a> {
-    created: Vec<&'a RelativePath>,
-    deleted: Vec<&'a RelativePath>,
-    renamed: Vec<(&'a RelativePath, &'a RelativePath)>,
+    pub(crate) created: Vec<&'a RelativePath>,
+    pub(crate) deleted: Vec<&'a RelativePath>,
+    pub(crate) renamed: Vec<(&'a RelativePath, &'a RelativePath)>,
 }
 
 impl<'a> DiffPaths<'a> {
