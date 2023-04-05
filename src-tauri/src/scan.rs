@@ -4,11 +4,14 @@ use std::fs;
 use std::fs::DirEntry;
 use std::io::Error;
 use std::path::{Path, PathBuf};
+use thiserror::Error;
 use tracing::{debug, info, warn};
 
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum ScanError {
+    #[error("cannot scan path, it is not a directory")]
     NotADirectory,
+    #[error("IOError occured when trying to scan the given path, {0}")]
     IOError(Error),
 }
 
@@ -89,8 +92,7 @@ fn classify_dir_items<T>(
         let path = path
             .strip_prefix(root_path)
             .expect("failed to strip prefix from path");
-        let path =
-            RelativePathBuf::from_path(path).expect("failed to convert to RelativePathBuf");
+        let path = RelativePathBuf::from_path(path).expect("failed to convert to RelativePathBuf");
 
         if options.excluded_paths.contains(&path) {
             debug!("Skipping excluded path: {}", path);

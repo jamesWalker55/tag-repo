@@ -22,6 +22,15 @@ import { emit } from "@tauri-apps/api/event";
 
 const happy = ref(false);
 const text: Ref<string | null> = ref(null);
+const managerState: Ref<string | null> = ref(null);
+
+// setInterval(async () => {
+//   const newState: string | null = await invoke("current_status");
+//   if (managerState.value != newState) {
+//     managerState.value = newState;
+//     console.log("Received state:", newState);
+//   }
+// }, 100);
 
 const menuItems = computed(() => [
   {
@@ -60,12 +69,15 @@ const menuItems = computed(() => [
       let path = await open({ directory: true });
       let items = null;
       if (path !== null) {
-        items = await invoke("open_repo", {path: path});
+        items = await invoke("open_path", { path: path });
+        const repoPath: string | null = await invoke("current_path");
+        console.log("Got repoPath:", repoPath);
+        console.log("Got items:", items);
+        text.value = repoPath;
+      } else {
+        await invoke("close_repo");
+        text.value = null;
       }
-      const repoPath: string | null = await invoke("current_repo_path");
-      console.log("Got repoPath:", repoPath);
-      console.log("Got items:", items);
-      text.value = repoPath;
 
       // if (path === null) return;
       // console.log("Chose path:", path);
@@ -79,6 +91,7 @@ const menuItems = computed(() => [
       // console.log("Took:", timetaken);
     },
   },
+  { text: managerState || "No repo loaded" },
   // Spacer
   { is: "div", class: "ml-auto" },
   {

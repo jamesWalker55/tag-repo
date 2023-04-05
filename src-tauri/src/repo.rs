@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 use crate::diff::{diff_path_list, DiffError};
 use crate::query::to_sql;
 use crate::query::ParseError;
-use crate::scan::{scan_dir, Options};
+use crate::scan::{scan_dir, Options, ScanError};
 use indoc::indoc;
 use lazy_static::lazy_static;
 use relative_path::RelativePathBuf;
@@ -18,12 +18,16 @@ use tempfile::{tempdir, TempDir};
 use thiserror::Error;
 use tracing::debug;
 
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum OpenError {
+    #[error("repo path does not exist")]
     PathDoesNotExist,
-    FailedToCreateRepo(std::io::Error),
-    FailedToCreateDatabase(rusqlite::Error),
-    FailedToMigrateDatabase(rusqlite_migration::Error),
+    #[error("failed to create .tagrepo folder")]
+    FailedToCreateRepo(#[from] std::io::Error),
+    #[error("failed to create database")]
+    FailedToCreateDatabase(#[from] rusqlite::Error),
+    #[error("failed to migrate database")]
+    FailedToMigrateDatabase(#[from] rusqlite_migration::Error),
 }
 
 #[derive(Error, Debug)]
@@ -83,6 +87,8 @@ pub enum SyncError {
     DiffError(#[from] DiffError),
     #[error("failed to retrieve all items in database, {0}")]
     SearchError(#[from] SearchError),
+    #[error("failed to scan directory for a list of files, {0}")]
+    ScanError(#[from] ScanError),
 }
 
 #[derive(Debug, Serialize)]
@@ -93,6 +99,7 @@ pub struct Item {
     pub(crate) meta_tags: String,
 }
 
+#[derive(Debug)]
 pub struct Repo {
     path: PathBuf,
     conn: Connection,
@@ -122,7 +129,7 @@ impl Repo {
         }
         let data_path = repo_path.join(".tagrepo");
         if !data_path.exists() {
-            create_dir(&data_path).map_err(OpenError::FailedToCreateRepo)?;
+            create_dir(&data_path)?;
         }
         let db_path = data_path.join("tags.db");
         let conn = open_database(db_path)?;
@@ -278,8 +285,9 @@ impl Repo {
         Ok(items?)
     }
 
+    #[tracing::instrument(skip(new_paths))]
     pub fn sync(
-        &self,
+        &mut self,
         new_paths: impl IntoIterator<Item = RelativePathBuf>,
     ) -> Result<(), SyncError> {
         let old_paths: HashSet<RelativePathBuf> = self
@@ -288,49 +296,41 @@ impl Repo {
             .map(|x| RelativePathBuf::from(x.path))
             .collect();
         let new_paths: HashSet<RelativePathBuf> = new_paths.into_iter().collect();
+        debug!("unique old paths: {}", old_paths.len());
+        debug!("unique new paths: {}", new_paths.len());
+
         let path_diff = diff_path_list(&old_paths, &new_paths)?;
-
-        todo!()
-    }
-
-    pub fn sync_all(&mut self) -> Result<(), SyncError> {
-        // scan items
-        let existing_items = self.all_items()?;
-        let current_paths = scan_dir(&self.path, Options::default()).unwrap();
-        println!("SYNC:");
-        println!("existing_paths: {}", existing_items.len());
-        println!("current_paths: {}", current_paths.len());
-
-        // convert to hashsets
-        let existing_paths: HashSet<RelativePathBuf> = HashSet::from_iter(
-            existing_items
-                .into_iter()
-                .map(|x| RelativePathBuf::from(x.path)),
+        debug!(
+            "diff: created={}, deleted={}, renamed={}",
+            path_diff.created.len(),
+            path_diff.deleted.len(),
+            path_diff.renamed.len(),
         );
-        let current_paths: HashSet<RelativePathBuf> = HashSet::from_iter(current_paths.into_iter());
-        println!("hashed:");
-        println!("existing_paths: {}", existing_paths.len());
-        println!("current_paths: {}", current_paths.len());
-
-        let path_diff = diff_path_list(&existing_paths, &current_paths).expect("can't diff files");
-        // dbg!(&path_diff);
 
         let tx = self.conn.transaction()?;
         {
+            // delete old paths
             let mut stmt = tx.prepare_cached("DELETE FROM items WHERE path = :path")?;
             for path in &path_diff.deleted {
                 stmt.execute(params![path.as_str()])?;
             }
+            // create new paths
             let mut stmt = tx.prepare_cached("INSERT INTO items (path, tags) VALUES (?1, ?2)")?;
             for path in &path_diff.created {
                 stmt.execute(params![path.as_str(), ""])?;
             }
+            // rename existing paths
             let mut stmt = tx.prepare_cached("UPDATE items SET path = ?2 WHERE path = ?1")?;
             for (from, to) in &path_diff.renamed {
                 stmt.execute(params![from.as_str(), to.as_str()])?;
             }
         }
         tx.commit()?;
+        Ok(())
+    }
+
+    pub fn sync_all(&mut self) -> Result<(), SyncError> {
+        self.sync(scan_dir(&self.path, Options::default()).unwrap())?;
         Ok(())
     }
 }
