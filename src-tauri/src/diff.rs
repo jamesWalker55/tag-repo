@@ -3,9 +3,11 @@ use relative_path::{RelativePath, RelativePathBuf};
 use std::collections::hash_map::RandomState;
 use std::collections::hash_set::Difference;
 use std::collections::{HashMap, HashSet};
+use thiserror::Error;
 
-#[derive(Debug)]
-pub(crate) enum DiffError {
+#[derive(Error, Debug)]
+pub enum DiffError {
+    #[error("failed to diff invalid path, {0}")]
     InvalidPath(RelativePathBuf),
 }
 

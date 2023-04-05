@@ -1,5 +1,6 @@
 mod diff;
 mod helpers;
+mod manager;
 mod query;
 mod repo;
 mod scan;

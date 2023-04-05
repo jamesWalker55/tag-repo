@@ -89,7 +89,7 @@ fn string_or_literal<'a>(input: &'a str) -> IResult<&str, Cow<'a, str>> {
 }
 
 #[derive(Debug, PartialEq, Eq)]
-pub(crate) enum Expr<'a> {
+pub enum Expr<'a> {
     And(Vec<Expr<'a>>),
     Or(Vec<Expr<'a>>),
     Not(Box<Expr<'a>>),

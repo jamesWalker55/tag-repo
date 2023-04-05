@@ -15,10 +15,13 @@ import {
 } from "@/lib/icons";
 
 import { appWindow } from "@tauri-apps/api/window";
+import { open } from "@tauri-apps/api/dialog";
 import { invoke } from "@tauri-apps/api";
-import { computed, ref } from "vue";
+import { computed, Ref, ref } from "vue";
+import { emit } from "@tauri-apps/api/event";
 
 const happy = ref(false);
+const text: Ref<string | null> = ref(null);
 
 const menuItems = computed(() => [
   {
@@ -52,8 +55,28 @@ const menuItems = computed(() => [
   },
   {
     icon: OpenRepo,
-    click: () => {
-      happy.value = !happy.value;
+    text: text.value,
+    click: async () => {
+      let path = await open({ directory: true });
+      let items = null;
+      if (path !== null) {
+        items = await invoke("open_repo", {path: path});
+      }
+      const repoPath: string | null = await invoke("current_repo_path");
+      console.log("Got repoPath:", repoPath);
+      console.log("Got items:", items);
+      text.value = repoPath;
+
+      // if (path === null) return;
+      // console.log("Chose path:", path);
+      // let a = performance.now();
+      // try {
+      //   const x: String = await invoke("testrepo", {path: path});
+      // } catch (e) {
+      //   console.error(e);
+      // }
+      // let timetaken = performance.now() - a;
+      // console.log("Took:", timetaken);
     },
   },
   // Spacer

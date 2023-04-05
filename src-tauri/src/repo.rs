@@ -1,6 +1,8 @@
+use std::collections::{HashMap, HashSet};
 use std::fs::create_dir;
 use std::path::{Path, PathBuf};
 
+use crate::diff::{diff_path_list, DiffError};
 use crate::query::to_sql;
 use crate::query::ParseError;
 use crate::scan::{scan_dir, Options};
@@ -8,40 +10,82 @@ use indoc::indoc;
 use lazy_static::lazy_static;
 use relative_path::RelativePathBuf;
 use rusqlite::Error::{QueryReturnedNoRows, SqliteFailure};
-use rusqlite::{params, Connection, ErrorCode, Row};
+use rusqlite::{ffi, params, Connection, ErrorCode, Row};
 use rusqlite_migration::{Migrations, M};
+use serde::Serialize;
 #[cfg(test)]
 use tempfile::{tempdir, TempDir};
+use thiserror::Error;
+use tracing::debug;
 
 #[derive(Debug)]
-pub(crate) enum OpenError {
+pub enum OpenError {
     PathDoesNotExist,
     FailedToCreateRepo(std::io::Error),
     FailedToCreateDatabase(rusqlite::Error),
     FailedToMigrateDatabase(rusqlite_migration::Error),
 }
 
-#[derive(Debug)]
-pub(crate) enum DatabaseError<'a> {
+#[derive(Error, Debug)]
+#[deprecated]
+pub enum DatabaseError {
+    #[error("an error occurred in rusqlite")]
+    BackendError(#[from] rusqlite::Error),
+    #[error("attempted to insert path, but path already exists in database")]
     DuplicatePathError(String),
+    #[error("failed to find item")]
     ItemNotFound,
-    BackendError(rusqlite::Error),
-    InvalidQuery(ParseError<'a>),
 }
 
-impl<'a> From<rusqlite::Error> for DatabaseError<'a> {
-    fn from(error: rusqlite::Error) -> Self {
-        DatabaseError::BackendError(error)
-    }
+#[derive(Error, Debug)]
+pub enum InsertError {
+    #[error("an error occurred in rusqlite")]
+    BackendError(#[from] rusqlite::Error),
+    #[error("attempted to insert path, but path already exists in database")]
+    DuplicatePathError(String),
+    #[error("failed to retrieve item data after inserting into database")]
+    SearchError(#[from] SearchError),
 }
 
-impl<'a> From<ParseError<'a>> for DatabaseError<'a> {
-    fn from(error: ParseError<'a>) -> Self {
-        DatabaseError::InvalidQuery(error)
-    }
+#[derive(Error, Debug)]
+pub enum SearchError {
+    #[error("an error occurred in rusqlite, {0}")]
+    BackendError(#[from] rusqlite::Error),
+    #[error("failed to find item")]
+    ItemNotFound,
 }
 
-#[derive(Debug)]
+#[derive(Error, Debug)]
+pub enum RemoveError {
+    #[error("an error occurred in rusqlite, {0}")]
+    BackendError(#[from] rusqlite::Error),
+}
+
+#[derive(Error, Debug)]
+pub enum UpdateError {
+    #[error("an error occurred in rusqlite, {0}")]
+    BackendError(#[from] rusqlite::Error),
+}
+
+#[derive(Error, Debug)]
+pub enum QueryError {
+    #[error("an error occurred in rusqlite, {0}")]
+    BackendError(#[from] rusqlite::Error),
+    #[error("invalid search query")]
+    InvalidQuery,
+}
+
+#[derive(Error, Debug)]
+pub enum SyncError {
+    #[error("an error occurred in rusqlite, {0}")]
+    BackendError(#[from] rusqlite::Error),
+    #[error("failed to diff file paths, {0}")]
+    DiffError(#[from] DiffError),
+    #[error("failed to retrieve all items in database, {0}")]
+    SearchError(#[from] SearchError),
+}
+
+#[derive(Debug, Serialize)]
 pub struct Item {
     pub(crate) id: i64,
     pub(crate) path: String,
@@ -71,7 +115,7 @@ impl Repo {
         })
     }
 
-    pub(crate) fn open(repo_path: impl AsRef<Path>) -> Result<Repo, OpenError> {
+    pub fn open(repo_path: impl AsRef<Path>) -> Result<Repo, OpenError> {
         let repo_path = repo_path.as_ref();
         if !repo_path.exists() {
             return Err(OpenError::PathDoesNotExist);
@@ -82,14 +126,15 @@ impl Repo {
         }
         let db_path = data_path.join("tags.db");
         let conn = open_database(db_path)?;
-        let repo = Self {
-            path: PathBuf::from(repo_path),
-            conn,
-        };
+        let repo = Self { path: PathBuf::from(repo_path), conn };
         Ok(repo)
     }
 
-    pub(crate) fn insert_item<T>(&self, path: T, tags: T) -> Result<Item, DatabaseError>
+    pub fn path(&self) -> &Path {
+        self.path.as_path()
+    }
+
+    pub(crate) fn insert_item<T>(&self, path: T, tags: T) -> Result<Item, InsertError>
     where
         T: AsRef<str>,
     {
@@ -103,28 +148,22 @@ impl Repo {
         match result {
             Ok(_) => {
                 let id = self.conn.last_insert_rowid();
-                self.get_item_by_id(id)
+                Ok(self.get_item_by_id(id)?)
             }
-            Err(SqliteFailure(sqlite_err, Some(msg))) => {
-                if sqlite_err.code == ErrorCode::ConstraintViolation
-                    && msg == "UNIQUE constraint failed: items.path"
-                {
-                    Err(DatabaseError::DuplicatePathError(path.into()))
-                } else {
-                    Err(DatabaseError::BackendError(SqliteFailure(
-                        sqlite_err,
-                        Some(msg),
-                    )))
-                }
+            Err(SqliteFailure(
+                ffi::Error { code: ErrorCode::ConstraintViolation, .. },
+                Some(msg),
+            )) if msg == "UNIQUE constraint failed: items.path" => {
+                Err(InsertError::DuplicatePathError(path.to_string()))
             }
-            Err(err) => Err(DatabaseError::BackendError(err)),
+            Err(err) => Err(InsertError::from(err)),
         }
     }
 
     pub(crate) fn insert_items<T>(
         &mut self,
         items_params: impl Iterator<Item = (T, T)>,
-    ) -> Result<(), DatabaseError>
+    ) -> Result<(), InsertError>
     where
         T: AsRef<str>,
     {
@@ -133,7 +172,7 @@ impl Repo {
 
         let tx = self.conn.transaction()?;
         {
-            let mut stmt = tx.prepare_cached("INSERT INTO ITEMS (path, tags) VALUES (?1, ?2)")?;
+            let mut stmt = tx.prepare_cached("INSERT INTO items (path, tags) VALUES (?1, ?2)")?;
             for (path, tags) in items_params {
                 let path = path.as_ref();
                 let tags = tags.as_ref();
@@ -144,39 +183,39 @@ impl Repo {
         Ok(())
     }
 
-    pub(crate) fn get_item_by_path(&self, path: impl AsRef<str>) -> Result<Item, DatabaseError> {
+    pub(crate) fn get_item_by_path(&self, path: impl AsRef<str>) -> Result<Item, SearchError> {
         let path = path.as_ref();
         let mut stmt = self
             .conn
             .prepare("SELECT id, path, tags, meta_tags FROM items WHERE path = :path LIMIT 1")?;
         let item = stmt.query_row([&path], Self::to_item);
         if let Err(QueryReturnedNoRows) = item {
-            return Err(DatabaseError::ItemNotFound);
+            return Err(SearchError::ItemNotFound);
         }
 
         Ok(item?)
     }
 
-    pub(crate) fn get_item_by_id(&self, id: i64) -> Result<Item, DatabaseError> {
+    pub(crate) fn get_item_by_id(&self, id: i64) -> Result<Item, SearchError> {
         let mut stmt = self
             .conn
             .prepare("SELECT id, path, tags, meta_tags FROM items WHERE id = :id LIMIT 1")?;
         let item = stmt.query_row([id], Self::to_item);
         if let Err(QueryReturnedNoRows) = item {
-            return Err(DatabaseError::ItemNotFound);
+            return Err(SearchError::ItemNotFound);
         }
 
         Ok(item?)
     }
 
-    pub(crate) fn remove_item_by_path(&self, path: impl AsRef<str>) -> Result<(), DatabaseError> {
+    pub(crate) fn remove_item_by_path(&self, path: impl AsRef<str>) -> Result<(), RemoveError> {
         let path = path.as_ref();
         self.conn
             .execute("DELETE FROM items WHERE path = :path", [path])?;
         Ok(())
     }
 
-    pub(crate) fn remove_item_by_id(&self, id: i64) -> Result<(), DatabaseError> {
+    pub(crate) fn remove_item_by_id(&self, id: i64) -> Result<(), RemoveError> {
         self.conn
             .execute("DELETE FROM items WHERE id = :id", [id])?;
         Ok(())
@@ -186,14 +225,14 @@ impl Repo {
         &self,
         item_id: i64,
         tags: impl AsRef<str>,
-    ) -> Result<(), DatabaseError> {
+    ) -> Result<(), UpdateError> {
         let rv = self.conn.execute(
             "UPDATE items SET tags = :tags WHERE id = :id",
             params![tags.as_ref(), item_id],
         );
         match rv {
             Ok(_) => Ok(()),
-            Err(e) => Err(DatabaseError::BackendError(e)),
+            Err(e) => Err(UpdateError::from(e)),
         }
     }
 
@@ -201,7 +240,7 @@ impl Repo {
         &self,
         item_id: i64,
         path: impl AsRef<str>,
-    ) -> Result<(), DatabaseError> {
+    ) -> Result<(), UpdateError> {
         let path = path.as_ref();
         let rv = self.conn.execute(
             "UPDATE items SET path = :path WHERE id = :id",
@@ -209,12 +248,12 @@ impl Repo {
         );
         match rv {
             Ok(_) => Ok(()),
-            Err(e) => Err(DatabaseError::BackendError(e)),
+            Err(e) => Err(UpdateError::from(e)),
         }
     }
 
-    pub(crate) fn query_items<'a>(&'a self, query: &'a str) -> Result<Vec<Item>, DatabaseError> {
-        let where_clause = to_sql(query)?;
+    pub fn query_items<'a>(&'a self, query: &'a str) -> Result<Vec<Item>, QueryError> {
+        let where_clause = to_sql(query).map_err(|x| QueryError::InvalidQuery)?;
         let sql = format!(
             indoc! {"
                 SELECT i.id, i.path, i.tags, i.meta_tags
@@ -229,6 +268,70 @@ impl Repo {
         let mapped_rows = stmt.query_map([], Self::to_item)?;
         let items: Result<Vec<_>, _> = mapped_rows.collect();
         Ok(items?)
+    }
+
+    pub(crate) fn all_items(&self) -> Result<Vec<Item>, SearchError> {
+        let sql = "SELECT i.id, i.path, i.tags, i.meta_tags FROM items i";
+        let mut stmt = self.conn.prepare_cached(sql)?;
+        let mapped_rows = stmt.query_map([], Self::to_item)?;
+        let items: Result<Vec<_>, _> = mapped_rows.collect();
+        Ok(items?)
+    }
+
+    pub fn sync(
+        &self,
+        new_paths: impl IntoIterator<Item = RelativePathBuf>,
+    ) -> Result<(), SyncError> {
+        let old_paths: HashSet<RelativePathBuf> = self
+            .all_items()?
+            .into_iter()
+            .map(|x| RelativePathBuf::from(x.path))
+            .collect();
+        let new_paths: HashSet<RelativePathBuf> = new_paths.into_iter().collect();
+        let path_diff = diff_path_list(&old_paths, &new_paths)?;
+
+        todo!()
+    }
+
+    pub fn sync_all(&mut self) -> Result<(), SyncError> {
+        // scan items
+        let existing_items = self.all_items()?;
+        let current_paths = scan_dir(&self.path, Options::default()).unwrap();
+        println!("SYNC:");
+        println!("existing_paths: {}", existing_items.len());
+        println!("current_paths: {}", current_paths.len());
+
+        // convert to hashsets
+        let existing_paths: HashSet<RelativePathBuf> = HashSet::from_iter(
+            existing_items
+                .into_iter()
+                .map(|x| RelativePathBuf::from(x.path)),
+        );
+        let current_paths: HashSet<RelativePathBuf> = HashSet::from_iter(current_paths.into_iter());
+        println!("hashed:");
+        println!("existing_paths: {}", existing_paths.len());
+        println!("current_paths: {}", current_paths.len());
+
+        let path_diff = diff_path_list(&existing_paths, &current_paths).expect("can't diff files");
+        // dbg!(&path_diff);
+
+        let tx = self.conn.transaction()?;
+        {
+            let mut stmt = tx.prepare_cached("DELETE FROM items WHERE path = :path")?;
+            for path in &path_diff.deleted {
+                stmt.execute(params![path.as_str()])?;
+            }
+            let mut stmt = tx.prepare_cached("INSERT INTO items (path, tags) VALUES (?1, ?2)")?;
+            for path in &path_diff.created {
+                stmt.execute(params![path.as_str(), ""])?;
+            }
+            let mut stmt = tx.prepare_cached("UPDATE items SET path = ?2 WHERE path = ?1")?;
+            for (from, to) in &path_diff.renamed {
+                stmt.execute(params![from.as_str(), to.as_str()])?;
+            }
+        }
+        tx.commit()?;
+        Ok(())
     }
 }
 
