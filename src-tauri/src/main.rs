@@ -4,6 +4,7 @@
 use tauri::Manager;
 use window_shadows::set_shadow;
 
+mod diff;
 mod helpers;
 mod query;
 mod repo;

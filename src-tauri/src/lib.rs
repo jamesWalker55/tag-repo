@@ -1,3 +1,4 @@
+mod diff;
 mod helpers;
 mod query;
 mod repo;
