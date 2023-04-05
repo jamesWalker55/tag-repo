@@ -84,32 +84,32 @@ fn classify_dir_items<T>(
             continue;
         };
 
+        // convert to relative path
+        let path = entry.path();
+        let path = path
+            .strip_prefix(root_path)
+            .expect("failed to strip prefix from path");
+        let path =
+            RelativePathBuf::from_path(path).expect("failed to convert to RelativePathBuf");
+
+        if options.excluded_paths.contains(&path) {
+            debug!("Skipping excluded path: {}", path);
+            continue;
+        }
+
+        let file_name = path.file_name().expect("path doesn't have file name");
+        if options
+            .excluded_names
+            .iter()
+            .any(|name| name.as_str() == file_name)
+        {
+            debug!("Skipping excluded file name: {}", path);
+            continue;
+        }
+
         if metadata.is_dir() {
             unscanned_dirs.push(entry.path());
         } else {
-            // convert to relative path
-            let path = entry.path();
-            let path = path
-                .strip_prefix(root_path)
-                .expect("failed to strip prefix from path");
-            let path =
-                RelativePathBuf::from_path(path).expect("failed to convert to RelativePathBuf");
-
-            if options.excluded_paths.contains(&path) {
-                debug!("Skipping excluded path: {}", path);
-                continue;
-            }
-
-            let file_name = path.file_name().expect("path doesn't have file name");
-            if options
-                .excluded_names
-                .iter()
-                .any(|name| name.as_str() == file_name)
-            {
-                debug!("Skipping excluded file name: {}", path);
-                continue;
-            }
-
             items.push(path)
         }
     }
