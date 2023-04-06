@@ -1,6 +1,6 @@
 use crate::repo::{OpenError, RemoveError, Repo, SyncError};
 use crate::scan::{classify_path, scan_dir, to_relative_path, Options, PathType, ScanError};
-use crate::watch::{NormWatcher, WindowsNormWatcher};
+use crate::watch::WindowsNormWatcher;
 use futures::executor::block_on;
 use notify::event::{ModifyKind, RenameMode};
 use notify::EventKind::{Create, Modify, Remove};

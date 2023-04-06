@@ -5,11 +5,11 @@ use async_trait::async_trait;
 use notify::event::ModifyKind::Name;
 use notify::event::{CreateKind, EventAttributes, RemoveKind, RenameMode};
 use notify::EventKind::{Create, Modify, Remove};
-use notify::{Config, Event, ReadDirectoryChangesWatcher, RecursiveMode, Watcher};
+use notify::{
+    Config, Event, EventHandler, ReadDirectoryChangesWatcher, RecursiveMode, Watcher, WatcherKind,
+};
 use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender};
 use tokio::time::{timeout_at, Instant};
-
-use crate::watch::NormWatcher;
 
 /// A wrapper for `ReadDirectoryChangesWatcher`.
 ///
@@ -46,57 +46,53 @@ use crate::watch::NormWatcher;
 pub struct WindowsNormWatcher {
     /// The actual watcher instance.
     watcher: ReadDirectoryChangesWatcher,
-    /// A receiver that receives processed events from the event handler, then sends the events to
-    /// the output receiver
-    output_rx: UnboundedReceiver<notify::Result<Event>>,
 }
 
-impl WindowsNormWatcher {
-    pub fn new() -> notify::Result<Self> {
+impl Watcher for WindowsNormWatcher {
+    fn new<F: EventHandler>(event_handler: F, config: Config) -> notify::Result<Self>
+    where
+        Self: Sized,
+    {
         // Spawn the watcher
         let (watcher_tx, watcher_rx) = unbounded_channel();
 
         let watcher = ReadDirectoryChangesWatcher::new(
             move |res| watcher_tx.send(res).unwrap(),
-            Config::default(),
+            config,
         )?;
 
         // Spawn the event handler
         // Don't need to store the JoinHandle, it should naturally terminate once the watcher drops
-        let (output_tx, output_rx) = unbounded_channel();
         tokio::spawn(async move {
-            event_handler(watcher_rx, output_tx).await;
+            event_handler_loop(watcher_rx, event_handler).await;
         });
 
-        Ok(Self { watcher, output_rx })
+        Ok(Self { watcher })
     }
-}
 
-#[async_trait]
-impl NormWatcher for WindowsNormWatcher {
     fn watch(&mut self, path: &Path, recursive_mode: RecursiveMode) -> notify::Result<()> {
-        self.watcher.watch(path.as_ref(), recursive_mode)
+        self.watcher.watch(path, recursive_mode)
     }
 
-    async fn recv(&mut self) -> Option<notify::Result<Event>> {
-        self.output_rx.recv().await
+    fn unwatch(&mut self, path: &Path) -> notify::Result<()> {
+        self.watcher.unwatch(path)
     }
 
-    #[cfg(test)]
-    fn stop_watching(&mut self) {
-        let temp_watcher = ReadDirectoryChangesWatcher::new(|_res| {}, Config::default()).unwrap();
-        let real_watcher = std::mem::replace(&mut self.watcher, temp_watcher);
-        drop(real_watcher);
+    fn kind() -> WatcherKind
+    where
+        Self: Sized,
+    {
+        WatcherKind::ReadDirectoryChangesWatcher
     }
 }
 
-async fn event_handler(
+async fn event_handler_loop(
     mut watcher_rx: UnboundedReceiver<notify::Result<Event>>,
-    output_tx: UnboundedSender<notify::Result<Event>>,
+    mut event_handler: impl EventHandler,
 ) {
     fn clear_expired_records(
         recent_deleted_paths: &mut Vec<(Instant, PathBuf, EventAttributes)>,
-        output_tx: &UnboundedSender<notify::Result<Event>>,
+        mut event_handler: &mut impl EventHandler,
     ) {
         let now = Instant::now();
         let mut i = 0;
@@ -113,7 +109,7 @@ async fn event_handler(
                         paths: vec![path],
                         attrs,
                     };
-                    output_tx.send(Ok(evt)).unwrap();
+                    event_handler.handle_event(Ok(evt));
                 } else {
                     // not expired, move on to next record
                     i += 1;
@@ -135,7 +131,7 @@ async fn event_handler(
                 }
                 Err(_) => {
                     // Timeout occurred, clear expired records from database and wait again
-                    clear_expired_records(&mut recent_deleted_paths, &output_tx);
+                    clear_expired_records(&mut recent_deleted_paths, &mut event_handler);
                     continue;
                 }
             }
@@ -146,7 +142,7 @@ async fn event_handler(
         match res {
             Some(evt) => {
                 if evt.is_err() {
-                    output_tx.send(evt).unwrap();
+                    event_handler.handle_event(evt);
                     continue;
                 }
                 let evt = evt.unwrap();
@@ -175,7 +171,7 @@ async fn event_handler(
                             paths: vec![from_path, to_path],
                             attrs,
                         };
-                        output_tx.send(Ok(evt)).unwrap();
+                        event_handler.handle_event(Ok(evt));
                     }
                     Event { kind: Remove(RemoveKind::Any), mut paths, attrs } => {
                         assert_eq!(
@@ -218,7 +214,7 @@ async fn event_handler(
                                     paths: vec![deleted_path_match, created_path],
                                     attrs,
                                 };
-                                output_tx.send(Ok(evt)).unwrap();
+                                event_handler.handle_event(Ok(evt));
                             }
                             None => {
                                 let evt = Event {
@@ -226,11 +222,11 @@ async fn event_handler(
                                     paths: vec![created_path],
                                     attrs,
                                 };
-                                output_tx.send(Ok(evt)).unwrap();
+                                event_handler.handle_event(Ok(evt));
                             }
                         }
                     }
-                    _ => output_tx.send(Ok(evt)).unwrap(),
+                    _ => event_handler.handle_event(Ok(evt)),
                 }
             }
             None => {
@@ -241,7 +237,7 @@ async fn event_handler(
                         paths: vec![path],
                         attrs,
                     };
-                    output_tx.send(Ok(evt)).unwrap();
+                    event_handler.handle_event(Ok(evt));
                 }
                 break;
             }
