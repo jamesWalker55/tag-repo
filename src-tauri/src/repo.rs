@@ -141,9 +141,10 @@ impl Repo {
         self.path.as_path()
     }
 
-    pub(crate) fn insert_item<T>(&self, path: T, tags: T) -> Result<Item, InsertError>
+    pub(crate) fn insert_item<T, U>(&self, path: T, tags: U) -> Result<Item, InsertError>
     where
         T: AsRef<str>,
+        U: AsRef<str>,
     {
         let path = path.as_ref();
         let tags = tags.as_ref();
@@ -257,6 +258,20 @@ impl Repo {
             Ok(_) => Ok(()),
             Err(e) => Err(UpdateError::from(e)),
         }
+    }
+
+    pub(crate) fn rename_path(
+        &self,
+        old_path: impl AsRef<str>,
+        new_path: impl AsRef<str>,
+    ) -> Result<(), UpdateError> {
+        let old_path = old_path.as_ref();
+        let new_path = new_path.as_ref();
+        self.conn.execute(
+            "UPDATE items SET path = ?2 WHERE path = ?1",
+            params![old_path, new_path],
+        )?;
+        Ok(())
     }
 
     pub fn query_items<'a>(&'a self, query: &'a str) -> Result<Vec<Item>, QueryError> {

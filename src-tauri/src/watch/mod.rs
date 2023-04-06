@@ -3,7 +3,7 @@ use std::path::Path;
 use async_trait::async_trait;
 use notify::{Event, RecursiveMode};
 
-use crate::watch::windows::ReadDirectoryChangesNormWatcher;
+pub use crate::watch::windows::ReadDirectoryChangesNormWatcher;
 
 mod windows;
 

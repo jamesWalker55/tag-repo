@@ -66,13 +66,21 @@ pub fn scan_dir(
     Ok(items)
 }
 
-enum PathType {
+pub(crate) enum PathType {
     Item(RelativePathBuf),
     Directory(PathBuf),
     Ignored,
 }
 
-fn classify_path(path: PathBuf, root_path: &Path, options: &Options) -> PathType {
+pub(crate) fn to_relative_path(path: &Path, root_path: &Path) -> RelativePathBuf {
+    // convert to relative path
+    let relpath = path
+        .strip_prefix(root_path)
+        .expect("failed to strip prefix from path");
+    RelativePathBuf::from_path(relpath).expect("failed to convert to RelativePathBuf")
+}
+
+pub(crate) fn classify_path(path: PathBuf, root_path: &Path, options: &Options) -> PathType {
     let is_dir = match fs::metadata(&path) {
         Ok(metadata) => metadata.is_dir(),
         Err(err) => {
@@ -82,11 +90,7 @@ fn classify_path(path: PathBuf, root_path: &Path, options: &Options) -> PathType
     };
 
     // convert to relative path
-    let relpath = &path
-        .strip_prefix(root_path)
-        .expect("failed to strip prefix from path");
-    let relpath =
-        RelativePathBuf::from_path(relpath).expect("failed to convert to RelativePathBuf");
+    let relpath = to_relative_path(path.as_path(), root_path);
 
     if options.excluded_paths.contains(&relpath) {
         debug!("Skipping excluded path: {}", relpath);
