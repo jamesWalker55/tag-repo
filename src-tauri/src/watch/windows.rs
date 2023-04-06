@@ -43,7 +43,7 @@ use crate::watch::NormWatcher;
 /// Just drop this struct. It should automatically clean up everything. When this struct drops, it
 /// drops the `notify` watcher, which in turn makes the event handler task stop since the task
 /// is receiving events from the watcher.
-pub struct ReadDirectoryChangesNormWatcher {
+pub struct WindowsNormWatcher {
     /// The actual watcher instance.
     watcher: ReadDirectoryChangesWatcher,
     /// A receiver that receives processed events from the event handler, then sends the events to
@@ -51,7 +51,7 @@ pub struct ReadDirectoryChangesNormWatcher {
     output_rx: UnboundedReceiver<notify::Result<Event>>,
 }
 
-impl ReadDirectoryChangesNormWatcher {
+impl WindowsNormWatcher {
     pub fn new() -> notify::Result<Self> {
         // Spawn the watcher
         let (watcher_tx, watcher_rx) = unbounded_channel();
@@ -73,7 +73,7 @@ impl ReadDirectoryChangesNormWatcher {
 }
 
 #[async_trait]
-impl NormWatcher for ReadDirectoryChangesNormWatcher {
+impl NormWatcher for WindowsNormWatcher {
     fn watch(&mut self, path: &Path, recursive_mode: RecursiveMode) -> notify::Result<()> {
         self.watcher.watch(path.as_ref(), recursive_mode)
     }

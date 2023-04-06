@@ -3,7 +3,7 @@ use std::path::Path;
 use async_trait::async_trait;
 use notify::{Event, RecursiveMode};
 
-pub use crate::watch::windows::ReadDirectoryChangesNormWatcher;
+pub use crate::watch::windows::WindowsNormWatcher;
 
 mod windows;
 
@@ -198,12 +198,12 @@ mod tests {
         }
     }
 
-    async fn setup() -> (TempDir, ReadDirectoryChangesNormWatcher, FSOperator) {
+    async fn setup() -> (TempDir, WindowsNormWatcher, FSOperator) {
         // the temporary directory to test in
         let dir = tempdir().unwrap();
 
         // watcher for directory
-        let mut watcher = ReadDirectoryChangesNormWatcher::new().unwrap();
+        let mut watcher = WindowsNormWatcher::new().unwrap();
         watcher.watch(dir.path(), RecursiveMode::Recursive).unwrap();
 
         // operator on temporary directory
@@ -377,7 +377,7 @@ mod tests {
         let path = r"D:\Programming\rust-learning\temp";
         println!("watching {}", path);
 
-        let mut watcher = ReadDirectoryChangesNormWatcher::new().unwrap();
+        let mut watcher = WindowsNormWatcher::new().unwrap();
         watcher
             .watch(path.as_ref(), RecursiveMode::Recursive)
             .unwrap();
