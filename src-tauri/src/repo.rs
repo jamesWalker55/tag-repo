@@ -480,7 +480,7 @@ mod tests {
         repo.insert_item("hello", "text root").unwrap();
         let rv = repo.insert_item("hello", "video root");
 
-        assert!(matches!(rv, Err(DatabaseError::DuplicatePathError(_))));
+        assert!(matches!(rv, Err(InsertError::DuplicatePathError(_))));
     }
 
     #[test]
@@ -536,7 +536,7 @@ mod tests {
         let repo = &mut tr.repo;
         repo.remove_item_by_path("apple").unwrap();
         let rv = repo.get_item_by_path("apple");
-        assert!(matches!(rv, Err(DatabaseError::ItemNotFound)))
+        assert!(matches!(rv, Err(SearchError::ItemNotFound)))
     }
 
     #[test]
@@ -545,7 +545,7 @@ mod tests {
         let repo = &mut tr.repo;
         repo.remove_item_by_id(1).unwrap();
         let rv = repo.get_item_by_id(1);
-        assert!(matches!(rv, Err(DatabaseError::ItemNotFound)))
+        assert!(matches!(rv, Err(SearchError::ItemNotFound)))
     }
 
     #[test]
