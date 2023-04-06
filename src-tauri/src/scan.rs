@@ -1,5 +1,5 @@
 use path_slash::{PathBufExt, PathExt};
-use relative_path::RelativePathBuf;
+use relative_path::{RelativePath, RelativePathBuf};
 use std::fs;
 use std::fs::DirEntry;
 use std::io::Error;
@@ -66,6 +66,50 @@ pub fn scan_dir(
     Ok(items)
 }
 
+enum PathType {
+    Item(RelativePathBuf),
+    Directory(PathBuf),
+    Ignored,
+}
+
+fn classify_path(path: PathBuf, root_path: &Path, options: &Options) -> PathType {
+    let is_dir = match fs::metadata(&path) {
+        Ok(metadata) => metadata.is_dir(),
+        Err(err) => {
+            warn!("Failed to get path metadata, treating as file: {:?}", err);
+            false
+        }
+    };
+
+    // convert to relative path
+    let relpath = &path
+        .strip_prefix(root_path)
+        .expect("failed to strip prefix from path");
+    let relpath =
+        RelativePathBuf::from_path(relpath).expect("failed to convert to RelativePathBuf");
+
+    if options.excluded_paths.contains(&relpath) {
+        debug!("Skipping excluded path: {}", relpath);
+        return PathType::Ignored;
+    }
+
+    let file_name = relpath.file_name().expect("path doesn't have file name");
+    if options
+        .excluded_names
+        .iter()
+        .any(|name| name.as_str() == file_name)
+    {
+        debug!("Skipping excluded file name: {}", relpath);
+        return PathType::Ignored;
+    }
+
+    if is_dir {
+        PathType::Directory(path)
+    } else {
+        PathType::Item(relpath)
+    }
+}
+
 /// Classify incoming DirEntries as either items or folders to be further scanned.
 fn classify_dir_items<T>(
     dir_iter: T,
@@ -82,37 +126,14 @@ fn classify_dir_items<T>(
             continue;
         };
 
-        let Ok(metadata) = entry.metadata() else {
-            warn!("Failed to get entry metadata: {:?}", entry.metadata());
-            continue;
-        };
-
-        // convert to relative path
-        let path = entry.path();
-        let path = path
-            .strip_prefix(root_path)
-            .expect("failed to strip prefix from path");
-        let path = RelativePathBuf::from_path(path).expect("failed to convert to RelativePathBuf");
-
-        if options.excluded_paths.contains(&path) {
-            debug!("Skipping excluded path: {}", path);
-            continue;
-        }
-
-        let file_name = path.file_name().expect("path doesn't have file name");
-        if options
-            .excluded_names
-            .iter()
-            .any(|name| name.as_str() == file_name)
-        {
-            debug!("Skipping excluded file name: {}", path);
-            continue;
-        }
-
-        if metadata.is_dir() {
-            unscanned_dirs.push(entry.path());
-        } else {
-            items.push(path)
+        match classify_path(entry.path(), root_path, &options) {
+            PathType::Item(path) => {
+                items.push(path);
+            }
+            PathType::Directory(path) => {
+                unscanned_dirs.push(path);
+            }
+            PathType::Ignored => (),
         }
     }
 }
