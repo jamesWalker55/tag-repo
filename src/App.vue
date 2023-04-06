@@ -1,5 +1,8 @@
 <script lang="ts" setup>
 import TitleBar from "./components/TitleBar.vue";
+import { refreshAll } from "@/lib/api";
+
+refreshAll();
 </script>
 
 <template>

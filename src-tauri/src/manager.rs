@@ -1,10 +1,12 @@
-use crate::repo::{OpenError, RemoveError, Repo, SyncError};
+use crate::repo::{Item, OpenError, QueryError, RemoveError, Repo, SyncError};
 use crate::scan::{classify_path, scan_dir, to_relative_path, Options, PathType, ScanError};
-use crate::watch::WindowsNormWatcher;
+use crate::watch::{BestWatcher, WindowsNormWatcher};
 use futures::executor::block_on;
 use notify::event::{ModifyKind, RenameMode};
 use notify::EventKind::{Create, Modify, Remove};
-use notify::{Event, ReadDirectoryChangesWatcher, RecursiveMode, Watcher};
+use notify::{
+    Config, Event, ReadDirectoryChangesWatcher, RecommendedWatcher, RecursiveMode, Watcher,
+};
 use relative_path::{RelativePath, RelativePathBuf};
 use serde::Serialize;
 use std::fmt::{Debug, Formatter, Pointer};
@@ -24,6 +26,7 @@ pub enum ManagerStatus {
     Idle,
     ScanningDirectory,
     UpdatingRepo,
+    Querying,
 }
 
 impl Default for ManagerStatus {
@@ -31,11 +34,6 @@ impl Default for ManagerStatus {
         Self::Idle
     }
 }
-
-// TODO: You need to rewrite your watcher to pass it a mpsc sender / follow notify's watcher api
-// Right now, it's impossible to drop the watcher from a different thread
-
-// TODO: For now, use the default notify watcher for support on all OS
 
 async fn event_handler(
     repo: Arc<Mutex<Repo>>,
@@ -102,17 +100,12 @@ pub enum UnwatchError {
     NotWatching,
 }
 
-trait DebugWatcher: Watcher + Debug + Sync + Send {}
-
-impl DebugWatcher for ReadDirectoryChangesWatcher {}
-
 #[derive(Debug)]
 pub struct RepoManager {
     repo: Arc<Mutex<Repo>>,
     status: RwLock<ManagerStatus>,
     path: PathBuf,
-    // watcher: Option<Box<dyn DebugWatcher>>,
-    watcher: RwLock<Option<Box<dyn DebugWatcher>>>,
+    watcher: RwLock<Option<BestWatcher>>,
 }
 
 impl RepoManager {
@@ -164,6 +157,24 @@ impl RepoManager {
         Ok(())
     }
 
+    pub async fn query(&self, query: &str) -> Result<Vec<Item>, QueryError> {
+        self.update_status(ManagerStatus::Querying).await;
+        let items = {
+            // clone a reference to the repo
+            let repo = self.repo.clone();
+            // move the sync() call to a separate blocking thread
+            let query = query.to_string();
+            tokio::task::spawn_blocking(move || {
+                let mut repo = block_on(async { repo.lock().await });
+                repo.query_items(&query)
+            })
+            .await
+            .expect("failed to join with thread that's batch-updating the database")?
+        };
+        self.update_status(ManagerStatus::Idle).await;
+        Ok(items)
+    }
+
     pub async fn watch(&self) -> Result<(), WatchError> {
         // check there isn't already a watcher
         {
@@ -186,21 +197,23 @@ impl RepoManager {
         }
 
         // create a new watcher
-        let mut watcher =
-            notify::recommended_watcher(move |res: notify::Result<Event>| match tx.send(res) {
+        let mut watcher = BestWatcher::new(
+            move |res: notify::Result<Event>| match tx.send(res) {
                 Ok(_) => {}
                 Err(err) => {
                     let evt = err.0;
                     error!("reached maximum event limit, cannot send event: {:?}", evt);
                 }
-            })
-            .unwrap();
+            },
+            Config::default(),
+        )
+        .unwrap();
         watcher.watch(self.path.as_ref(), RecursiveMode::Recursive)?;
 
         // drop the existing watcher
         {
             let mut watcher_opt = self.watcher.write().await;
-            *watcher_opt = Some(Box::new(watcher));
+            *watcher_opt = Some(watcher);
         }
 
         Ok(())

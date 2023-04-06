@@ -15,22 +15,11 @@ import {
 } from "@/lib/icons";
 
 import { appWindow } from "@tauri-apps/api/window";
-import { open } from "@tauri-apps/api/dialog";
-import { invoke } from "@tauri-apps/api";
-import { computed, Ref, ref } from "vue";
-import { emit } from "@tauri-apps/api/event";
+import { computed, ref } from "vue";
+import * as api from "@/lib/api";
+import TitleBarSpacer from "./TitleBarSpacer.vue";
 
 const happy = ref(false);
-const text: Ref<string | null> = ref(null);
-const managerState: Ref<string | null> = ref(null);
-
-// setInterval(async () => {
-//   const newState: string | null = await invoke("current_status");
-//   if (managerState.value != newState) {
-//     managerState.value = newState;
-//     console.log("Received state:", newState);
-//   }
-// }, 100);
 
 const menuItems = computed(() => [
   {
@@ -39,7 +28,7 @@ const menuItems = computed(() => [
       {
         text: "Open repository...",
         icon: OpenRepo,
-        click: () => alert("Action 1"),
+        click: api.promptOpenRepo,
       },
       { is: "separator" },
       { text: "Exit", icon: MenuClose, click: () => appWindow.close() },
@@ -62,38 +51,9 @@ const menuItems = computed(() => [
       happy.value = !happy.value;
     },
   },
-  {
-    icon: OpenRepo,
-    text: text.value,
-    click: async () => {
-      let path = await open({ directory: true });
-      let items = null;
-      if (path !== null) {
-        items = await invoke("open_path", { path: path });
-        const repoPath: string | null = await invoke("current_path");
-        console.log("Got repoPath:", repoPath);
-        console.log("Got items:", items);
-        text.value = repoPath;
-      } else {
-        await invoke("close_repo");
-        text.value = null;
-      }
-
-      // if (path === null) return;
-      // console.log("Chose path:", path);
-      // let a = performance.now();
-      // try {
-      //   const x: String = await invoke("testrepo", {path: path});
-      // } catch (e) {
-      //   console.error(e);
-      // }
-      // let timetaken = performance.now() - a;
-      // console.log("Took:", timetaken);
-    },
-  },
-  { text: managerState || "No repo loaded" },
+  { text: api.state.status || "No repo loaded" },
   // Spacer
-  { is: "div", class: "ml-auto" },
+  { is: TitleBarSpacer, class: "ml-auto" },
   {
     icon: TitleMinimize,
     click: () => appWindow.minimize(),
@@ -116,6 +76,7 @@ const menuItems = computed(() => [
   <VueFileToolbarMenu
     id="toolbar"
     :content="menuItems"
+    class="bg-black"
     data-tauri-drag-region
   />
 </template>

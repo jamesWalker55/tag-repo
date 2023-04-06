@@ -47,12 +47,6 @@ async fn temp() {
 }
 
 #[tauri::command]
-fn testrepo(path: &str) -> Result<(), String> {
-    let repo = Repo::open(path).map_err(|err| "failed to open repo!")?;
-    Ok(())
-}
-
-#[tauri::command]
 async fn current_path(state: tauri::State<'_, AppState>) -> Result<Option<PathBuf>, ()> {
     // async commands that use state MUST return a Result:
     // https://github.com/tauri-apps/tauri/issues/2533
@@ -64,7 +58,7 @@ async fn current_path(state: tauri::State<'_, AppState>) -> Result<Option<PathBu
 }
 
 #[tauri::command]
-async fn open_path(mut state: tauri::State<'_, AppState>, path: &str) -> Result<Vec<Item>, String> {
+async fn open_repo(mut state: tauri::State<'_, AppState>, path: &str) -> Result<(), String> {
     // discard the existing connection first
     {
         let mut opt = state.manager.write().await;
@@ -73,18 +67,37 @@ async fn open_path(mut state: tauri::State<'_, AppState>, path: &str) -> Result<
 
     // then open the repo
     let manager = RepoManager::new(&path).map_err(|x| x.to_string())?;
+
+    // assign manager to state NOW, to let #current_status() check the manager's status
     {
         let mut opt = state.manager.write().await;
         *opt = Some(manager);
     }
-    let manager = state.manager.read().await;
-    let Some(manager) = &*manager else {
-        panic!("race condition occurred! attempted to resync after loading a new manager");
-    };
-    manager.resync().await.map_err(|x| x.to_string())?;
-    // let items = repo.query_items("").expect("failed to query");
 
-    Ok(vec![])
+    // now try to resync the manager
+    let rv = {
+        let manager = state.manager.read().await;
+        let Some(manager) = &*manager else {
+            return Err(String::from(
+                "race condition occurred! manager was deleted between this and the previous lock"
+            ));
+        };
+        manager.resync().await.map_err(|x| x.to_string())
+    };
+
+    // if resyncing failed, discard the manager
+    // otherwise, continue on
+    match rv {
+        Ok(_) => { /* everything is ok, do nothing */ }
+        Err(err) => {
+            // error occurred, discard the manager from the app state
+            let mut opt = state.manager.write().await;
+            *opt = None;
+            return Err(err);
+        }
+    }
+
+    Ok(())
 }
 
 #[tauri::command]
@@ -131,9 +144,8 @@ async fn main() {
         .invoke_handler(tauri::generate_handler![
             greet,
             temp,
-            testrepo,
             current_path,
-            open_path,
+            open_repo,
             close_repo,
             current_status,
         ])

@@ -43,6 +43,7 @@ use tokio::time::{timeout_at, Instant};
 /// Just drop this struct. It should automatically clean up everything. When this struct drops, it
 /// drops the `notify` watcher, which in turn makes the event handler task stop since the task
 /// is receiving events from the watcher.
+#[derive(Debug)]
 pub struct WindowsNormWatcher {
     /// The actual watcher instance.
     watcher: ReadDirectoryChangesWatcher,

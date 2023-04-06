@@ -7,6 +7,11 @@ pub use crate::watch::windows::WindowsNormWatcher;
 
 mod windows;
 
+#[cfg(target_os = "windows")]
+pub type BestWatcher = WindowsNormWatcher;
+#[cfg(not(target_os = "windows"))]
+pub type BestWatcher = notify::RecommendedWatcher;
+
 // #[cfg(test)]
 // mod tests {
 //     use std::collections::VecDeque;
