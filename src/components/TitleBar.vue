@@ -76,28 +76,30 @@ const menuItems = computed(() => [
 </template>
 
 <style scoped>
-// i'm using a random #toolbar ID to make these styles more important, so it overrides the default styles
+/* i'm using a random #toolbar ID to make these styles more important, so it overrides the default styles */
 #toolbar.bar {
-  // Toolbar styling
-  //
-  // The structure of the toolbar is as follows:
-  // .bar
-  //   .bar-button
-  //     .label / .icon (name or icon of the button)
-  //     .bar-menu.menu (the popup menu, hidden by default)
-  //       ...
-  //   .bar-button
-  //   (each menu item)
-  //   ...
+  /**
+   * Toolbar styling
+   *
+   * The structure of the toolbar is as follows:
+   * .bar
+   *   .bar-button
+   *     .label / .icon (name or icon of the button)
+   *     .bar-menu.menu (the popup menu, hidden by default)
+   *       ...
+   *   .bar-button
+   *   (each menu item)
+   *   ...
+   */
 
-  // Text styling
+  /* Text styling */
   @apply text-base;
 
-  // Limit toolbar to a single row
+  /* Limit toolbar to a single row */
   @apply flex;
   @apply flex-nowrap;
 
-  // Button colors
+  /* Button colors */
   @apply text-neutral-900;
 
   :deep(.bar-button) {
@@ -118,12 +120,12 @@ const menuItems = computed(() => [
     }
   }
 
-  // Button styling
+  /* Button styling */
   :deep(.bar-button) {
     @apply rounded-none px-1 py-0;
   }
 
-  // Special buttons
+  /* Special buttons */
   :deep(.bar-button.title-button) {
     @apply w-title-button;
     @apply flex-none;
@@ -143,12 +145,12 @@ const menuItems = computed(() => [
     }
   }
   :deep(.bar-button.app-icon) {
-    // disable highlight when hovering
+    /* disable highlight when hovering */
     --tw-bg-opacity: 0 !important;
     @apply text-orange-600;
   }
 
-  // Button icon sizes
+  /* Button icon sizes */
   :deep(.bar-button) {
     .icon {
       @apply h-7 w-5;
@@ -158,18 +160,20 @@ const menuItems = computed(() => [
     }
   }
 
-  // Menu styling
-  //
-  // The structure of the menu is as follows:
-  // .bar-menu
-  //   .extended-hover-zone (hidden)
-  //   .bar-menu-items (container for items)
-  //     .bar-menu-item (a menu item)
-  //       .icon (optional icon)
-  //       .label (text for the item)
-  //       .hotkey (optional hotkey text)
-  //     .bar-menu-separator (a menu separator)
-  //     ...
+  /**
+   * Menu styling
+   *
+   * The structure of the menu is as follows:
+   * .bar-menu
+   *   .extended-hover-zone (hidden)
+   *   .bar-menu-items (container for items)
+   *     .bar-menu-item (a menu item)
+   *       .icon (optional icon)
+   *       .label (text for the item)
+   *       .hotkey (optional hotkey text)
+   *     .bar-menu-separator (a menu separator)
+   *     ...
+   */
   :deep(.bar-menu-items) {
     @apply text-neutral-900;
     @apply px-0 py-1;
@@ -190,7 +194,7 @@ const menuItems = computed(() => [
     @apply mx-2 my-1 h-px bg-neutral-200;
   }
 
-  // Menu icon sizes
+  /* Menu icon sizes */
   :deep(.bar-menu-items) {
     .icon {
       @apply -ml-6 mr-2 h-min w-4;
