@@ -4,7 +4,7 @@ import * as api from "@/lib/api";
 
 <template>
   <div
-    class="mx-auto flex items-center truncate text-xs text-neutral-400"
+    class="mx-auto flex items-center truncate text-sm text-neutral-400"
     data-tauri-drag-region
   >
     {{ api.state.path ? api.state.path + " - " : "" }}tagrepo

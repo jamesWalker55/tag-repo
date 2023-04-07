@@ -45,7 +45,7 @@ const menuItems = computed(() => [
   @apply bg-neutral-50 border-solid border-x-0 border-b-0 border-t border-neutral-200;
 
   // Text styling
-  @apply text-xs;
+  @apply text-sm;
 
   // Limit toolbar to a single row
   @apply flex;
@@ -78,43 +78,13 @@ const menuItems = computed(() => [
     @apply rounded-none px-0.5 py-0;
   }
 
-  // Special buttons
-  :deep(.bar-button.title-button) {
-    @apply w-title-button;
-    @apply flex-none;
-
-    .icon {
-      @apply h-min w-4;
-    }
-    .material-icons.icon {
-      @apply text-base;
-    }
-
-    &.danger {
-      @apply hover:bg-red-600 hover:text-white;
-      &:active {
-        @apply bg-red-500 text-white;
-      }
-    }
-  }
-  :deep(.bar-button.app-icon) {
-    // disable highlight when hovering
-    --tw-bg-opacity: 0 !important;
-
-    :deep(.icon) {
-      /* @apply text-yellow-400; */
-      color: #ff0000;
-      /* @apply text-neutral-500; */
-    }
-  }
-
   // Button icon sizes
   :deep(.bar-button) {
     .icon {
       @apply h-5 w-4;
     }
     .material-icons.icon {
-      @apply text-xl;
+      @apply text-lg;
     }
   }
 

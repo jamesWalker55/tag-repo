@@ -95,7 +95,7 @@ const menuItems = computed(() => [
   //   ...
 
   // Text styling
-  @apply text-sm;
+  @apply text-base;
 
   // Limit toolbar to a single row
   @apply flex;
@@ -158,7 +158,7 @@ const menuItems = computed(() => [
       @apply h-7 w-5;
     }
     .material-icons.icon {
-      @apply text-xl;
+      @apply text-sm;
     }
   }
 
