@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import TitleBar from "./components/TitleBar.vue";
+import QueryBar from "./components/QueryBar.vue";
 import StatusBar from "./components/StatusBar.vue";
 import { refreshAll, state } from "@/lib/api";
 
@@ -25,7 +26,7 @@ refreshAll();
 <template>
   <div id="container" class="h-screen border border-neutral-300 flex flex-col">
     <TitleBar class="flex-none" />
-    <!--<Main />-->
+    <QueryBar />
     <div class="flex-grow"></div>
     <StatusBar class="flex-none" />
   </div>

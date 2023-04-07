@@ -20,8 +20,6 @@ import { computed, ref } from "vue";
 import * as api from "@/lib/api";
 import TitleBarSpacer from "./TitleBarSpacer.vue";
 
-const happy = ref(false);
-
 const menuItems = computed(() => [
   {
     icon: AppLogo,
@@ -43,9 +41,9 @@ const menuItems = computed(() => [
   {
     text: "Edit",
     menu: [
-      { text: "Cut", icon: Cut },
-      { text: "Copy", icon: Copy },
-      { text: "Paste", icon: Paste },
+      { text: "Cut", icon: Cut, disabled: true },
+      { text: "Copy", icon: Copy, disabled: true },
+      { text: "Paste", icon: Paste, disabled: true },
       { is: "separator" },
       { text: "Tools", disabled: true },
     ],
@@ -181,7 +179,7 @@ const menuItems = computed(() => [
   }
 
   :deep(.bar-menu-item) {
-    @apply w-60 py-0.5 pl-8 pr-3 transition-colors duration-75 ease-out hover:bg-neutral-100;
+    @apply w-52 py-0.5 pl-8 pr-3 transition-colors duration-75 ease-out hover:bg-neutral-100;
     &:active {
       @apply bg-neutral-300;
     }

@@ -1,9 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 export default {
-  content: [
-    './index.html',
-    './src/**/*.{vue,js,ts,jsx,tsx}',
-  ],
+  content: ["./index.html", "./src/**/*.{vue,js,ts,jsx,tsx}"],
   theme: {
     fontSize: {
       xs: "0.625rem", // 10px
@@ -22,10 +19,9 @@ export default {
     },
     extend: {
       width: {
-        'title-button': '2.85rem',
-      }
+        "title-button": "2.85rem",
+      },
     },
   },
   plugins: [],
-}
-
+};
