@@ -1,19 +1,7 @@
 <script lang="ts" setup>
 import VueFileToolbarMenu from "vue-file-toolbar-menu";
 
-import {
-  TitleMinimize,
-  TitleMaximise,
-  TitleClose,
-  MenuClose,
-  OpenRepo,
-  FaceSmile,
-  FaceFrown,
-  Copy,
-  Cut,
-  Paste,
-  AppLogo,
-} from "@/lib/icons";
+import { Feedback } from "@/lib/icons";
 
 import { appWindow } from "@tauri-apps/api/window";
 import { computed, ref } from "vue";
@@ -23,50 +11,10 @@ import TitleBarSpacer from "./TitleBarSpacer.vue";
 const happy = ref(false);
 
 const menuItems = computed(() => [
-  {
-    icon: AppLogo,
-    class: "app-icon",
-  },
-  {
-    text: "File",
-    menu: [
-      {
-        text: "Open repository...",
-        icon: OpenRepo,
-        click: api.promptOpenRepo,
-        hotkey: "ctrl+o",
-      },
-      { is: "separator" },
-      { text: "Exit", icon: MenuClose, click: () => appWindow.close() },
-    ],
-  },
-  {
-    text: "Edit",
-    menu: [
-      { text: "Cut", icon: Cut },
-      { text: "Copy", icon: Copy },
-      { text: "Paste", icon: Paste },
-      { is: "separator" },
-      { text: "Tools", disabled: true },
-    ],
-  },
-  // Spacer
-  { is: TitleBarSpacer, class: "shrink" },
   // Right side
   {
-    icon: TitleMinimize,
+    icon: Feedback,
     click: () => appWindow.minimize(),
-    class: "title-button",
-  },
-  {
-    icon: TitleMaximise,
-    click: () => appWindow.toggleMaximize(),
-    class: "title-button",
-  },
-  {
-    icon: TitleClose,
-    click: () => appWindow.close(),
-    class: "title-button danger",
   },
 ]);
 </script>
@@ -75,6 +23,7 @@ const menuItems = computed(() => [
   <VueFileToolbarMenu
     id="toolbar"
     :content="menuItems"
+    class="bg-neutral-300"
     data-tauri-drag-region
   />
 </template>
@@ -82,18 +31,6 @@ const menuItems = computed(() => [
 <style scoped>
 // i'm using a random #toolbar ID to make these styles more important, so it overrides the default styles
 #toolbar.bar {
-  // Toolbar styling
-  //
-  // The structure of the toolbar is as follows:
-  // .bar
-  //   .bar-button
-  //     .label / .icon (name or icon of the button)
-  //     .bar-menu.menu (the popup menu, hidden by default)
-  //       ...
-  //   .bar-button
-  //   (each menu item)
-  //   ...
-
   // Text styling
   @apply text-sm;
 
@@ -145,16 +82,11 @@ const menuItems = computed(() => [
       }
     }
   }
-  :deep(.bar-button.app-icon) {
-    // disable highlight when hovering
-    --tw-bg-opacity: 0 !important;
-    @apply text-neutral-500;
-  }
 
   // Button icon sizes
   :deep(.bar-button) {
     .icon {
-      @apply h-7 w-5;
+      @apply w-4 h-5;
     }
     .material-icons.icon {
       @apply text-xl;
@@ -162,17 +94,6 @@ const menuItems = computed(() => [
   }
 
   // Menu styling
-  //
-  // The structure of the menu is as follows:
-  // .bar-menu
-  //   .extended-hover-zone (hidden)
-  //   .bar-menu-items (container for items)
-  //     .bar-menu-item (a menu item)
-  //       .icon (optional icon)
-  //       .label (text for the item)
-  //       .hotkey (optional hotkey text)
-  //     .bar-menu-separator (a menu separator)
-  //     ...
   :deep(.bar-menu-items) {
     @apply text-neutral-900;
     @apply px-0 py-1;
@@ -180,7 +101,7 @@ const menuItems = computed(() => [
   }
 
   :deep(.bar-menu-item) {
-    @apply w-60 py-0.5 pl-8 pr-3 transition-colors duration-75 ease-out hover:bg-neutral-100;
+    @apply py-0.5 pl-8 pr-3 transition-colors duration-75 ease-out hover:bg-neutral-100;
     &:active {
       @apply bg-neutral-300;
     }
