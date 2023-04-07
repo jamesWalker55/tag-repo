@@ -5,7 +5,7 @@ use crate::manager::{ManagerStatus, RepoManager};
 use crate::repo::{Item, OpenError, Repo};
 use std::path::PathBuf;
 use std::time::Duration;
-use tauri::Manager;
+use tauri::{AppHandle, Manager, Runtime, Wry};
 use tokio::sync::{Mutex, RwLock};
 use tokio::time::sleep;
 use tracing::Level;
@@ -24,7 +24,7 @@ pub(crate) mod watch;
 
 struct AppState {
     repo: Mutex<Option<Repo>>,
-    manager: RwLock<Option<RepoManager>>,
+    manager: RwLock<Option<RepoManager<Wry>>>,
 }
 
 impl Default for AppState {
@@ -58,21 +58,33 @@ async fn current_path(state: tauri::State<'_, AppState>) -> Result<Option<PathBu
 }
 
 #[tauri::command]
-async fn open_repo(mut state: tauri::State<'_, AppState>, path: &str) -> Result<(), String> {
+async fn open_repo(
+    mut state: tauri::State<'_, AppState>,
+    app_handle: AppHandle<Wry>,
+    path: &str,
+) -> Result<(), String> {
     // discard the existing connection first
     {
         let mut opt = state.manager.write().await;
         *opt = None;
     }
 
+    app_handle
+        .emit_all("repo-path-changed", None::<PathBuf>)
+        .expect("Failed to emit event");
+
     // then open the repo
-    let manager = RepoManager::new(&path).map_err(|x| x.to_string())?;
+    let manager = RepoManager::new(&path, app_handle.clone()).map_err(|x| x.to_string())?;
 
     // assign manager to state NOW, to let #current_status() check the manager's status
     {
         let mut opt = state.manager.write().await;
         *opt = Some(manager);
     }
+
+    app_handle
+        .emit_all("repo-path-changed", Some(PathBuf::from(path)))
+        .expect("Failed to emit event");
 
     // now try to resync the manager
     let rv = {
@@ -82,6 +94,7 @@ async fn open_repo(mut state: tauri::State<'_, AppState>, path: &str) -> Result<
                 "race condition occurred! manager was deleted between this and the previous lock"
             ));
         };
+        manager.watch().await.unwrap();
         manager.resync().await.map_err(|x| x.to_string())
     };
 
@@ -92,6 +105,9 @@ async fn open_repo(mut state: tauri::State<'_, AppState>, path: &str) -> Result<
         Err(err) => {
             // error occurred, discard the manager from the app state
             let mut opt = state.manager.write().await;
+            app_handle
+                .emit_all("repo-path-changed", None::<PathBuf>)
+                .expect("Failed to emit event");
             *opt = None;
             return Err(err);
         }

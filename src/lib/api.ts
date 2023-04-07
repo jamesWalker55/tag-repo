@@ -2,6 +2,7 @@ import { provide, reactive } from "vue";
 import { pollUntilComplete } from "@/lib/utils";
 import * as ffi from "@/lib/ffi";
 import { open } from "@tauri-apps/api/dialog";
+import { listen, Event } from "@tauri-apps/api/event";
 
 interface AppState {
   path: string | null;
@@ -14,6 +15,27 @@ export const state: AppState = reactive({
   path: null,
   status: null,
 });
+
+// listen to change events from the backend
+(async () => {
+  await Promise.all([
+    listen("item-added", (x: Event<string>) => {
+      console.log("item-added", x);
+    }),
+    listen("item-removed", (x: Event<string>) => {
+      console.log("item-removed", x);
+    }),
+    listen("item-renamed", (x: Event<[string, string]>) => {
+      console.log("item-renamed", x);
+    }),
+    listen("status-changed", (x: Event<string>) => {
+      state.status = x.payload;
+    }),
+    listen("repo-path-changed", (x: Event<string>) => {
+      state.path = x.payload;
+    }),
+  ]);
+})();
 
 const refreshFuncs: (() => Promise<void>)[] = [];
 

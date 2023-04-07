@@ -14,12 +14,13 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
+use tauri::{AppHandle, Manager, Runtime};
 use thiserror::Error;
 use tokio::sync::mpsc::error::SendError;
 use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver};
 use tokio::sync::{Mutex, RwLock};
 use tokio::time::timeout;
-use tracing::error;
+use tracing::{debug, error, info};
 
 #[derive(Debug, Copy, Clone, Serialize)]
 pub enum ManagerStatus {
@@ -35,14 +36,18 @@ impl Default for ManagerStatus {
     }
 }
 
-async fn event_handler(
+// #[tracing::instrument]
+async fn event_handler<R: Runtime>(
     repo: Arc<Mutex<Repo>>,
     repo_path: PathBuf,
+    app_handle: AppHandle<R>,
     mut receiver: UnboundedReceiver<notify::Result<Event>>,
     options: Options,
 ) {
+    debug!("watcher started!");
     let repo_path = repo_path.as_path();
     while let Some(evt) = receiver.recv().await {
+        debug!("received event: {:?}", evt);
         let evt = evt.expect("unknown event error");
         match evt {
             evt if evt.kind == Modify(ModifyKind::Any) => { /* ignore */ }
@@ -54,6 +59,9 @@ async fn event_handler(
                 let repo = repo.lock().await;
                 repo.insert_item(path.to_string(), "")
                     .expect("failed to insert item");
+                app_handle
+                    .emit_all("item-added", path.to_string())
+                    .expect("Failed to emit event");
             }
             Event { kind: Remove(_), mut paths, .. } => {
                 let path = paths.pop().expect("remove event doesn't have a path");
@@ -65,6 +73,9 @@ async fn event_handler(
                 // Only panic if there is some rusqlite error
                 repo.remove_item_by_path(path.to_string())
                     .expect("failed to remove item");
+                app_handle
+                    .emit_all("item-removed", path.to_string())
+                    .expect("Failed to emit event");
             }
             Event {
                 kind: Modify(ModifyKind::Name(RenameMode::Both)),
@@ -78,12 +89,19 @@ async fn event_handler(
                     continue;
                 };
                 let repo = repo.lock().await;
-                repo.rename_path(old_path, new_path)
+                repo.rename_path(old_path.to_string(), new_path.to_string())
                     .expect("failed to rename item");
+                app_handle
+                    .emit_all(
+                        "item-renamed",
+                        (old_path.to_string(), new_path.to_string()),
+                    )
+                    .expect("Failed to emit event");
             }
             _ => (),
         }
     }
+    debug!("watcher ended!");
 }
 
 #[derive(Error, Debug)]
@@ -101,22 +119,24 @@ pub enum UnwatchError {
 }
 
 #[derive(Debug)]
-pub struct RepoManager {
+pub struct RepoManager<R: Runtime> {
     repo: Arc<Mutex<Repo>>,
     status: RwLock<ManagerStatus>,
     path: PathBuf,
     watcher: RwLock<Option<BestWatcher>>,
+    app_handle: AppHandle<R>,
 }
 
-impl RepoManager {
-    pub fn new(path: impl AsRef<Path>) -> Result<Self, OpenError> {
+impl<R: Runtime> RepoManager<R> {
+    pub fn new(path: impl AsRef<Path>, app_handle: AppHandle<R>) -> Result<Self, OpenError> {
         let path = path.as_ref();
-        let repo = Repo::open(path.clone())?;
+        let repo = Repo::open(&path)?;
         let manager = Self {
             repo: Arc::new(Mutex::new(repo)),
             status: RwLock::new(ManagerStatus::Idle),
             path: path.to_path_buf(),
             watcher: RwLock::new(None),
+            app_handle,
         };
         Ok(manager)
     }
@@ -131,6 +151,9 @@ impl RepoManager {
 
     pub async fn update_status(&self, status: ManagerStatus) {
         *self.status.write().await = status;
+        self.app_handle
+            .emit_all("status-changed", status)
+            .expect("Failed to emit event");
     }
 
     pub async fn resync(&self) -> Result<(), SyncError> {
@@ -193,7 +216,10 @@ impl RepoManager {
         {
             let repo = self.repo.clone();
             let path = self.path.clone();
-            tokio::spawn(async move { event_handler(repo, path, rx, Options::default()) });
+            let new_handle = self.app_handle.clone();
+            tokio::spawn(async move {
+                event_handler(repo, path, new_handle, rx, Options::default()).await
+            });
         }
 
         // create a new watcher
@@ -202,7 +228,7 @@ impl RepoManager {
                 Ok(_) => {}
                 Err(err) => {
                     let evt = err.0;
-                    error!("reached maximum event limit, cannot send event: {:?}", evt);
+                    error!("failed to send event to watcher loop: {:?}", evt);
                 }
             },
             Config::default(),
