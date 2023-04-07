@@ -24,10 +24,14 @@ refreshAll();
 </script>
 
 <template>
-  <div id="container" class="h-screen border border-neutral-300 flex flex-col">
+  <div
+    id="container"
+    class="relative flex h-screen select-none flex-col border border-neutral-300 text-base"
+  >
     <TitleBar class="flex-none" />
-    <QueryBar />
-    <div class="flex-grow"></div>
+    <main class="relative flex flex-1 flex-col">
+      <QueryBar />
+    </main>
     <StatusBar class="flex-none" />
   </div>
 </template>

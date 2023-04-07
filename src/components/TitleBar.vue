@@ -7,8 +7,6 @@ import {
   TitleClose,
   MenuClose,
   OpenRepo,
-  FaceSmile,
-  FaceFrown,
   Copy,
   Cut,
   Paste,
@@ -147,7 +145,7 @@ const menuItems = computed(() => [
   :deep(.bar-button.app-icon) {
     // disable highlight when hovering
     --tw-bg-opacity: 0 !important;
-    @apply text-orange-700;
+    @apply text-orange-600;
   }
 
   // Button icon sizes

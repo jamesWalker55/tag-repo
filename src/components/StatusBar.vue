@@ -2,19 +2,21 @@
 import VueFileToolbarMenu from "vue-file-toolbar-menu";
 
 import { Feedback } from "@/lib/icons";
-
+import FeedbackModal from "./FeedbackModal.vue";
 import { appWindow } from "@tauri-apps/api/window";
 import { computed, ref } from "vue";
 import * as api from "@/lib/api";
-import StatucBarInfo from "./StatusBarInfo.vue";
+import StatusBarInfo from "./StatusBarInfo.vue";
+
+const feedbackPopup = ref(false);
 
 const menuItems = computed(() => [
   {
-    is: StatucBarInfo,
+    is: StatusBarInfo,
   },
   {
     icon: Feedback,
-    click: () => appWindow.minimize(),
+    click: () => (feedbackPopup.value = !feedbackPopup.value),
   },
 ]);
 </script>
@@ -24,6 +26,10 @@ const menuItems = computed(() => [
     id="toolbar"
     :content="menuItems"
     data-tauri-drag-region
+  />
+  <FeedbackModal
+    v-if="feedbackPopup"
+    @closed="feedbackPopup = !feedbackPopup"
   />
 </template>
 
@@ -42,7 +48,8 @@ const menuItems = computed(() => [
   //   (each menu item)
   //   ...
 
-  @apply bg-neutral-50 border-solid border-x-0 border-b-0 border-t border-neutral-200;
+  @apply border-x-0 border-b-0 border-t border-solid border-neutral-200 bg-neutral-50;
+  @apply mx-2;
 
   // Text styling
   @apply text-sm;

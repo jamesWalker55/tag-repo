@@ -7,7 +7,7 @@ import * as api from "@/lib/api";
 </script>
 
 <template>
-  <div class="ml-2 mr-auto text-neutral-500">
+  <div class="mr-auto text-neutral-500">
     {{ api.state.status || "No repo loaded" }}
   </div>
 </template>
