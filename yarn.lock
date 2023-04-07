@@ -1022,6 +1022,11 @@ minimatch@^6.1.6:
   dependencies:
     brace-expansion "^2.0.1"
 
+mitt@^2.1.0:
+  version "2.1.0"
+  resolved "https://registry.yarnpkg.com/mitt/-/mitt-2.1.0.tgz#f740577c23176c6205b121b2973514eade1b2230"
+  integrity sha512-ILj2TpLiysu2wkBbWjAmww7TkZb65aiQO+DkVdUTBpBXq+MHYiETENkKFMtsJZX1Lf4pe4QOrTSjIfUwN5lRdg==
+
 mlly@^1.1.0, mlly@^1.1.1:
   version "1.2.0"
   resolved "https://registry.yarnpkg.com/mlly/-/mlly-1.2.0.tgz#f0f6c2fc8d2d12ea6907cd869066689b5031b613"
@@ -1616,6 +1621,16 @@ vue-file-toolbar-menu@^2.2.0:
     material-icons "^1.12.0"
     node-emoji "^1.11.0"
 
+vue-observe-visibility@^2.0.0-alpha.1:
+  version "2.0.0-alpha.1"
+  resolved "https://registry.yarnpkg.com/vue-observe-visibility/-/vue-observe-visibility-2.0.0-alpha.1.tgz#1e4eda7b12562161d58984b7e0dea676d83bdb13"
+  integrity sha512-flFbp/gs9pZniXR6fans8smv1kDScJ8RS7rEpMjhVabiKeq7Qz3D9+eGsypncjfIyyU84saU88XZ0zjbD6Gq/g==
+
+vue-resize@^2.0.0-alpha.1:
+  version "2.0.0-alpha.1"
+  resolved "https://registry.yarnpkg.com/vue-resize/-/vue-resize-2.0.0-alpha.1.tgz#43eeb79e74febe932b9b20c5c57e0ebc14e2df3a"
+  integrity sha512-7+iqOueLU7uc9NrMfrzbG8hwMqchfVfSzpVlCMeJQe4pyibqyoifDNbKTZvwxZKDvGkB+PdFeKvnGZMoEb8esg==
+
 vue-template-compiler@^2.7.14:
   version "2.7.14"
   resolved "https://registry.yarnpkg.com/vue-template-compiler/-/vue-template-compiler-2.7.14.tgz#4545b7dfb88090744c1577ae5ac3f964e61634b1"
@@ -1636,6 +1651,15 @@ vue-virtual-scroll-list@^2.3.4:
   version "2.3.4"
   resolved "https://registry.yarnpkg.com/vue-virtual-scroll-list/-/vue-virtual-scroll-list-2.3.4.tgz#0d08c2d26299d8609018b8c04f5e3ca608fbe2d6"
   integrity sha512-a9bmmIhAdnKcp8NG0C9ZQ+pW9nAOrDv5SHqJfbbEpXxVVERCtbIgGeBnkwrGgmoILBoFz/WANIZgA22G44F0Yw==
+
+vue-virtual-scroller@^2.0.0-beta.8:
+  version "2.0.0-beta.8"
+  resolved "https://registry.yarnpkg.com/vue-virtual-scroller/-/vue-virtual-scroller-2.0.0-beta.8.tgz#eeceda57e4faa5ba1763994c873923e2a956898b"
+  integrity sha512-b8/f5NQ5nIEBRTNi6GcPItE4s7kxNHw2AIHLtDp+2QvqdTjVN0FgONwX9cr53jWRgnu+HRLPaWDOR2JPI5MTfQ==
+  dependencies:
+    mitt "^2.1.0"
+    vue-observe-visibility "^2.0.0-alpha.1"
+    vue-resize "^2.0.0-alpha.1"
 
 vue@^3.2.45:
   version "3.2.47"
