@@ -98,6 +98,7 @@ const menuItems = computed(() => [
   @apply text-sm;
 
   // Limit toolbar to a single row
+  @apply flex;
   @apply flex-nowrap;
 
   // Button colors
@@ -148,7 +149,7 @@ const menuItems = computed(() => [
   :deep(.bar-button.app-icon) {
     // disable highlight when hovering
     --tw-bg-opacity: 0 !important;
-    @apply text-neutral-500;
+    @apply text-orange-700;
   }
 
   // Button icon sizes

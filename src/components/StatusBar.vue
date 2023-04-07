@@ -6,12 +6,12 @@ import { Feedback } from "@/lib/icons";
 import { appWindow } from "@tauri-apps/api/window";
 import { computed, ref } from "vue";
 import * as api from "@/lib/api";
-import TitleBarSpacer from "./TitleBarSpacer.vue";
-
-const happy = ref(false);
+import StatucBarInfo from "./StatusBarInfo.vue";
 
 const menuItems = computed(() => [
-  // Right side
+  {
+    is: StatucBarInfo,
+  },
   {
     icon: Feedback,
     click: () => appWindow.minimize(),
@@ -23,7 +23,6 @@ const menuItems = computed(() => [
   <VueFileToolbarMenu
     id="toolbar"
     :content="menuItems"
-    class="bg-neutral-300"
     data-tauri-drag-region
   />
 </template>
@@ -31,11 +30,27 @@ const menuItems = computed(() => [
 <style scoped>
 // i'm using a random #toolbar ID to make these styles more important, so it overrides the default styles
 #toolbar.bar {
+  // Toolbar styling
+  //
+  // The structure of the toolbar is as follows:
+  // .bar
+  //   .bar-button
+  //     .label / .icon (name or icon of the button)
+  //     .bar-menu.menu (the popup menu, hidden by default)
+  //       ...
+  //   .bar-button
+  //   (each menu item)
+  //   ...
+
+  @apply bg-neutral-50 border-solid border-x-0 border-b-0 border-t border-neutral-200;
+
   // Text styling
-  @apply text-sm;
+  @apply text-xs;
 
   // Limit toolbar to a single row
+  @apply flex;
   @apply flex-nowrap;
+  @apply items-center;
 
   // Button colors
   @apply text-neutral-900;
@@ -60,7 +75,7 @@ const menuItems = computed(() => [
 
   // Button styling
   :deep(.bar-button) {
-    @apply rounded-none px-1 py-0;
+    @apply rounded-none px-0.5 py-0;
   }
 
   // Special buttons
@@ -82,11 +97,21 @@ const menuItems = computed(() => [
       }
     }
   }
+  :deep(.bar-button.app-icon) {
+    // disable highlight when hovering
+    --tw-bg-opacity: 0 !important;
+
+    :deep(.icon) {
+      /* @apply text-yellow-400; */
+      color: #ff0000;
+      /* @apply text-neutral-500; */
+    }
+  }
 
   // Button icon sizes
   :deep(.bar-button) {
     .icon {
-      @apply w-4 h-5;
+      @apply h-5 w-4;
     }
     .material-icons.icon {
       @apply text-xl;
@@ -94,6 +119,17 @@ const menuItems = computed(() => [
   }
 
   // Menu styling
+  //
+  // The structure of the menu is as follows:
+  // .bar-menu
+  //   .extended-hover-zone (hidden)
+  //   .bar-menu-items (container for items)
+  //     .bar-menu-item (a menu item)
+  //       .icon (optional icon)
+  //       .label (text for the item)
+  //       .hotkey (optional hotkey text)
+  //     .bar-menu-separator (a menu separator)
+  //     ...
   :deep(.bar-menu-items) {
     @apply text-neutral-900;
     @apply px-0 py-1;
@@ -101,7 +137,7 @@ const menuItems = computed(() => [
   }
 
   :deep(.bar-menu-item) {
-    @apply py-0.5 pl-8 pr-3 transition-colors duration-75 ease-out hover:bg-neutral-100;
+    @apply w-60 py-0.5 pl-8 pr-3 transition-colors duration-75 ease-out hover:bg-neutral-100;
     &:active {
       @apply bg-neutral-300;
     }

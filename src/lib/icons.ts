@@ -15,5 +15,5 @@ export { default as Paste } from "~icons/heroicons/clipboard-document";
 // Misc
 export { default as FaceSmile } from "~icons/heroicons/face-smile";
 export { default as FaceFrown } from "~icons/heroicons/face-frown";
-export { default as AppLogo } from "~icons/heroicons/tag";
+export { default as AppLogo } from "~icons/heroicons/tag-solid";
 export { default as Feedback } from "~icons/heroicons/chat-bubble-oval-left-ellipsis";
