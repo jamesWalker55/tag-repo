@@ -12,6 +12,14 @@ export { default as Cut } from "~icons/heroicons/scissors";
 export { default as Copy } from "~icons/heroicons/document-duplicate";
 export { default as Paste } from "~icons/heroicons/clipboard-document";
 
+// Filetype icons
+export { default as FTAudio } from "~icons/fluent/music-note-2-16-regular";
+export { default as FTVideo } from "~icons/fluent/video-16-regular";
+export { default as FTImage } from "~icons/fluent/image-16-regular";
+export { default as FTText } from "~icons/fluent/document-text-16-regular";
+export { default as FTFolder } from "~icons/fluent/folder-16-regular";
+export { default as FTMisc } from "~icons/fluent/document-16-regular";
+
 // Misc
 export { default as FaceSmile } from "~icons/heroicons/face-smile";
 export { default as FaceFrown } from "~icons/heroicons/face-frown";

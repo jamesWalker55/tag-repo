@@ -34,3 +34,11 @@ export async function queryItemIds(query: string): Promise<number[]> {
 export async function getItem(id: number): Promise<Item> {
   return await invoke("get_item", { id: id });
 }
+
+export async function revealFile(path: string) {
+  return await invoke("reveal_file", { path: path });
+}
+
+export async function openFile(path: string) {
+  return await invoke("open_file", { path: path });
+}

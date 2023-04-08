@@ -8,8 +8,13 @@ import "vue-virtual-scroller/dist/vue-virtual-scroller.css";
 import { RecycleScroller } from "vue-virtual-scroller";
 import { getEmSizeInPx } from "@/lib/utils";
 import { ref, Ref, watch } from "vue";
+import { convertFileSrc } from "@tauri-apps/api/tauri";
+import {appDataDir, join} from '@tauri-apps/api/path';
+import {path} from '@tauri-apps/api';
 
 refreshAll();
+
+path.basename("D:\\vm\\qmul-files\\yfp\\testrepo\\b\\b\\").then(console.log);
 
 const mainElement: Ref<Element | null> = ref(null);
 
@@ -39,8 +44,10 @@ watch(
       <RecycleScroller
         v-if="mainElement !== null"
         class="h-full min-h-full"
+        listClass="hide-scrollbar !overflow-x-auto"
+        itemClass="!w-max"
         :items="state.itemIds"
-        :item-size="getEmSizeInPx(mainElement) * 1.5 /* em */"
+        :item-size="getEmSizeInPx(mainElement) * 1.75 /* em */"
         v-slot="{ item }"
         :key="scrollerRefreshBool"
       >

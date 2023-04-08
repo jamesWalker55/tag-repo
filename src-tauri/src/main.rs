@@ -5,6 +5,7 @@ use crate::manager::{ManagerStatus, RepoManager};
 use crate::repo::{Item, OpenError, QueryError, Repo, SearchError};
 use serde::{Serialize, Serializer};
 use std::path::PathBuf;
+use std::process::Command;
 use std::time::Duration;
 use tauri::{AppHandle, Manager, Runtime, Wry};
 use thiserror::Error;
@@ -103,7 +104,12 @@ async fn open_repo(
     // if resyncing failed, discard the manager
     // otherwise, continue on
     match rv {
-        Ok(_) => { /* everything is ok, do nothing */ }
+        Ok(_) => {
+            // resync ok, emit event
+            app_handle
+                .emit_all("repo-resynced", Some(PathBuf::from(path)))
+                .expect("Failed to emit event");
+        }
         Err(err) => {
             // error occurred, discard the manager from the app state
             let mut opt = state.manager.write().await;
@@ -190,6 +196,46 @@ async fn query_item_ids(
     Ok(item_ids)
 }
 
+#[derive(Error, Debug)]
+enum RevealFileError {
+    #[error("support for your operating system has not been implemented yet")]
+    OperatingSystemNotSupported,
+    #[error("failed to reveal file")]
+    IOError(#[from] std::io::Error),
+}
+
+impl_serialize_to_string!(RevealFileError);
+
+#[tauri::command]
+fn reveal_file(path: String) -> Result<(), RevealFileError> {
+    // for all target_os options, see:
+    // https://doc.rust-lang.org/reference/conditional-compilation.html#target_os
+    if cfg!(target_os = "windows") {
+        Command::new("explorer")
+            .args(["/select,", path.as_str()])
+            .spawn()?;
+    } else if cfg!(target_os = "macos") {
+        Command::new("open").args(["-R", path.as_str()]).spawn()?;
+    } else {
+        return Err(RevealFileError::OperatingSystemNotSupported);
+    };
+    Ok(())
+}
+
+#[derive(Error, Debug)]
+enum OpenFileError {
+    #[error("failed to reveal file")]
+    IOError(#[from] std::io::Error),
+}
+
+impl_serialize_to_string!(OpenFileError);
+
+#[tauri::command]
+fn open_file(path: String) -> Result<(), OpenFileError> {
+    open::that(path)?;
+    Ok(())
+}
+
 #[tokio::main]
 async fn main() {
     let subscriber = FmtSubscriber::builder()
@@ -224,6 +270,8 @@ async fn main() {
             current_status,
             query_item_ids,
             get_item,
+            reveal_file,
+            open_file,
         ])
         .plugin(tauri_plugin_window_state::Builder::default().build())
         .run(tauri::generate_context!())

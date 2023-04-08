@@ -7,6 +7,7 @@ import { Event, listen } from "@tauri-apps/api/event";
 import { appWindow } from "@tauri-apps/api/window";
 
 export type { Item } from "@/lib/ffi";
+export { revealFile, openFile } from "@/lib/ffi";
 
 interface AppState {
   path: string | null;
@@ -29,20 +30,35 @@ const itemCache: Map<number, Item> = new Map();
 // listen to change events from the backend
 (async () => {
   await Promise.all([
-    listen("item-added", (evt: Event<string>) => {
+    listen("item-added", async (evt: Event<string>) => {
       console.log("item-added", evt);
+      await queryItemIds(state.query);
     }),
-    listen("item-removed", (evt: Event<string>) => {
+    listen("item-removed", async (evt: Event<string>) => {
       console.log("item-removed", evt);
+      await queryItemIds(state.query);
     }),
-    listen("item-renamed", (evt: Event<[string, string]>) => {
+    listen("item-renamed", async (evt: Event<[string, string]>) => {
       console.log("item-renamed", evt);
+      await queryItemIds(state.query);
     }),
     listen("status-changed", (evt: Event<string>) => {
       state.status = evt.payload;
     }),
     listen("repo-path-changed", (evt: Event<string>) => {
       state.path = evt.payload;
+    }),
+    listen("repo-resynced", async (evt: Event<string>) => {
+      await queryItemIds(state.query);
+    }),
+    listen("tauri://file-drop", (event) => {
+      console.log(event);
+    }),
+    listen("tauri://file-drop-cancelled", (event) => {
+      console.log(event);
+    }),
+    listen("tauri://file-drop-hover", (event) => {
+      console.log(event);
     }),
   ]);
 })();
