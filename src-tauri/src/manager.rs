@@ -178,7 +178,6 @@ impl<R: Runtime> RepoManager<R> {
     }
 
     pub async fn query(&self, query: &str) -> Result<Vec<i64>, QueryError> {
-        self.update_status(ManagerStatus::Querying).await;
         let items = {
             // clone a reference to the repo
             let repo = self.repo.clone();
@@ -190,17 +189,14 @@ impl<R: Runtime> RepoManager<R> {
             .await
             .expect("failed to join with thread that's batch-updating the database")?
         };
-        self.update_status(ManagerStatus::Idle).await;
         Ok(items)
     }
 
     pub async fn get_item(&self, id: i64) -> Result<Item, SearchError> {
-        self.update_status(ManagerStatus::Querying).await;
         let item = {
             let repo = self.repo.lock().await;
             repo.get_item_by_id(id)
         };
-        self.update_status(ManagerStatus::Idle).await;
         Ok(item?)
     }
 

@@ -42,3 +42,15 @@ export async function revealFile(path: string) {
 export async function openFile(path: string) {
   return await invoke("open_file", { path: path });
 }
+
+export enum FileType {
+  AUDIO = "Audio",
+  DOCUMENT = "Document",
+  IMAGE = "Image",
+  VIDEO = "Video",
+  UNKNOWN = "Unknown",
+}
+
+export async function determineFileType(path: string): Promise<FileType> {
+  return await invoke("determine_filetype", { path: path });
+}

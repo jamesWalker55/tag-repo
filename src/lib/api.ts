@@ -8,6 +8,8 @@ import { appWindow } from "@tauri-apps/api/window";
 
 export type { Item } from "@/lib/ffi";
 export { revealFile, openFile } from "@/lib/ffi";
+export { FileType } from "@/lib/ffi";
+export { determineFileType } from "@/lib/ffi";
 
 interface AppState {
   path: string | null;
@@ -43,6 +45,7 @@ const itemCache: Map<number, Item> = new Map();
       await queryItemIds(state.query);
     }),
     listen("status-changed", (evt: Event<string>) => {
+      console.log("Status changed to:", evt.payload);
       state.status = evt.payload;
     }),
     listen("repo-path-changed", (evt: Event<string>) => {

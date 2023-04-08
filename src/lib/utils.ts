@@ -45,3 +45,20 @@ export async function pollUntilComplete<F>(
 export function getEmSizeInPx(element: Element) {
   return parseFloat(getComputedStyle(element).fontSize);
 }
+
+/** Number of pixels in `1rem` */
+const REM_PIXELS = getEmSizeInPx(document.documentElement);
+
+/**
+ * Convert a size definition in `rem` units like `0.875rem` into pixels.
+ * @param emSize
+ */
+export function parseRemSize(emSize: string): number | null {
+  const match = emSize.match(/^ *(\d+(?:\.\d+)?) *rem *$/);
+  if (match === null) {
+    return null;
+  } else {
+    const rem = parseFloat(match[1]);
+    return rem * REM_PIXELS;
+  }
+}

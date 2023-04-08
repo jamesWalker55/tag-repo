@@ -17,6 +17,7 @@ import { appWindow } from "@tauri-apps/api/window";
 import { computed, ref } from "vue";
 import * as api from "@/lib/api";
 import TitleBarSpacer from "./TitleBarSpacer.vue";
+import { openRepo } from "@/lib/api";
 
 const menuItems = computed(() => [
   {
@@ -31,6 +32,18 @@ const menuItems = computed(() => [
         icon: OpenRepo,
         click: api.promptOpenRepo,
         hotkey: "ctrl+o",
+      },
+      {
+        text: "Open Audio Samples",
+        icon: OpenRepo,
+        click: () => openRepo("D:\\Audio Samples"),
+        hotkey: "ctrl+d",
+      },
+      {
+        text: "Open Reaper Projects",
+        icon: OpenRepo,
+        click: () => openRepo("D:\\Audio Projects (Reaper)"),
+        hotkey: "ctrl+f",
       },
       { is: "separator" },
       { text: "Exit", icon: MenuClose, click: () => appWindow.close() },

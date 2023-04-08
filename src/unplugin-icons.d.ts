@@ -1,4 +1,4 @@
-/// <reference types="unplugin-icons/types/vue" />
+/// <reference types="unplugin-icons/types/vue3" />
 
 // This fixes type detection on CLion
 
