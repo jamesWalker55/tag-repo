@@ -1,12 +1,18 @@
-import { provide, reactive } from "vue";
+import { reactive, watch } from "vue";
 import { pollUntilComplete } from "@/lib/utils";
+import type { Item } from "@/lib/ffi";
 import * as ffi from "@/lib/ffi";
 import { open } from "@tauri-apps/api/dialog";
-import { listen, Event } from "@tauri-apps/api/event";
+import { Event, listen } from "@tauri-apps/api/event";
+import { appWindow } from "@tauri-apps/api/window";
+
+export type { Item } from "@/lib/ffi";
 
 interface AppState {
   path: string | null;
   status: string | null;
+  query: string;
+  itemIds: number[];
 }
 
 // The app state. DO NOT MODIFY FROM CHILD COMPONENTS.
@@ -14,28 +20,72 @@ interface AppState {
 export const state: AppState = reactive({
   path: null,
   status: null,
+  query: "",
+  itemIds: [],
 });
+
+const itemCache: Map<number, Item> = new Map();
 
 // listen to change events from the backend
 (async () => {
   await Promise.all([
-    listen("item-added", (x: Event<string>) => {
-      console.log("item-added", x);
+    listen("item-added", (evt: Event<string>) => {
+      console.log("item-added", evt);
     }),
-    listen("item-removed", (x: Event<string>) => {
-      console.log("item-removed", x);
+    listen("item-removed", (evt: Event<string>) => {
+      console.log("item-removed", evt);
     }),
-    listen("item-renamed", (x: Event<[string, string]>) => {
-      console.log("item-renamed", x);
+    listen("item-renamed", (evt: Event<[string, string]>) => {
+      console.log("item-renamed", evt);
     }),
-    listen("status-changed", (x: Event<string>) => {
-      state.status = x.payload;
+    listen("status-changed", (evt: Event<string>) => {
+      state.status = evt.payload;
     }),
-    listen("repo-path-changed", (x: Event<string>) => {
-      state.path = x.payload;
+    listen("repo-path-changed", (evt: Event<string>) => {
+      state.path = evt.payload;
     }),
   ]);
 })();
+
+// update app title when the path changes
+async function updateWindowTitle(path: string | null) {
+  if (path === null) {
+    await appWindow.setTitle("tagrepo");
+  } else {
+    await appWindow.setTitle(`${path} - tagrepo`);
+  }
+}
+
+// update the window title now
+updateWindowTitle(state.path);
+
+// watchers
+// when the path changes...
+watch(
+  () => state.path,
+  async (newPath) => {
+    await Promise.all([
+      // update the window title
+      updateWindowTitle(newPath),
+      // re-query for new items
+      (async () => {
+        if (newPath === null) {
+          state.itemIds = [];
+        } else {
+          await queryItemIds(state.query);
+        }
+      })(),
+    ]);
+  }
+);
+// when the query changes...
+watch(
+  () => state.query,
+  async (newQuery) => {
+    // re-query for new items
+    await queryItemIds(newQuery);
+  }
+);
 
 const refreshFuncs: (() => Promise<void>)[] = [];
 
@@ -62,14 +112,7 @@ export async function refreshAll() {
 }
 
 export async function openRepo(path: string) {
-  try {
-    await pollUntilComplete(ffi.openRepo(path), refreshStatus);
-    await refreshStatus();
-    state.path = await ffi.getRepoPath();
-  } catch (e) {
-    console.error(e);
-    state.path = null;
-  }
+  await ffi.openRepo(path);
 }
 
 export async function promptOpenRepo() {
@@ -84,4 +127,31 @@ export async function promptOpenRepo() {
 export async function closeRepo() {
   await ffi.closeRepo();
   state.path = null;
+}
+
+export function setQuery(query: string) {
+  console.log("Set query to:", query);
+  state.query = query;
+}
+
+async function queryItemIds(query: string) {
+  console.log("querying with this:", query);
+  state.itemIds = await ffi.queryItemIds(query);
+}
+
+export function clearItemCache() {
+  itemCache.clear();
+}
+
+export async function getItem(
+  id: number,
+  cached: boolean = true
+): Promise<Item> {
+  if (cached) {
+    let item = itemCache.get(id);
+    if (item !== undefined) return item;
+  }
+  const item = await ffi.getItem(id);
+  itemCache.set(id, item);
+  return item;
 }

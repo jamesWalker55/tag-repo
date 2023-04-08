@@ -4,6 +4,13 @@
 
 import { invoke } from "@tauri-apps/api";
 
+export interface Item {
+  id: number;
+  path: string;
+  tags: string;
+  meta_tags: string;
+}
+
 export async function openRepo(path: string) {
   await invoke("open_repo", { path: path });
 }
@@ -18,4 +25,12 @@ export async function getStatus(): Promise<string | null> {
 
 export async function getRepoPath(): Promise<string | null> {
   return await invoke("current_path");
+}
+
+export async function queryItemIds(query: string): Promise<number[]> {
+  return await invoke("query_item_ids", { query: query });
+}
+
+export async function getItem(id: number): Promise<Item> {
+  return await invoke("get_item", { id: id });
 }

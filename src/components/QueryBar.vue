@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import { Ref, ref, watch } from "vue";
+import {setQuery} from '@/lib/api';
 
 const inputElement: Ref<HTMLInputElement | null> = ref(null);
 const queryText = ref("");
@@ -33,7 +34,7 @@ function getInputTextWidth() {
   return width;
 }
 
-// time-based callbacks
+// execute search on timeout
 (function () {
   let searchTimerId: number | null = null;
   watch(queryText, async (text) => {
@@ -42,7 +43,7 @@ function getInputTextWidth() {
     }
     searchTimerId = setTimeout(() => {
       searchTimerId = null;
-      console.log("Execute search with:", text);
+      setQuery(text);
     }, 300);
   });
 })();

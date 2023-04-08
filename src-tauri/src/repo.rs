@@ -12,7 +12,7 @@ use relative_path::RelativePathBuf;
 use rusqlite::Error::{QueryReturnedNoRows, SqliteFailure};
 use rusqlite::{ffi, params, Connection, ErrorCode, Row};
 use rusqlite_migration::{Migrations, M};
-use serde::Serialize;
+use serde::{Serialize, Serializer};
 #[cfg(test)]
 use tempfile::{tempdir, TempDir};
 use thiserror::Error;
@@ -113,13 +113,24 @@ impl Repo {
     /// ```sql
     /// SELECT i.id, i.path, i.tags, i.meta_tags
     /// ```
-    fn to_item(row: &Row) -> Result<Item, rusqlite::Error> {
+    fn row_to_item(row: &Row) -> Result<Item, rusqlite::Error> {
         Ok(Item {
             id: row.get::<_, i64>(0)?,
             path: row.get::<_, String>(1)?,
             tags: row.get::<_, String>(2)?,
             meta_tags: row.get::<_, String>(3)?,
         })
+    }
+
+    /// Common function used to convert a query row into a id.
+    ///
+    /// Queried columns must be:
+    ///
+    /// ```sql
+    /// SELECT i.id
+    /// ```
+    fn row_to_id(row: &Row) -> Result<i64, rusqlite::Error> {
+        row.get::<_, i64>(0)
     }
 
     pub fn open(repo_path: impl AsRef<Path>) -> Result<Repo, OpenError> {
@@ -196,7 +207,7 @@ impl Repo {
         let mut stmt = self
             .conn
             .prepare("SELECT id, path, tags, meta_tags FROM items WHERE path = :path LIMIT 1")?;
-        let item = stmt.query_row([&path], Self::to_item);
+        let item = stmt.query_row([&path], Self::row_to_item);
         if let Err(QueryReturnedNoRows) = item {
             return Err(SearchError::ItemNotFound);
         }
@@ -208,7 +219,7 @@ impl Repo {
         let mut stmt = self
             .conn
             .prepare("SELECT id, path, tags, meta_tags FROM items WHERE id = :id LIMIT 1")?;
-        let item = stmt.query_row([id], Self::to_item);
+        let item = stmt.query_row([id], Self::row_to_item);
         if let Err(QueryReturnedNoRows) = item {
             return Err(SearchError::ItemNotFound);
         }
@@ -287,7 +298,25 @@ impl Repo {
             where_clause
         );
         let mut stmt = self.conn.prepare_cached(sql.as_str())?;
-        let mapped_rows = stmt.query_map([], Self::to_item)?;
+        let mapped_rows = stmt.query_map([], Self::row_to_item)?;
+        let items: Result<Vec<_>, _> = mapped_rows.collect();
+        Ok(items?)
+    }
+
+    pub fn query_ids<'a>(&'a self, query: &'a str) -> Result<Vec<i64>, QueryError> {
+        let where_clause = to_sql(query).map_err(|x| QueryError::InvalidQuery)?;
+        let sql = format!(
+            indoc! {"
+                SELECT i.id
+                FROM items i
+                INNER JOIN
+                    tag_query tq ON tq.id = i.id
+                WHERE {}
+            "},
+            where_clause
+        );
+        let mut stmt = self.conn.prepare_cached(sql.as_str())?;
+        let mapped_rows = stmt.query_map([], Self::row_to_id)?;
         let items: Result<Vec<_>, _> = mapped_rows.collect();
         Ok(items?)
     }
@@ -295,7 +324,7 @@ impl Repo {
     pub(crate) fn all_items(&self) -> Result<Vec<Item>, SearchError> {
         let sql = "SELECT i.id, i.path, i.tags, i.meta_tags FROM items i";
         let mut stmt = self.conn.prepare_cached(sql)?;
-        let mapped_rows = stmt.query_map([], Self::to_item)?;
+        let mapped_rows = stmt.query_map([], Self::row_to_item)?;
         let items: Result<Vec<_>, _> = mapped_rows.collect();
         Ok(items?)
     }

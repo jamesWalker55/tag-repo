@@ -2,10 +2,12 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use crate::manager::{ManagerStatus, RepoManager};
-use crate::repo::{Item, OpenError, Repo};
+use crate::repo::{Item, OpenError, QueryError, Repo, SearchError};
+use serde::{Serialize, Serializer};
 use std::path::PathBuf;
 use std::time::Duration;
 use tauri::{AppHandle, Manager, Runtime, Wry};
+use thiserror::Error;
 use tokio::sync::{Mutex, RwLock};
 use tokio::time::sleep;
 use tracing::Level;
@@ -132,6 +134,62 @@ async fn current_status(state: tauri::State<'_, AppState>) -> Result<Option<Mana
     Ok(Some(manager.status().await))
 }
 
+macro_rules! impl_serialize_to_string {
+    ($t:ty) => {
+        impl Serialize for $t {
+            fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+            where
+                S: Serializer,
+            {
+                serializer.serialize_str(self.to_string().as_str())
+            }
+        }
+    };
+}
+
+#[derive(Error, Debug)]
+enum GetItemError {
+    #[error("no active repo")]
+    NoOpenRepo,
+    #[error("no item with given id found")]
+    SearchError(#[from] SearchError),
+}
+
+impl_serialize_to_string!(GetItemError);
+
+#[tauri::command]
+async fn get_item(state: tauri::State<'_, AppState>, id: i64) -> Result<Item, GetItemError> {
+    let manager = state.manager.read().await;
+    let Some(manager) = &*manager else {
+        return Err(GetItemError::NoOpenRepo);
+    };
+    let item = manager.get_item(id).await?;
+    Ok(item)
+}
+
+#[derive(Error, Debug)]
+enum QueryItemIdsError {
+    #[error("no active repo")]
+    NoOpenRepo,
+    #[error("no item with given id found")]
+    QueryError(#[from] QueryError),
+}
+
+impl_serialize_to_string!(QueryItemIdsError);
+
+#[tauri::command]
+async fn query_item_ids(
+    state: tauri::State<'_, AppState>,
+    query: String,
+) -> Result<Vec<i64>, QueryItemIdsError> {
+    let manager = state.manager.read().await;
+    let Some(manager) = &*manager else {
+        return Err(QueryItemIdsError::NoOpenRepo);
+    };
+    let item_ids = manager.query(query.as_str()).await?;
+    Ok(item_ids)
+}
+
 #[tokio::main]
 async fn main() {
     let subscriber = FmtSubscriber::builder()
@@ -164,6 +222,8 @@ async fn main() {
             open_repo,
             close_repo,
             current_status,
+            query_item_ids,
+            get_item,
         ])
         .plugin(tauri_plugin_window_state::Builder::default().build())
         .run(tauri::generate_context!())

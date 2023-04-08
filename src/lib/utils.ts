@@ -37,3 +37,11 @@ export async function pollUntilComplete<F>(
     await pollFunc();
   }
 }
+
+/**
+ * Given an element, return the size of `1em` in pixels.
+ * @param element The element to derive CSS styles from
+ */
+export function getEmSizeInPx(element: Element) {
+  return parseFloat(getComputedStyle(element).fontSize);
+}

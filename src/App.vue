@@ -2,36 +2,39 @@
 import TitleBar from "./components/TitleBar.vue";
 import QueryBar from "./components/QueryBar.vue";
 import StatusBar from "./components/StatusBar.vue";
+import Item from "./components/Item.vue";
 import { refreshAll, state } from "@/lib/api";
-
-import { appWindow } from "@tauri-apps/api/window";
-import { watch } from "vue";
-
-async function updateWindowTitle(path: string | null) {
-  if (path === null) {
-    await appWindow.setTitle("tagrepo");
-  } else {
-    await appWindow.setTitle(`${path} - tagrepo`);
-  }
-}
-
-(async () => {
-  watch(() => state.path, updateWindowTitle);
-  await updateWindowTitle(state.path);
-})();
+import "vue-virtual-scroller/dist/vue-virtual-scroller.css";
+import { RecycleScroller } from "vue-virtual-scroller";
+import { getEmSizeInPx } from "@/lib/utils";
+import { ref, Ref } from "vue";
 
 refreshAll();
+
+const mainElement: Ref<Element | null> = ref(null);
 </script>
 
 <template>
   <div
     id="container"
-    class="relative flex h-screen select-none flex-col border border-neutral-300 text-base"
+    class="relative grid h-screen max-h-screen select-none grid-rows-app border border-neutral-300 text-base"
   >
     <TitleBar class="flex-none" />
-    <main class="relative flex flex-1 flex-col">
+    <main
+      ref="mainElement"
+      class="relative grid grid-rows-[max-content_minmax(0,_1fr)]"
+    >
       <QueryBar />
+      <RecycleScroller
+        v-if="mainElement !== null"
+        class="h-full min-h-full"
+        :items="state.itemIds"
+        :item-size="getEmSizeInPx(mainElement) * 1.5 /* em */"
+        v-slot="{ item }"
+      >
+        <Item :id="item" />
+      </RecycleScroller>
     </main>
-    <StatusBar class="flex-none" />
+    <StatusBar />
   </div>
 </template>

@@ -1,4 +1,4 @@
-use crate::repo::{Item, OpenError, QueryError, RemoveError, Repo, SyncError};
+use crate::repo::{Item, OpenError, QueryError, RemoveError, Repo, SearchError, SyncError};
 use crate::scan::{classify_path, scan_dir, to_relative_path, Options, PathType, ScanError};
 use crate::watch::{BestWatcher, WindowsNormWatcher};
 use futures::executor::block_on;
@@ -92,10 +92,7 @@ async fn event_handler<R: Runtime>(
                 repo.rename_path(old_path.to_string(), new_path.to_string())
                     .expect("failed to rename item");
                 app_handle
-                    .emit_all(
-                        "item-renamed",
-                        (old_path.to_string(), new_path.to_string()),
-                    )
+                    .emit_all("item-renamed", (old_path.to_string(), new_path.to_string()))
                     .expect("Failed to emit event");
             }
             _ => (),
@@ -180,22 +177,31 @@ impl<R: Runtime> RepoManager<R> {
         Ok(())
     }
 
-    pub async fn query(&self, query: &str) -> Result<Vec<Item>, QueryError> {
+    pub async fn query(&self, query: &str) -> Result<Vec<i64>, QueryError> {
         self.update_status(ManagerStatus::Querying).await;
         let items = {
             // clone a reference to the repo
             let repo = self.repo.clone();
-            // move the sync() call to a separate blocking thread
             let query = query.to_string();
             tokio::task::spawn_blocking(move || {
                 let mut repo = block_on(async { repo.lock().await });
-                repo.query_items(&query)
+                repo.query_ids(&query)
             })
             .await
             .expect("failed to join with thread that's batch-updating the database")?
         };
         self.update_status(ManagerStatus::Idle).await;
         Ok(items)
+    }
+
+    pub async fn get_item(&self, id: i64) -> Result<Item, SearchError> {
+        self.update_status(ManagerStatus::Querying).await;
+        let item = {
+            let repo = self.repo.lock().await;
+            repo.get_item_by_id(id)
+        };
+        self.update_status(ManagerStatus::Idle).await;
+        Ok(item?)
     }
 
     pub async fn watch(&self) -> Result<(), WatchError> {
