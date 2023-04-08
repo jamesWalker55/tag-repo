@@ -1,16 +1,10 @@
 <script lang="ts" setup>
 import { RecycleScroller } from "vue-virtual-scroller";
-import ItemRow from "./ItemRow.vue";
+import ItemListHeader from "@/components/ItemListHeader.vue";
+import ItemRow, { Column } from "./ItemRow.vue";
 import { state } from "@/lib/api";
 import { parseRemSize } from "@/lib/utils";
 import tailwind, { getSpacingSize } from "@/lib/tailwindcss";
-
-export interface Column {
-  // what kind of column this is
-  type: "path" | "name" | "tags";
-  // width of the column in pixels
-  width: number;
-}
 
 defineProps<{ columns: Column[] }>();
 
@@ -21,14 +15,18 @@ const itemSize = getSpacingSize("6");
 
 <template>
   <RecycleScroller
-    class="h-full min-h-full"
-    listClass="hide-scrollbar !overflow-x-auto table"
+    class="h-full min-h-full text-sm relative"
+    listClass="hide-scrollbar !overflow-x-auto"
     itemClass="flex !h-max !w-max"
     :items="state.itemIds"
     :item-size="itemSize"
-    v-slot="{ item }"
     :key="state.path"
   >
-    <ItemRow :id="item" :columns="columns" />
+    <template #before>
+      <ItemListHeader :columns="columns" />
+    </template>
+    <template v-slot="{ item }">
+      <ItemRow :id="item" :columns="columns" />
+    </template>
   </RecycleScroller>
 </template>

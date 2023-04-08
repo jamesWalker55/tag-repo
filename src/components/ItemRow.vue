@@ -2,11 +2,11 @@
 import { determineFileType, FileType, getItem, Item, state } from "@/lib/api";
 import { reactive, Ref, ref, watch } from "vue";
 import ItemIcon from "@/components/ItemIcon.vue";
-import { basename } from "@tauri-apps/api/path";
+import { basename, extname } from "@tauri-apps/api/path";
 
-interface Column {
+export interface Column {
   // what kind of column this is
-  type: "path" | "name" | "tags";
+  type: "path" | "name" | "tags" | "extension";
   // width of the column in pixels
   width: number;
 }
@@ -28,11 +28,13 @@ const itemData: Ref<Item | null> = ref(null);
 interface ExtraData {
   fileType: FileType;
   filename: string;
+  extension: string;
 }
 
 const extraData: ExtraData = reactive({
   fileType: FileType.UNKNOWN,
   filename: "",
+  extension: "",
 });
 
 async function fetchItemData(id: number) {
@@ -44,6 +46,12 @@ async function fetchItemData(id: number) {
   basename(data.path)
     .then((x) => (extraData.filename = x))
     .catch(console.error);
+  extname(data.path)
+    .then((x) => (extraData.extension = x))
+    .catch(() => {
+      // path has no extension
+      extraData.extension = "";
+    });
 }
 
 fetchItemData(props.id);
@@ -59,7 +67,7 @@ watch(
 <template>
   <div
     v-if="itemData !== null"
-    class="item flex h-6 items-center"
+    class="item flex h-6 items-center px-1"
     @click="
       async () => {
         if (state.path === null) throw 'repo path is null?!';
@@ -74,35 +82,45 @@ watch(
     <template v-for="col in columns">
       <div
         v-if="col.type === 'name'"
-        class="flex flex-nowrap px-1"
+        class="flex flex-nowrap gap-1 px-1"
         :style="{ width: `${col.width}px` }"
       >
         <ItemIcon
           :filetype="extraData.fileType"
           class="h-[16px] w-[16px] flex-none text-neutral-600"
         />
-        <span class="flex-1 overflow-clip whitespace-nowrap text-sm">
+        <span class="flex-1 overflow-clip whitespace-nowrap">
           {{ extraData.filename }}
         </span>
       </div>
       <div
-        v-if="col.type === 'path'"
-        class="flex truncate px-1"
+        v-else-if="col.type === 'path'"
+        class="flex truncate px-1 text-neutral-700"
         :style="{ width: `${col.width}px` }"
       >
-        <span class="text-sm">{{ itemData.path }}</span>
+        {{ itemData.path }}
       </div>
       <div
-        v-if="col.type === 'tags'"
+        v-else-if="col.type === 'tags'"
         class="flex truncate px-1"
         :style="{ width: `${col.width}px` }"
       >
-        <span v-if="itemData.tags">
-          {{ itemData.tags }}
-        </span>
-        <span v-else class="italic text-neutral-300">
-          (no tags)
-        </span>
+        <span v-if="itemData.tags">{{ itemData.tags }}</span>
+        <span v-else class="italic text-neutral-300">(no tags)</span>
+      </div>
+      <div
+        v-else-if="col.type === 'extension'"
+        class="flex truncate px-1"
+        :style="{ width: `${col.width}px` }"
+      >
+        {{ extraData.extension }}
+      </div>
+      <div
+        v-else
+        class="flex truncate px-1 italic text-red-500"
+        :style="{ width: `${col.width}px` }"
+      >
+        Not implemented, please notify the developer!
       </div>
     </template>
   </div>

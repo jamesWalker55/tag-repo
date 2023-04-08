@@ -6,6 +6,7 @@ import ItemList from "./components/ItemList.vue";
 import { refreshAll, state, openRepo } from "@/lib/api";
 import "vue-virtual-scroller/dist/vue-virtual-scroller.css";
 import { determineFileType } from "@/lib/ffi";
+import { Column } from "@/components/ItemRow.vue";
 
 refreshAll();
 
@@ -13,16 +14,12 @@ refreshAll();
 
 determineFileType("hello.wav").then(console.log);
 
-// // Force the scroller to re-mount and update.
-// //
-// // This is used when we change repos, the `itemIds` list will change but some IDs
-// // may remain in the same place by coincidence. When this happens the scroller reuses
-// // the path names from the old repo since they happen to have the same ID.
-// const scrollerRefreshBool = ref(false);
-// watch(
-//   () => state.itemIds,
-//   () => (scrollerRefreshBool.value = !scrollerRefreshBool.value)
-// );
+const columns: Column[] = [
+  { type: "name", width: 300 },
+  { type: "extension", width: 100 },
+  { type: "path", width: 500 },
+  { type: "tags", width: 300 },
+];
 </script>
 
 <template>
@@ -33,13 +30,7 @@ determineFileType("hello.wav").then(console.log);
     <TitleBar class="flex-none" />
     <main class="relative grid grid-rows-[max-content_minmax(0,_1fr)]">
       <QueryBar />
-      <ItemList
-        :columns="[
-          { type: 'name', width: 300 },
-          { type: 'path', width: 500 },
-          { type: 'tags', width: 300 },
-        ]"
-      />
+      <ItemList :columns="columns" />
     </main>
     <StatusBar />
   </div>
