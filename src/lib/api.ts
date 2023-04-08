@@ -136,7 +136,9 @@ export function setQuery(query: string) {
 
 async function queryItemIds(query: string) {
   console.log("querying with this:", query);
-  state.itemIds = await ffi.queryItemIds(query);
+  const itemIds = await ffi.queryItemIds(query);
+  clearItemCache();
+  state.itemIds = itemIds;
 }
 
 export function clearItemCache() {

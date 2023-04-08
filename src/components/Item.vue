@@ -6,6 +6,7 @@ const props = defineProps<{ id: number }>();
 const itemData: Ref<Item | null> = ref(null);
 
 async function fetchItemData(id: number) {
+  console.log("Refreshing item:", id);
   itemData.value = await getItem(id);
 }
 
