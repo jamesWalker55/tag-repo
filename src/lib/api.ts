@@ -11,11 +11,19 @@ export { revealFile, openFile } from "@/lib/ffi";
 export { FileType } from "@/lib/ffi";
 export { determineFileType } from "@/lib/ffi";
 
+export interface ListViewColumn {
+  // what kind of column this is
+  type: "path" | "name" | "tags" | "extension";
+  // width of the column in pixels
+  width: number;
+}
+
 interface AppState {
   path: string | null;
   status: string | null;
   query: string;
   itemIds: number[];
+  listViewColumns: ListViewColumn[];
 }
 
 // The app state. DO NOT MODIFY FROM CHILD COMPONENTS.
@@ -25,6 +33,12 @@ export const state: AppState = reactive({
   status: null,
   query: "",
   itemIds: [],
+  listViewColumns: [
+    { type: "name", width: 300 },
+    { type: "extension", width: 60 },
+    { type: "path", width: 500 },
+    { type: "tags", width: 200 },
+  ],
 });
 
 const itemCache: Map<number, Item> = new Map();

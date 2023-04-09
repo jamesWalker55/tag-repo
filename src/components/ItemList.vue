@@ -8,7 +8,6 @@ import tailwind, { getSpacingSize } from "@/lib/tailwindcss";
 import { computed } from "@vue/reactivity";
 import { onBeforeUnmount, onMounted, onUnmounted, Ref, ref, watch } from "vue";
 
-const props = defineProps<{ columns: Column[] }>();
 const container: Ref<HTMLDivElement | null> = ref(null);
 
 type EventListenerInfo = [
@@ -106,7 +105,7 @@ const headerHeight = getSpacingSize("6");
 
 const containerHeight = computed(() => state.itemIds.length * itemHeight);
 const containerWidth = computed(() =>
-  props.columns.reduce((acc, col) => acc + col.width, 0)
+  state.listViewColumns.reduce((acc, col) => acc + col.width, 0)
 );
 
 const preloadPadding = itemHeight * 10; // px
@@ -139,7 +138,6 @@ const debug = false;
     <ItemRow
       v-for="n in indexRangeToRender[1] - indexRangeToRender[0]"
       :id="state.itemIds[n + indexRangeToRender[0] - 1]"
-      :columns="columns"
       class="absolute"
       :style="{
         top: `${(n + indexRangeToRender[0] - 1) * itemHeight + headerHeight}px`,
@@ -156,6 +154,6 @@ const debug = false;
       </template>
     </div>
     <!-- I put the header after the items to make it appear above the items -->
-    <ItemListHeader :columns="columns" />
+    <ItemListHeader />
   </div>
 </template>

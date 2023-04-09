@@ -11,14 +11,7 @@ import { reactive, Ref, ref, watch } from "vue";
 import ItemIcon from "@/components/ItemIcon.vue";
 import { basename, extname, join } from "@tauri-apps/api/path";
 
-export interface Column {
-  // what kind of column this is
-  type: "path" | "name" | "tags" | "extension";
-  // width of the column in pixels
-  width: number;
-}
-
-const props = defineProps<{ id: number; columns: Column[] }>();
+const props = defineProps<{ id: number }>();
 const emit = defineEmits<{
   // select a single item with normal mouse click
   (e: "selection-set", id: number): void;
@@ -86,7 +79,7 @@ watch(
     "
   >
     <!-- v-if has higher priority than v-for, see https://vuejs.org/guide/essentials/list.html#v-for-with-v-if -->
-    <template v-for="col in columns">
+    <template v-for="col in state.listViewColumns">
       <div
         v-if="col.type === 'name'"
         class="flex flex-nowrap gap-1 px-1"
