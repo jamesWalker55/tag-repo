@@ -116,6 +116,7 @@ const debug = false;
     <ItemRow
       v-for="n in indexRangeToRender[1] - indexRangeToRender[0]"
       :id="state.itemIds[n + indexRangeToRender[0] - 1]"
+      :listIndex="n + indexRangeToRender[0] - 1"
       class="absolute"
       :style="{
         top: `${(n + indexRangeToRender[0] - 1) * itemHeight + headerHeight}px`,

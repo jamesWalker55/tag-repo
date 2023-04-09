@@ -45,6 +45,12 @@ export {
       if (index !== -1) {
         state.itemIds.splice(index, 1);
       }
+      // remove from selection if it's in it
+      try {
+        selection.remove(evt.id);
+      } catch (e) {
+        // nothing
+      }
     }),
     listen("item-renamed", async (evt: Event<Item>) => {
       console.log("item-renamed", evt);
@@ -61,11 +67,16 @@ export {
     }),
     listen("repo-path-changed", (evt: Event<string>) => {
       state.path = evt.payload;
+      selection.clear();
     }),
     listen("repo-resynced", async (evt: Event<string>) => {
       const newItems = await queryItemIds(state.query);
       clearItemCache();
       state.itemIds = newItems;
+      // clear the selection for now
+      // TODO: You should make the resync code emit an event containing removed paths, so
+      //  you can remove them from the selection
+      selection.clear();
     }),
   ]);
 })();
@@ -87,6 +98,9 @@ updateWindowTitle(state.path).then();
 watch(
   () => state.path,
   async (newPath) => {
+    // clear selection, we're in a new repo now
+    selection.clear()
+    // execute several async functions at once
     await Promise.all([
       // update the window title
       updateWindowTitle(newPath),
@@ -109,7 +123,11 @@ watch(
   async (newQuery) => {
     // re-query for new items
     const newItems = await queryItemIds(state.query);
+    // clear selection, we're moving to a new item list
+    selection.clear()
+    // clear item cache in case the item has changed upstream
     clearItemCache();
+    // actually change the item list
     state.itemIds = newItems;
   }
 );

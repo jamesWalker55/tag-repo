@@ -1,10 +1,23 @@
 <script lang="ts" setup>
-import { determineFileType, FileType, getItem, Item, state } from "@/lib/api";
-import { reactive, Ref, ref, watch } from "vue";
+import {
+  determineFileType,
+  FileType,
+  getItem,
+  Item,
+  selection,
+  state,
+} from "@/lib/api";
+import { computed, reactive, Ref, ref, watch } from "vue";
 import ItemIcon from "@/components/ItemIcon.vue";
 import { basename, extname } from "@tauri-apps/api/path";
 
-const props = defineProps<{ id: number }>();
+interface Props {
+  // the item id of this row
+  id: number;
+  // the index of the item in state.itemIds
+  listIndex: number;
+}
+const props = defineProps<Props>();
 const emit = defineEmits<{
   // select a single item with normal mouse click
   (e: "selection-set", id: number): void;
@@ -17,6 +30,7 @@ const emit = defineEmits<{
 }>();
 
 const itemData: Ref<Item | null> = ref(null);
+const isSelected = computed(() => selection.contains(props.listIndex));
 
 interface ExtraData {
   fileType: FileType;
@@ -31,16 +45,20 @@ const extraData: ExtraData = reactive({
 });
 
 async function fetchItemData(id: number) {
-  console.log(`row: fetchItemData(${id})`);
   itemData.value = await getItem(id);
 }
 
-// watch when the item cache changes
-// this can be caused by the watcher sending "rename" events
+// fetch data asynchronously
+fetchItemData(props.id).then();
+
+// this watch has 2 causes:
+// 1. the initial data fetch
+//    - the #fetchItemData() call above will asynchronously set itemData.path
+// 2. watch when the item cache changes
+//    - this can be caused by the watcher sending "rename" events
 watch(
   () => itemData.value?.path,
   (newPath) => {
-    console.log(`row: watch(${JSON.stringify(newPath)})`);
     if (newPath !== undefined) {
       determineFileType(newPath)
         .then((x) => (extraData.fileType = x))
@@ -62,25 +80,37 @@ watch(
   }
 );
 
-fetchItemData(props.id);
-
+console.log("selection:", selection);
 watch(
-  () => props.id,
-  async (newId) => {
-    await fetchItemData(newId);
-  }
+  () => state.itemIdSelection,
+  (sel) => console.log(sel)
 );
+const log = console.log;
 </script>
 
 <template>
   <div
     v-if="itemData !== null"
     class="item flex h-6 w-full min-w-max items-center hover:bg-slate-50"
+    :class="isSelected ? '!bg-red-500' : ''"
     @click="
-      async () => {
+      (e: MouseEvent) => {
         if (state.path === null) throw 'repo path is null?!';
         if (itemData === null) throw 'item data is null?!';
 
+        if (e.shiftKey && e.ctrlKey) {
+          selection.addTo(listIndex);
+        } else if (e.shiftKey) {
+          selection.extendTo(listIndex);
+        } else if (e.ctrlKey) {
+          if (isSelected) {
+            selection.remove(listIndex);
+          } else {
+            selection.add(listIndex);
+          }
+        } else {
+          selection.isolate(listIndex);
+        }
         // await clipboard.writeText(await path.join(state.path, itemData.path));
         // await revealFile(await join(state.path, itemData.path));
       }
@@ -98,6 +128,7 @@ watch(
           class="h-[16px] w-[16px] flex-none text-neutral-600"
         />
         <span class="flex-1 overflow-clip whitespace-nowrap">
+          {{ listIndex }}
           {{ extraData.filename }}
         </span>
       </div>
