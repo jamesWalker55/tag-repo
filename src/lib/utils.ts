@@ -138,3 +138,7 @@ export function findClosestIndex(arr: number[], num: number) {
 
   return closestIndex;
 }
+
+export function unreachable(x: never): never {
+  throw new Error("This statement should never be reached.")
+}
