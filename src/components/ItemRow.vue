@@ -1,8 +1,15 @@
 <script lang="ts" setup>
-import { determineFileType, FileType, getItem, Item, state } from "@/lib/api";
+import {
+  determineFileType,
+  FileType,
+  getItem,
+  Item,
+  revealFile,
+  state,
+} from "@/lib/api";
 import { reactive, Ref, ref, watch } from "vue";
 import ItemIcon from "@/components/ItemIcon.vue";
-import { basename, extname } from "@tauri-apps/api/path";
+import { basename, extname, join } from "@tauri-apps/api/path";
 
 export interface Column {
   // what kind of column this is
@@ -67,14 +74,14 @@ watch(
 <template>
   <div
     v-if="itemData !== null"
-    class="item flex h-6 items-center px-1"
+    class="item flex h-6 w-full min-w-max items-center hover:bg-slate-50"
     @click="
       async () => {
         if (state.path === null) throw 'repo path is null?!';
         if (itemData === null) throw 'item data is null?!';
 
         // await clipboard.writeText(await path.join(state.path, itemData.path));
-        // await revealFile(await path.join(state.path, itemData.path));
+        // await revealFile(await join(state.path, itemData.path));
       }
     "
   >
