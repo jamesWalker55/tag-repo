@@ -62,3 +62,56 @@ export function parseRemSize(emSize: string): number | null {
     return rem * REM_PIXELS;
   }
 }
+
+export type EventListenerInfo = [
+  element: Element | Window,
+  type: string,
+  listener: (this: Element, ev: Event) => any
+];
+
+export function createEventListenerRegistry() {
+  const eventListeners: EventListenerInfo[] = [];
+
+  function add(
+    element: Element | Window,
+    type: string,
+    listener: (this: Element, ev: any) => any
+  ): EventListenerInfo {
+    element.addEventListener(type, listener);
+    const info: EventListenerInfo = [element, type, listener];
+    eventListeners.push(info);
+    console.log("Added event listener:", element, type, listener);
+    return info;
+  }
+
+  function remove(listenerInfo: EventListenerInfo) {
+    const infoIdx = eventListeners.indexOf(listenerInfo);
+    if (infoIdx === -1) {
+      const [element, type, listener] = listenerInfo;
+      element.removeEventListener(type, listener);
+      eventListeners.splice(infoIdx, 1);
+      console.log("Removed event listener:", element, type, listener);
+    } else {
+      console.error(
+        "No registered event listener with given specification:",
+        listenerInfo
+      );
+      throw "No registered event listener with given specification";
+    }
+  }
+
+  function clear() {
+    for (const [element, type, listener] of eventListeners) {
+      element.removeEventListener(type, listener);
+      console.log("Removed event listener:", element, type, listener);
+    }
+    // setting length to 0 clears the array
+    eventListeners.length = 0;
+  }
+
+  return {
+    add: add,
+    remove: remove,
+    clear: clear,
+  };
+}

@@ -1,40 +1,16 @@
 <script lang="ts" setup>
 import { RecycleScroller } from "vue-virtual-scroller";
 import ItemListHeader from "@/components/ItemListHeader.vue";
-import ItemRow, { Column } from "./ItemRow.vue";
+import ItemRow from "./ItemRow.vue";
 import { state } from "@/lib/api";
-import { parseRemSize } from "@/lib/utils";
+import { createEventListenerRegistry, parseRemSize } from "@/lib/utils";
 import tailwind, { getSpacingSize } from "@/lib/tailwindcss";
 import { computed } from "@vue/reactivity";
 import { onBeforeUnmount, onMounted, onUnmounted, Ref, ref, watch } from "vue";
 
 const container: Ref<HTMLDivElement | null> = ref(null);
 
-type EventListenerInfo = [
-  element: Element,
-  type: string,
-  listener: (this: Element, ev: Event) => any
-];
-
-const eventListeners: EventListenerInfo[] = [];
-
-function registerEventListener(
-  element: Element,
-  type: string,
-  listener: (this: Element, ev: Event) => any
-) {
-  element.addEventListener(type, listener);
-  eventListeners.push([element, type, listener]);
-}
-
-function clearEventListeners() {
-  for (const [element, type, listener] of eventListeners) {
-    element.removeEventListener(type, listener);
-  }
-  // setting length to 0 clears the array
-  eventListeners.length = 0;
-}
-
+const listeners = createEventListenerRegistry();
 let observer: ResizeObserver | null = null;
 
 const viewWidth: Ref<number> = ref(0);
@@ -86,7 +62,7 @@ onMounted(() => {
 
   // Detect scroll position within the container
   updateScrollPosition(con);
-  registerEventListener(con, "scroll", (evt: Event) => {
+  listeners.add(con, "scroll", (evt: Event) => {
     updateScrollPosition(con);
   });
 });
@@ -94,7 +70,7 @@ onMounted(() => {
 onBeforeUnmount(() => {
   // component hasn't been mounted yet, container MUST be a div at this point
   const con = container.value!;
-  clearEventListeners();
+  listeners.clear();
   observer?.disconnect();
 });
 
@@ -125,7 +101,10 @@ const debug = false;
 </script>
 
 <template>
-  <div ref="container" class="relative h-full w-full overflow-auto text-sm">
+  <div
+    ref="container"
+    class="relative h-full w-full overflow-auto border-r-2 border-white text-sm"
+  >
     <!-- The container resizer, it's a 1px div located at the bottom right corner -->
     <component
       is="div"
@@ -144,7 +123,10 @@ const debug = false;
       }"
       :key="n + indexRangeToRender[0] - 1"
     />
-    <div class="fixed bottom-2 right-2 border bg-white opacity-50 shadow" v-if="debug">
+    <div
+      class="fixed bottom-2 right-2 border bg-white opacity-50 shadow"
+      v-if="debug"
+    >
       {{ indexRangeToRender }}
       <template
         class="mr-1"
