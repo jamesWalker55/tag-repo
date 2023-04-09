@@ -5,7 +5,7 @@ import StatusBar from "./components/StatusBar.vue";
 import ItemList from "./components/ItemList.vue";
 import { refreshAll, state, openRepo } from "@/lib/api";
 import "vue-virtual-scroller/dist/vue-virtual-scroller.css";
-import { determineFileType } from "@/lib/ffi";
+import { determineFileType } from "@/lib/api";
 
 refreshAll();
 
