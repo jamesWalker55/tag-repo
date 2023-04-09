@@ -1,7 +1,7 @@
-import { reactive, watch } from "vue";
-import { pollUntilComplete } from "@/lib/utils";
+import { reactive, Ref, ref, watch } from "vue";
 import type { Item } from "@/lib/ffi";
 import * as ffi from "@/lib/ffi";
+import { ManagerStatus } from "@/lib/ffi";
 import { open } from "@tauri-apps/api/dialog";
 import { Event, listen } from "@tauri-apps/api/event";
 import { appWindow } from "@tauri-apps/api/window";
@@ -10,6 +10,7 @@ export type { Item } from "@/lib/ffi";
 export { revealFile, openFile } from "@/lib/ffi";
 export { FileType } from "@/lib/ffi";
 export { determineFileType } from "@/lib/ffi";
+export { ManagerStatus } from "@/lib/ffi";
 
 export interface ListViewColumn {
   // what kind of column this is
@@ -20,7 +21,7 @@ export interface ListViewColumn {
 
 interface AppState {
   path: string | null;
-  status: string | null;
+  status: ManagerStatus | null;
   query: string;
   itemIds: number[];
   listViewColumns: ListViewColumn[];
@@ -41,24 +42,45 @@ export const state: AppState = reactive({
   ],
 });
 
-const itemCache: Map<number, Item> = new Map();
+const itemCache: Ref<Map<number, Item>> = ref(new Map());
+
+function itemIdsEqual(arr1: number[], arr2: number[]) {
+  if (arr1.length !== arr2.length) return false;
+
+  for (let i = 0; i < arr1.length; i++) {
+    if (arr1[i] !== arr2[i]) {
+      return false;
+    }
+  }
+  return true;
+}
 
 // listen to change events from the backend
 (async () => {
   await Promise.all([
-    listen("item-added", async (evt: Event<string>) => {
+    listen("item-added", async (evt: Event<Item>) => {
       console.log("item-added", evt);
-      await queryItemIds(state.query);
+      // update item list without discarding cache
+      state.itemIds = await queryItemIds(state.query);
     }),
-    listen("item-removed", async (evt: Event<string>) => {
+    listen("item-removed", async (evt: Event<Item>) => {
       console.log("item-removed", evt);
-      await queryItemIds(state.query);
+      // remove the item from the item list, if it exists
+      const index = state.itemIds.indexOf(evt.payload.id);
+      if (index !== -1) {
+        state.itemIds.splice(index, 1);
+      }
     }),
-    listen("item-renamed", async (evt: Event<[string, string]>) => {
+    listen("item-renamed", async (evt: Event<Item>) => {
       console.log("item-renamed", evt);
-      await queryItemIds(state.query);
+      // edit the item cache to change the path
+
+      const cachedItem = itemCache.value.get(evt.payload.id);
+      if (cachedItem !== undefined) {
+        cachedItem.path = evt.payload.path;
+      }
     }),
-    listen("status-changed", (evt: Event<string>) => {
+    listen("status-changed", (evt: Event<ManagerStatus | null>) => {
       console.log("Status changed to:", evt.payload);
       state.status = evt.payload;
     }),
@@ -66,16 +88,9 @@ const itemCache: Map<number, Item> = new Map();
       state.path = evt.payload;
     }),
     listen("repo-resynced", async (evt: Event<string>) => {
-      await queryItemIds(state.query);
-    }),
-    listen("tauri://file-drop", (event) => {
-      console.log(event);
-    }),
-    listen("tauri://file-drop-cancelled", (event) => {
-      console.log(event);
-    }),
-    listen("tauri://file-drop-hover", (event) => {
-      console.log(event);
+      const newItems = await queryItemIds(state.query);
+      clearItemCache();
+      state.itemIds = newItems;
     }),
   ]);
 })();
@@ -105,7 +120,9 @@ watch(
         if (newPath === null) {
           state.itemIds = [];
         } else {
-          await queryItemIds(state.query);
+          const newItems = await queryItemIds(state.query);
+          clearItemCache();
+          state.itemIds = newItems;
         }
       })(),
     ]);
@@ -116,7 +133,9 @@ watch(
   () => state.query,
   async (newQuery) => {
     // re-query for new items
-    await queryItemIds(newQuery);
+    const newItems = await queryItemIds(state.query);
+    clearItemCache();
+    state.itemIds = newItems;
   }
 );
 
@@ -169,13 +188,11 @@ export function setQuery(query: string) {
 
 async function queryItemIds(query: string) {
   console.log("querying with this:", query);
-  const itemIds = await ffi.queryItemIds(query);
-  clearItemCache();
-  state.itemIds = itemIds;
+  return await ffi.queryItemIds(query);
 }
 
 export function clearItemCache() {
-  itemCache.clear();
+  itemCache.value.clear();
 }
 
 export async function getItem(
@@ -183,10 +200,10 @@ export async function getItem(
   cached: boolean = true
 ): Promise<Item> {
   if (cached) {
-    let item = itemCache.get(id);
+    let item = itemCache.value.get(id);
     if (item !== undefined) return item;
   }
   const item = await ffi.getItem(id);
-  itemCache.set(id, item);
+  itemCache.value.set(id, item);
   return item;
 }

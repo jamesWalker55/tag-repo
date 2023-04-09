@@ -63,6 +63,8 @@ pub enum SearchError {
 pub enum RemoveError {
     #[error("an error occurred in rusqlite, {0}")]
     BackendError(#[from] rusqlite::Error),
+    #[error("failed to fetch item, {0}")]
+    SearchError(#[from] SearchError),
 }
 
 #[derive(Error, Debug)]
@@ -91,7 +93,7 @@ pub enum SyncError {
     ScanError(#[from] ScanError),
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Clone)]
 pub struct Item {
     pub(crate) id: i64,
     pub(crate) path: String,
@@ -227,11 +229,12 @@ impl Repo {
         Ok(item?)
     }
 
-    pub(crate) fn remove_item_by_path(&self, path: impl AsRef<str>) -> Result<(), RemoveError> {
+    pub(crate) fn remove_item_by_path(&self, path: impl AsRef<str>) -> Result<Item, RemoveError> {
+        let removed_item = self.get_item_by_path(&path)?;
         let path = path.as_ref();
         self.conn
             .execute("DELETE FROM items WHERE path = :path", [path])?;
-        Ok(())
+        Ok(removed_item)
     }
 
     pub(crate) fn remove_item_by_id(&self, id: i64) -> Result<(), RemoveError> {

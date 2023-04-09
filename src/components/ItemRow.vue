@@ -1,15 +1,8 @@
 <script lang="ts" setup>
-import {
-  determineFileType,
-  FileType,
-  getItem,
-  Item,
-  revealFile,
-  state,
-} from "@/lib/api";
+import { determineFileType, FileType, getItem, Item, state } from "@/lib/api";
 import { reactive, Ref, ref, watch } from "vue";
 import ItemIcon from "@/components/ItemIcon.vue";
-import { basename, extname, join } from "@tauri-apps/api/path";
+import { basename, extname } from "@tauri-apps/api/path";
 
 const props = defineProps<{ id: number }>();
 const emit = defineEmits<{
@@ -38,21 +31,37 @@ const extraData: ExtraData = reactive({
 });
 
 async function fetchItemData(id: number) {
+  console.log(`row: fetchItemData(${id})`);
   const data = await getItem(id);
   itemData.value = data;
-  determineFileType(data.path)
-    .then((x) => (extraData.fileType = x))
-    .catch(console.error);
-  basename(data.path)
-    .then((x) => (extraData.filename = x))
-    .catch(console.error);
-  extname(data.path)
-    .then((x) => (extraData.extension = x))
-    .catch(() => {
-      // path has no extension
-      extraData.extension = "";
-    });
 }
+
+// watch when the item cache changes
+// this can be caused by the watcher sending "rename" events
+watch(
+  () => itemData.value?.path,
+  (newPath) => {
+    console.log(`row: watch(${JSON.stringify(newPath)})`);
+    if (newPath !== undefined) {
+      determineFileType(newPath)
+        .then((x) => (extraData.fileType = x))
+        .catch(console.error);
+      basename(newPath)
+        .then((x) => (extraData.filename = x))
+        .catch(console.error);
+      extname(newPath)
+        .then((x) => (extraData.extension = x))
+        .catch(() => {
+          // path has no extension
+          extraData.extension = "";
+        });
+    } else {
+      extraData.fileType = FileType.UNKNOWN;
+      extraData.filename = "";
+      extraData.extension = "";
+    }
+  }
+);
 
 fetchItemData(props.id);
 

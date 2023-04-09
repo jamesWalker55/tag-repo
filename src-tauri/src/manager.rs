@@ -27,7 +27,7 @@ pub enum ManagerStatus {
     Idle,
     ScanningDirectory,
     UpdatingRepo,
-    Querying,
+    // Querying,
 }
 
 impl Default for ManagerStatus {
@@ -57,10 +57,11 @@ async fn event_handler<R: Runtime>(
                     continue;
                 };
                 let repo = repo.lock().await;
-                repo.insert_item(path.to_string(), "")
+                let inserted_item = repo
+                    .insert_item(path.to_string(), "")
                     .expect("failed to insert item");
                 app_handle
-                    .emit_all("item-added", path.to_string())
+                    .emit_all("item-added", inserted_item)
                     .expect("Failed to emit event");
             }
             Event { kind: Remove(_), mut paths, .. } => {
@@ -71,10 +72,11 @@ async fn event_handler<R: Runtime>(
                 // Since removals are delayed, the item we are trying to remove may not be in the repo
                 // Don't panic if the item isn't found
                 // Only panic if there is some rusqlite error
-                repo.remove_item_by_path(path.to_string())
+                let removed_item = repo
+                    .remove_item_by_path(path.to_string())
                     .expect("failed to remove item");
                 app_handle
-                    .emit_all("item-removed", path.to_string())
+                    .emit_all("item-removed", removed_item)
                     .expect("Failed to emit event");
             }
             Event {
@@ -88,11 +90,16 @@ async fn event_handler<R: Runtime>(
                 let PathType::Item(new_path) = classify_path(new_path, repo_path, &options) else {
                     continue;
                 };
+                let old_path = old_path.to_string();
+                let new_path = new_path.to_string();
                 let repo = repo.lock().await;
-                repo.rename_path(old_path.to_string(), new_path.to_string())
+                repo.rename_path(&old_path, &new_path)
                     .expect("failed to rename item");
+                let renamed_item = repo
+                    .get_item_by_path(&new_path)
+                    .expect("failed to fetch renamed item");
                 app_handle
-                    .emit_all("item-renamed", (old_path.to_string(), new_path.to_string()))
+                    .emit_all("item-renamed", renamed_item)
                     .expect("Failed to emit event");
             }
             _ => (),

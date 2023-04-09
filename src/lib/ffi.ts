@@ -19,7 +19,14 @@ export async function closeRepo() {
   await invoke("close_repo");
 }
 
-export async function getStatus(): Promise<string | null> {
+export enum ManagerStatus {
+  IDLE = "Idle",
+  SCANNING_DIRECTORY = "ScanningDirectory",
+  UPDATING_REPO = "UpdatingRepo",
+  // QUERYING = "Querying",
+}
+
+export async function getStatus(): Promise<ManagerStatus | null> {
   return await invoke("current_status");
 }
 
