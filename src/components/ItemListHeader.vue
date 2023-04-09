@@ -1,8 +1,12 @@
 <script lang="ts" setup>
 import { ListViewColumn, state } from "@/lib/api";
-import { createEventListenerRegistry, EventListenerInfo } from "@/lib/utils";
+import {
+  createEventListenerRegistry,
+  EventListenerInfo,
+  findClosestIndex,
+} from "@/lib/utils";
 import { getSpacingSize } from "@/lib/tailwindcss";
-import { computed } from "vue";
+import { computed, reactive, ref } from "vue";
 
 const columnBreakpoints = computed(() => {
   const positions: number[] = [0];
@@ -14,8 +18,6 @@ const columnBreakpoints = computed(() => {
 });
 
 const resizeHandleWidth = getSpacingSize("2");
-
-const log = console.log;
 
 const windowHandle = window;
 
@@ -62,25 +64,55 @@ function onColumnMouseDown(
   });
 }
 
+// a map from column index (a number) to offset pixels (a number)
+// it's typed as a <string, number> because object keys can only be strings
+const columnVisualOffsets: Record<string, number | undefined> = reactive({});
+
 function handleColumnDrag(
   colIdx: number,
   col: ListViewColumn,
   downEvt: MouseEvent,
   moveEvt: MouseEvent
 ) {
+  // We are working with 2 units here:
+  //   client X: X position relative to the whole window
+  //   offset X: X position relative to the start of the headers, which may be off-screen
   const listeners = createEventListenerRegistry();
-  const initialX = downEvt.clientX;
+  const initialClientX = downEvt.clientX;
+  const element = downEvt.target as HTMLDivElement;
+  const elementClientX = element.getBoundingClientRect().x;
+  const initialOffsetX =
+    initialClientX - elementClientX + columnBreakpoints.value[colIdx];
   function onMouseMove(moveEvt: MouseEvent) {
-    const dx = moveEvt.clientX - initialX;
-    // TODO: SOME CODE TO VISUALLY MOVE THE HEADER
+    const dx = moveEvt.clientX - initialClientX;
+    columnVisualOffsets[colIdx] = dx;
   }
   onMouseMove(moveEvt);
   listeners.add(windowHandle, "mousemove", onMouseMove);
   listeners.add(windowHandle, "mouseup", (upEvt: MouseEvent) => {
     // remove existing listeners
     listeners.clear();
-    // // commit changes by editing the headers list
-    // state.listViewColumns
+
+    // reset visual offsets
+    // don't use `delete`, that messes with Vue's reactivity
+    for (const key of Object.keys(columnVisualOffsets)) {
+      columnVisualOffsets[key] = undefined;
+    }
+
+    // determine which index this column should be moved to
+    const currentOffsetX = initialOffsetX - initialClientX + upEvt.clientX;
+    const breakpointIdx = findClosestIndex(
+      columnBreakpoints.value,
+      currentOffsetX
+    );
+    const newColIdx =
+      breakpointIdx > colIdx ? breakpointIdx - 1 : breakpointIdx;
+
+    // remove the column from the list, then insert in the correct position
+    if (newColIdx !== colIdx) {
+      const tmp = state.listViewColumns.splice(colIdx, 1);
+      state.listViewColumns.splice(newColIdx, 0, tmp[0]);
+    }
   });
 }
 
@@ -91,20 +123,23 @@ function handleColumnClick(
   upEvt: MouseEvent
 ) {
   // TODO: Sort by this column
+  console.log("YOU HAVE CLICKED THIS COLUMN!!!");
 }
 
 const debug = false;
 </script>
 
 <template>
-  <div
-    class="sticky top-0 flex h-6 w-full min-w-max border-b border-neutral-300 bg-neutral-100"
-  >
+  <div class="sticky top-0 flex h-6">
     <template v-for="(col, i) in state.listViewColumns">
       <div
         v-if="col.type === 'path'"
         class="absolute flex h-6 flex-none items-center border-b border-r border-neutral-300 bg-white px-2 hover:bg-slate-100"
-        :style="{ width: `${col.width}px`, left: `${columnBreakpoints[i]}px` }"
+        :style="{
+          width: `${col.width}px`,
+          left: `${columnBreakpoints[i] + (columnVisualOffsets[i] || 0)}px`,
+        }"
+        :class="columnVisualOffsets[i] ? 'z-10 border-l opacity-50' : ''"
         @mousedown="(e) => onColumnMouseDown(i, col, e)"
       >
         Path
@@ -112,7 +147,11 @@ const debug = false;
       <div
         v-else-if="col.type === 'tags'"
         class="absolute flex h-6 flex-none items-center border-b border-r border-neutral-300 bg-white px-2 hover:bg-slate-100"
-        :style="{ width: `${col.width}px`, left: `${columnBreakpoints[i]}px` }"
+        :style="{
+          width: `${col.width}px`,
+          left: `${columnBreakpoints[i] + (columnVisualOffsets[i] || 0)}px`,
+        }"
+        :class="columnVisualOffsets[i] ? 'z-10 border-l opacity-50' : ''"
         @mousedown="(e) => onColumnMouseDown(i, col, e)"
       >
         Tags
@@ -120,7 +159,11 @@ const debug = false;
       <div
         v-else-if="col.type === 'extension'"
         class="absolute flex h-6 flex-none items-center border-b border-r border-neutral-300 bg-white px-2 hover:bg-slate-100"
-        :style="{ width: `${col.width}px`, left: `${columnBreakpoints[i]}px` }"
+        :style="{
+          width: `${col.width}px`,
+          left: `${columnBreakpoints[i] + (columnVisualOffsets[i] || 0)}px`,
+        }"
+        :class="columnVisualOffsets[i] ? 'z-10 border-l opacity-50' : ''"
         @mousedown="(e) => onColumnMouseDown(i, col, e)"
       >
         Extension
@@ -128,7 +171,11 @@ const debug = false;
       <div
         v-else-if="col.type === 'name'"
         class="absolute flex h-6 flex-none items-center border-b border-r border-neutral-300 bg-white px-2 hover:bg-slate-100"
-        :style="{ width: `${col.width}px`, left: `${columnBreakpoints[i]}px` }"
+        :style="{
+          width: `${col.width}px`,
+          left: `${columnBreakpoints[i] + (columnVisualOffsets[i] || 0)}px`,
+        }"
+        :class="columnVisualOffsets[i] ? 'z-10 border-l opacity-50' : ''"
         @mousedown="(e) => onColumnMouseDown(i, col, e)"
       >
         Name
@@ -136,7 +183,11 @@ const debug = false;
       <div
         v-else
         class="absolute flex h-6 flex-none items-center border-b border-r border-neutral-300 bg-white px-2 italic text-red-500 hover:bg-slate-100"
-        :style="{ width: `${col.width}px`, left: `${columnBreakpoints[i]}px` }"
+        :style="{
+          width: `${col.width}px`,
+          left: `${columnBreakpoints[i] + (columnVisualOffsets[i] || 0)}px`,
+        }"
+        :class="columnVisualOffsets[i] ? 'z-10 border-l opacity-50' : ''"
         @mousedown="(e) => onColumnMouseDown(i, col, e)"
       >
         Not implemented, please notify the developer!

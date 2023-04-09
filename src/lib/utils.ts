@@ -115,3 +115,26 @@ export function createEventListenerRegistry() {
     clear: clear,
   };
 }
+
+/**
+ * Returns the index of the element in the given array that is closest to the
+ * specified number.
+ *
+ * @param arr - The array of numbers in increasing order.
+ * @param num - The number to find the closest element to.
+ * @returns The index of the closest element in the array.
+ */
+export function findClosestIndex(arr: number[], num: number) {
+  let minDiff = Infinity;
+  let closestIndex = -1;
+
+  for (let i = 0; i < arr.length; i++) {
+    const diff = Math.abs(num - arr[i]);
+    if (diff < minDiff) {
+      minDiff = diff;
+      closestIndex = i;
+    }
+  }
+
+  return closestIndex;
+}
