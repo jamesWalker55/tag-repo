@@ -32,8 +32,7 @@ const extraData: ExtraData = reactive({
 
 async function fetchItemData(id: number) {
   console.log(`row: fetchItemData(${id})`);
-  const data = await getItem(id);
-  itemData.value = data;
+  itemData.value = await getItem(id);
 }
 
 // watch when the item cache changes

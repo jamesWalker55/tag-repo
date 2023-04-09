@@ -52,3 +52,6 @@ export async function refreshAll() {
     await refreshFunc();
   }
 }
+
+// fetch data right now
+refreshAll().then()

@@ -5,6 +5,7 @@ import { appWindow } from "@tauri-apps/api/window";
 import { refreshAll, state } from "./state";
 import { closeRepo, openRepo, promptOpenRepo } from "./repo";
 import { setQuery } from "./query";
+import { type ListViewColumn } from "@/lib/api/view-columns";
 import {
   clearItemCache,
   getCachedItem,
@@ -17,6 +18,7 @@ import { selection } from "./selection";
 export { revealFile, openFile, determineFileType, FileType } from "@/lib/ffi";
 export {
   type Item,
+  type ListViewColumn,
   ManagerStatus,
   openRepo,
   promptOpenRepo,
@@ -78,7 +80,7 @@ async function updateWindowTitle(path: string | null) {
 }
 
 // update the window title now
-updateWindowTitle(state.path);
+updateWindowTitle(state.path).then();
 
 // watchers
 // when the path changes...

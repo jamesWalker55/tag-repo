@@ -1,5 +1,4 @@
 <script lang="ts" setup>
-import { RecycleScroller } from "vue-virtual-scroller";
 import ItemListHeader from "@/components/ItemListHeader.vue";
 import ItemRow from "./ItemRow.vue";
 import { state } from "@/lib/api";
