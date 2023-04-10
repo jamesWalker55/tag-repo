@@ -62,8 +62,9 @@ function createSelectionManager(state: AppState) {
           return rangeToArray(selection);
         case SelectionType.SEPARATE:
           return selection.indexes;
+        default:
+          unreachable(selectionType);
       }
-      unreachable(selectionType);
     }
   });
 
@@ -86,8 +87,9 @@ function createSelectionManager(state: AppState) {
           return small <= index && index <= large;
         case SelectionType.SEPARATE:
           return selection.indexes.indexOf(index) !== -1;
+        default:
+          unreachable(selectionType);
       }
-      unreachable(selectionType);
     }
   }
 
@@ -171,8 +173,9 @@ function createSelectionManager(state: AppState) {
           }
           selection.lastToggledIndex = endIndex;
           return;
+        default:
+          unreachable(selectionType);
       }
-      unreachable(selectionType);
     }
   }
 
@@ -207,8 +210,9 @@ function createSelectionManager(state: AppState) {
         selection.indexes.splice(indexOfIndex, 1);
         selection.lastToggledIndex = index;
         return;
+      default:
+        unreachable(selectionType);
     }
-    unreachable(selectionType);
   }
 
   function extendTo(index: number) {
@@ -234,8 +238,9 @@ function createSelectionManager(state: AppState) {
           extendToIndex: index,
         };
         return;
+      default:
+        unreachable(selectionType);
     }
-    unreachable(selectionType);
   }
 
   function clear() {
