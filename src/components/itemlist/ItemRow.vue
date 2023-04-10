@@ -8,7 +8,7 @@ import {
   state,
 } from "@/lib/api";
 import { computed, reactive, Ref, ref, watch } from "vue";
-import ItemIcon from "@/components/ItemIcon.vue";
+import ItemIcon from "@/components/itemlist/ItemIcon.vue";
 import { basename, extname } from "@tauri-apps/api/path";
 
 interface Props {

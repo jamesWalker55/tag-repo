@@ -2,7 +2,7 @@
 import VueFileToolbarMenu from "vue-file-toolbar-menu";
 
 import { Feedback } from "@/lib/icons";
-import FeedbackModal from "./FeedbackModal.vue";
+import FeedbackModal from "../FeedbackModal.vue";
 import { appWindow } from "@tauri-apps/api/window";
 import { computed, ref } from "vue";
 import * as api from "@/lib/api";

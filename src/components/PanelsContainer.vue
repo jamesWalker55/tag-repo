@@ -2,9 +2,9 @@
 import { computed, useSlots, watch } from "vue";
 import type { Component } from "@vue/runtime-core";
 import { PanelSizeKey, state } from "@/lib/api/state";
-import BottomPanel from "@/components/BottomPanel.vue";
-import LeftPanel from "@/components/LeftPanel.vue";
-import RightPanel from "@/components/RightPanel.vue";
+import BottomPanel from "@/components/panels/BottomPanel.vue";
+import LeftPanel from "@/components/panels/LeftPanel.vue";
+import RightPanel from "@/components/panels/RightPanel.vue";
 import { PANEL_MIN_HEIGHT, PANEL_MIN_WIDTH } from "@/lib/constants";
 
 interface Props {

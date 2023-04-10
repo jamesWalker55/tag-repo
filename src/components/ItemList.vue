@@ -1,6 +1,6 @@
 <script lang="ts" setup>
-import ItemListHeader from "@/components/ItemListHeader.vue";
-import ItemRow from "./ItemRow.vue";
+import ItemListHeader from "@/components/itemlist/ItemListHeader.vue";
+import ItemRow from "./itemlist/ItemRow.vue";
 import { selection, state } from "@/lib/api";
 import { createEventListenerRegistry, parseRemSize } from "@/lib/utils";
 import tailwind, { getSpacingSize } from "@/lib/tailwindcss";

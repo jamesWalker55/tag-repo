@@ -1,7 +1,7 @@
 <script lang="ts" setup>
-import TitleBar from "./components/TitleBar.vue";
+import TitleBar from "./components/toolbars/TitleBar.vue";
 import QueryBar from "./components/QueryBar.vue";
-import StatusBar from "./components/StatusBar.vue";
+import StatusBar from "./components/toolbars/StatusBar.vue";
 import ItemList from "./components/ItemList.vue";
 import { selection } from "@/lib/api";
 import { computed } from "vue";
@@ -20,14 +20,9 @@ const propertiesVisible = computed(() => selection.selectedCount.value > 0);
     <PanelsContainer
       is="main"
       class="relative flex-1"
-      right-size-key="rightPanel"
-      left-size-key="leftPanel"
-      bottom-size-key="bottomPanel"
+      :right-size-key="propertiesVisible ? 'rightPanel' : null"
     >
-      <ItemList style="grid-area: m" />
-      <template #bottom>
-        <div>hello!</div>
-      </template>
+      <ItemList />
       <template #right> hello! </template>
     </PanelsContainer>
     <StatusBar />
