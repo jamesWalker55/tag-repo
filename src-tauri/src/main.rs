@@ -7,7 +7,7 @@ use serde::{Serialize, Serializer};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::Duration;
-use tauri::{AppHandle, Manager, Runtime, Wry};
+use tauri::{AppHandle, Manager, PhysicalSize, Runtime, Wry};
 use thiserror::Error;
 use tokio::sync::{Mutex, RwLock};
 use tokio::time::sleep;
@@ -316,8 +316,14 @@ async fn main() {
     tauri::Builder::default()
         .manage(AppState::default())
         .setup(|app| {
-            let window = app.get_window("main").unwrap();
-            set_shadow(&window, true).expect("Unsupported platform!");
+            let window = app
+                .get_window("main")
+                .expect("failed to get window with name 'main'");
+            window
+                .set_min_size(Some(PhysicalSize { width: 400, height: 270 }))
+                .expect("failed to set min size of window");
+            set_shadow(&window, true)
+                .expect("failed to set window shadow: 'Unsupported platform!'");
             // app.listen_global("cool", |evt| {
             //     tokio::spawn(async move {
             //         println!("Sleeping a bit...");
