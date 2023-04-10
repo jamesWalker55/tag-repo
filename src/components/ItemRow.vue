@@ -150,7 +150,13 @@ const log = console.log;
         :style="{ width: `${col.width}px` }"
       >
         <span v-if="itemData.tags">{{ itemData.tags }}</span>
-        <span v-else class="italic" :class="!isSelected ? 'text-neutral-300' : 'text-neutral-400'">(no tags)</span>
+        <span
+          v-else
+          class="italic"
+          :class="!isSelected ? 'text-neutral-300' : 'text-neutral-400'"
+        >
+          (no tags)
+        </span>
       </div>
       <div
         v-else-if="col.type === 'extension'"
