@@ -12,12 +12,16 @@ const columnBreakpoints = computed(() => {
   const positions: number[] = [0];
   for (let i = 0; i < state.listViewColumns.length; i++) {
     const prevPos = positions[positions.length - 1];
-    positions.push(prevPos + state.listViewColumns[i].width);
+    positions.push(
+      prevPos + Math.max(state.listViewColumns[i].width, COLUMN_MIN_WIDTH)
+    );
   }
   return positions;
 });
 
 const resizeHandleWidth = getSpacingSize("2");
+
+const COLUMN_MIN_WIDTH = 16;
 
 function onResizerMouseDown(
   colIdx: number,
@@ -29,7 +33,7 @@ function onResizerMouseDown(
   const initialWidth = col.width;
   listeners.add(window, "mousemove", (moveEvt: MouseEvent) => {
     const newWidth = initialWidth - initialX + moveEvt.clientX;
-    col.width = Math.round(newWidth);
+    col.width = Math.max(Math.round(newWidth), COLUMN_MIN_WIDTH);
   });
   listeners.add(window, "mouseup", (_: MouseEvent) => {
     listeners.clear();
@@ -136,7 +140,7 @@ const debug = false;
         v-if="col.type === 'path'"
         class="absolute flex h-6 flex-none items-center border-b border-r border-neutral-300 bg-white px-2 hover:bg-slate-100"
         :style="{
-          width: `${col.width}px`,
+          width: `${Math.max(col.width, COLUMN_MIN_WIDTH)}px`,
           left: `${columnBreakpoints[i] + (columnVisualOffsets[i] || 0)}px`,
         }"
         :class="columnVisualOffsets[i] ? 'z-10 border-l opacity-50' : ''"
@@ -149,7 +153,7 @@ const debug = false;
         v-else-if="col.type === 'tags'"
         class="absolute flex h-6 flex-none items-center border-b border-r border-neutral-300 bg-white px-2 hover:bg-slate-100"
         :style="{
-          width: `${col.width}px`,
+          width: `${Math.max(col.width, COLUMN_MIN_WIDTH)}px`,
           left: `${columnBreakpoints[i] + (columnVisualOffsets[i] || 0)}px`,
         }"
         :class="columnVisualOffsets[i] ? 'z-10 border-l opacity-50' : ''"
@@ -162,7 +166,7 @@ const debug = false;
         v-else-if="col.type === 'extension'"
         class="absolute flex h-6 flex-none items-center border-b border-r border-neutral-300 bg-white px-2 hover:bg-slate-100"
         :style="{
-          width: `${col.width}px`,
+          width: `${Math.max(col.width, COLUMN_MIN_WIDTH)}px`,
           left: `${columnBreakpoints[i] + (columnVisualOffsets[i] || 0)}px`,
         }"
         :class="columnVisualOffsets[i] ? 'z-10 border-l opacity-50' : ''"
@@ -175,7 +179,7 @@ const debug = false;
         v-else-if="col.type === 'name'"
         class="absolute flex h-6 flex-none items-center border-b border-r border-neutral-300 bg-white px-2 hover:bg-slate-100"
         :style="{
-          width: `${col.width}px`,
+          width: `${Math.max(col.width, COLUMN_MIN_WIDTH)}px`,
           left: `${columnBreakpoints[i] + (columnVisualOffsets[i] || 0)}px`,
         }"
         :class="columnVisualOffsets[i] ? 'z-10 border-l opacity-50' : ''"
@@ -188,7 +192,7 @@ const debug = false;
         v-else
         class="absolute flex h-6 flex-none items-center border-b border-r border-neutral-300 bg-white px-2 italic text-red-500 hover:bg-slate-100"
         :style="{
-          width: `${col.width}px`,
+          width: `${Math.max(col.width, COLUMN_MIN_WIDTH)}px`,
           left: `${columnBreakpoints[i] + (columnVisualOffsets[i] || 0)}px`,
         }"
         :class="columnVisualOffsets[i] ? 'z-10 border-l opacity-50' : ''"
