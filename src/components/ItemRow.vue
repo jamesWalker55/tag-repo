@@ -18,19 +18,15 @@ interface Props {
   listIndex: number;
 }
 const props = defineProps<Props>();
-const emit = defineEmits<{
-  // select a single item with normal mouse click
-  (e: "selection-set", id: number): void;
-  // add to selection with ctrl + mouse click
-  (e: "selection-add", id: number): void;
-  // remove from selection with ctrl + mouse click
-  (e: "selection-remove", id: number): void;
-  // extend selection with shift + mouse click
-  (e: "selection-extend", id: number): void;
-}>();
 
 const itemData: Ref<Item | null> = ref(null);
-const isSelected = computed(() => selection.contains(props.listIndex));
+
+async function fetchItemData(id: number) {
+  itemData.value = await getItem(id);
+}
+
+// fetch data asynchronously
+fetchItemData(props.id).then();
 
 interface ExtraData {
   fileType: FileType;
@@ -43,13 +39,6 @@ const extraData: ExtraData = reactive({
   filename: "",
   extension: "",
 });
-
-async function fetchItemData(id: number) {
-  itemData.value = await getItem(id);
-}
-
-// fetch data asynchronously
-fetchItemData(props.id).then();
 
 // this watch has 2 causes:
 // 1. the initial data fetch
@@ -80,12 +69,7 @@ watch(
   }
 );
 
-console.log("selection:", selection);
-watch(
-  () => state.itemIdSelection,
-  (sel) => console.log(sel)
-);
-const log = console.log;
+const isSelected = computed(() => selection.contains(props.listIndex));
 </script>
 
 <template>

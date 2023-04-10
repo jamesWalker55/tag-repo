@@ -17,6 +17,8 @@ export interface AppState {
   listViewColumns: ListViewColumn[];
   // the selection in the list view
   itemIdSelection: Selection | null;
+  // properties panel height
+  propertiesPanelHeight: number;
 }
 
 // The app state. DO NOT MODIFY FROM CHILD COMPONENTS.
@@ -33,6 +35,7 @@ export const state: AppState = reactive({
     { type: "tags", width: 200 },
   ],
   itemIdSelection: null,
+  propertiesPanelHeight: 160,
 });
 
 const refreshFuncs: (() => Promise<void>)[] = [];

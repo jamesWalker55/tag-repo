@@ -68,11 +68,19 @@ function createSelectionManager(state: AppState) {
     }
   });
 
+  const selectedCount = computed(() => selectedIndexes.value.length);
+
   function itemIdToIndex(itemId: number): number {
     const index = state.itemIds.indexOf(itemId);
     if (index === -1) throw "item id doesn't exist in selection!";
 
     return index;
+  }
+
+  function indexToItemId(index: number): number {
+    if (index < 0 || index >= state.itemIds.length)
+      throw "item index is out of bounds!";
+    return state.itemIds[index];
   }
 
   function contains(index: number): boolean {
@@ -249,7 +257,9 @@ function createSelectionManager(state: AppState) {
 
   return {
     selected: selectedIndexes,
+    selectedCount: selectedCount,
     itemIdToIndex: itemIdToIndex,
+    indexToItemId: indexToItemId,
     contains: contains,
     isolate: isolate,
     add: add,

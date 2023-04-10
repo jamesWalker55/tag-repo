@@ -17,7 +17,7 @@ import { appWindow } from "@tauri-apps/api/window";
 import { computed, ref } from "vue";
 import * as api from "@/lib/api";
 import TitleBarSpacer from "./TitleBarSpacer.vue";
-import { openRepo } from "@/lib/api";
+import { openRepo, selection } from "@/lib/api";
 
 const menuItems = computed(() => [
   {
@@ -52,9 +52,17 @@ const menuItems = computed(() => [
   {
     text: "Edit",
     menu: [
-      { text: "Cut", icon: Cut, disabled: true },
-      { text: "Copy", icon: Copy, disabled: true },
-      { text: "Paste", icon: Paste, disabled: true },
+      // TODO: Implement select buttons
+      { text: "Select All", disabled: true },
+      { text: "Invert Selection", disabled: true },
+      {
+        text: "Clear Selection",
+        click: () => selection.clear(),
+        disabled: selection.selectedCount.value === 0,
+      },
+      // { text: "Cut", icon: Cut, disabled: true },
+      // { text: "Copy", icon: Copy, disabled: true },
+      // { text: "Paste", icon: Paste, disabled: true },
       { is: "separator" },
       { text: "Tools", disabled: true },
     ],
