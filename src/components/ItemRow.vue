@@ -75,7 +75,7 @@ const isSelected = computed(() => selection.contains(props.listIndex));
 <template>
   <div
     v-if="itemData !== null"
-    class="item flex h-6 w-full min-w-max items-center hover:bg-slate-50"
+    class="item flex h-6 w-full min-w-max items-center"
     :class="
       !isSelected
         ? 'hover:bg-slate-50 hover:outline hover:outline-1 hover:outline-neutral-200'
