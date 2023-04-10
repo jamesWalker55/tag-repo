@@ -12,6 +12,7 @@
   "dependencies": {
     "@tauri-apps/api": "^1.2.0",
     "hotkeys-js": "^3.10.2",
+    "path-browserify": "^1.0.1",
     "vue": "^3.2.45",
     "vue-file-toolbar-menu": "^2.2.0"
   },
@@ -19,6 +20,7 @@
     "@iconify/json": "^2.2.43",
     "@tauri-apps/cli": "^1.2.3",
     "@types/node": "^18.7.10",
+    "@types/path-browserify": "^1.0.0",
     "@vitejs/plugin-vue": "^4.0.0",
     "autoprefixer": "^10.4.14",
     "postcss": "^8.4.21",

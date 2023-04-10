@@ -2,14 +2,14 @@
 import {
   determineFileType,
   FileType,
-  getItem,
-  Item,
+  getItemDetails,
+  ItemDetails,
   selection,
   state,
 } from "@/lib/api";
 import { computed, reactive, Ref, ref, watch } from "vue";
 import ItemIcon from "@/components/itemlist/ItemIcon.vue";
-import { basename, extname } from "@tauri-apps/api/path";
+import path from "path-browserify";
 
 interface Props {
   // the item id of this row
@@ -19,55 +19,14 @@ interface Props {
 }
 const props = defineProps<Props>();
 
-const itemData: Ref<Item | null> = ref(null);
+const itemData: Ref<ItemDetails | null> = ref(null);
 
 async function fetchItemData(id: number) {
-  itemData.value = await getItem(id);
+  itemData.value = await getItemDetails(id);
 }
 
 // fetch data asynchronously
 fetchItemData(props.id).then();
-
-interface ExtraData {
-  fileType: FileType;
-  filename: string;
-  extension: string;
-}
-
-const extraData: ExtraData = reactive({
-  fileType: FileType.UNKNOWN,
-  filename: "",
-  extension: "",
-});
-
-// this watch has 2 causes:
-// 1. the initial data fetch
-//    - the #fetchItemData() call above will asynchronously set itemData.path
-// 2. watch when the item cache changes
-//    - this can be caused by the watcher sending "rename" events
-watch(
-  () => itemData.value?.path,
-  (newPath) => {
-    if (newPath !== undefined) {
-      determineFileType(newPath)
-        .then((x) => (extraData.fileType = x))
-        .catch(console.error);
-      basename(newPath)
-        .then((x) => (extraData.filename = x))
-        .catch(console.error);
-      extname(newPath)
-        .then((x) => (extraData.extension = x))
-        .catch(() => {
-          // path has no extension
-          extraData.extension = "";
-        });
-    } else {
-      extraData.fileType = FileType.UNKNOWN;
-      extraData.filename = "";
-      extraData.extension = "";
-    }
-  }
-);
 
 const isSelected = computed(() => selection.contains(props.listIndex));
 
@@ -115,11 +74,11 @@ function onItemMouseDown(e: MouseEvent) {
         :style="{ width: `${col.width}px` }"
       >
         <ItemIcon
-          :filetype="extraData.fileType"
+          :filetype="itemData.filetype"
           class="h-[16px] w-[16px] flex-none text-neutral-600"
         />
         <span class="flex-1 overflow-clip whitespace-nowrap">
-          {{ extraData.filename }}
+          {{ path.basename(itemData.item.path) }}
         </span>
       </div>
       <div
@@ -127,14 +86,14 @@ function onItemMouseDown(e: MouseEvent) {
         class="flex truncate px-1 text-neutral-700"
         :style="{ width: `${col.width}px` }"
       >
-        {{ itemData.path }}
+        {{ itemData.item.path }}
       </div>
       <div
         v-else-if="col.type === 'tags'"
         class="flex truncate px-1"
         :style="{ width: `${col.width}px` }"
       >
-        <span v-if="itemData.tags">{{ itemData.tags }}</span>
+        <span v-if="itemData.item.tags">{{ itemData.item.tags }}</span>
         <span
           v-else
           class="italic"
@@ -148,7 +107,7 @@ function onItemMouseDown(e: MouseEvent) {
         class="flex truncate px-1"
         :style="{ width: `${col.width}px` }"
       >
-        {{ extraData.extension }}
+        {{ path.extname(itemData.item.path) }}
       </div>
       <div
         v-else

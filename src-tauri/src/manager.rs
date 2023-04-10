@@ -36,7 +36,80 @@ impl Default for ManagerStatus {
     }
 }
 
-// #[tracing::instrument]
+#[derive(Serialize, Clone)]
+pub struct ItemDetails {
+    item: Item,
+    filetype: FileType,
+}
+
+impl ItemDetails {
+    fn from_item(item: Item) -> Self {
+        let filetype = determine_filetype(&item.path);
+        Self { item, filetype }
+    }
+}
+
+#[derive(Serialize, Clone)]
+pub enum FileType {
+    Audio,
+    Document,
+    Image,
+    Video,
+    Unknown,
+}
+
+macro_rules! file_types {
+    ($($file_type:tt),*) => {
+        [$(stringify!($file_type)),*]
+    };
+}
+
+const EXT_AUDIO: &'static [&'static str] = &file_types![
+    aac, ac3, aif, aifc, aiff, au, cda, dts, fla, flac, it, m1a, m2a, m3u, m4a, mid, midi, mka,
+    mod, mp2, mp3, mpa, ogg, opus, ra, rmi, snd, spc, umx, voc, wav, wma, xm
+];
+
+const EXT_DOCUMENT: &'static [&'static str] = &file_types![
+    c, chm, cpp, csv, cxx, doc, docm, docx, dot, dotm, dotx, h, hpp, htm, html, hxx, ini, java,
+    lua, mht, mhtml, odt, pdf, potm, potx, ppam, pps, ppsm, ppsx, ppt, pptm, pptx, rtf, sldm, sldx,
+    thmx, txt, vsd, wpd, wps, wri, xlam, xls, xlsb, xlsm, xlsx, xltm, xltx, xml
+];
+
+const EXT_IMAGE: &'static [&'static str] =
+    &file_types![ani, bmp, gif, ico, jpe, jpeg, jpg, pcx, png, psd, tga, tif, tiff, webp, wmf];
+
+const EXT_VIDEO: &'static [&'static str] = &file_types![
+    3g2, 3gp, 3gp2, 3gpp, amr, amv, asf, avi, bdmv, bik, d2v, divx, drc, dsa, dsm, dss, dsv, evo,
+    f4v, flc, fli, flic, flv, hdmov, ifo, ivf, m1v, m2p, m2t, m2ts, m2v, m4b, m4p, m4v, mkv, mov,
+    mp2v, mp4, mp4v, mpe, mpeg, mpg, mpls, mpv2, mpv4, mts, ogm, ogv, pss, pva, qt, ram, ratdvd,
+    rm, rmm, rmvb, roq, rpm, smil, smk, swf, tp, tpr, ts, vob, vp6, webm, wm, wmp, wmv
+];
+
+pub fn determine_filetype(path: impl AsRef<Path>) -> FileType {
+    let path: &Path = path.as_ref();
+    let Some(extension) = path.extension() else {
+        return FileType::Unknown;
+    };
+
+    let Some(extension) = extension.to_str() else {
+        error!("cannot determine filetype of malformed path: {:?}", path);
+        return FileType::Unknown;
+    };
+
+    if EXT_AUDIO.contains(&extension) {
+        FileType::Audio
+    } else if EXT_DOCUMENT.contains(&extension) {
+        FileType::Document
+    } else if EXT_IMAGE.contains(&extension) {
+        FileType::Image
+    } else if EXT_VIDEO.contains(&extension) {
+        FileType::Video
+    } else {
+        FileType::Unknown
+    }
+}
+
+#[tracing::instrument]
 async fn event_handler<R: Runtime>(
     repo: Arc<Mutex<Repo>>,
     repo_path: PathBuf,
@@ -61,7 +134,7 @@ async fn event_handler<R: Runtime>(
                     .insert_item(path.to_string(), "")
                     .expect("failed to insert item");
                 app_handle
-                    .emit_all("item-added", inserted_item)
+                    .emit_all("item-added", ItemDetails::from_item(inserted_item))
                     .expect("Failed to emit event");
             }
             Event { kind: Remove(_), mut paths, .. } => {
@@ -76,7 +149,7 @@ async fn event_handler<R: Runtime>(
                     .remove_item_by_path(path.to_string())
                     .expect("failed to remove item");
                 app_handle
-                    .emit_all("item-removed", removed_item)
+                    .emit_all("item-removed", ItemDetails::from_item(removed_item))
                     .expect("Failed to emit event");
             }
             Event {
@@ -99,7 +172,7 @@ async fn event_handler<R: Runtime>(
                     .get_item_by_path(&new_path)
                     .expect("failed to fetch renamed item");
                 app_handle
-                    .emit_all("item-renamed", renamed_item)
+                    .emit_all("item-renamed", ItemDetails::from_item(renamed_item))
                     .expect("Failed to emit event");
             }
             _ => (),
@@ -199,12 +272,13 @@ impl<R: Runtime> RepoManager<R> {
         Ok(items)
     }
 
-    pub async fn get_item(&self, id: i64) -> Result<Item, SearchError> {
+    pub async fn get_item_details(&self, id: i64) -> Result<ItemDetails, SearchError> {
         let item = {
             let repo = self.repo.lock().await;
             repo.get_item_by_id(id)
-        };
-        Ok(item?)
+        }?;
+        let details = ItemDetails::from_item(item);
+        Ok(details)
     }
 
     pub async fn watch(&self) -> Result<(), WatchError> {

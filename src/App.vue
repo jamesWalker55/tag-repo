@@ -6,6 +6,7 @@ import ItemList from "./components/ItemList.vue";
 import { selection } from "@/lib/api";
 import { computed } from "vue";
 import PanelsContainer from "@/components/PanelsContainer.vue";
+import ItemProperties from "@/components/ItemProperties.vue";
 
 const propertiesVisible = computed(() => selection.selectedCount.value > 0);
 </script>
@@ -23,7 +24,9 @@ const propertiesVisible = computed(() => selection.selectedCount.value > 0);
       :right-size-key="propertiesVisible ? 'rightPanel' : null"
     >
       <ItemList />
-      <template #right> hello! </template>
+      <template #right>
+        <ItemProperties />
+      </template>
     </PanelsContainer>
     <StatusBar />
   </div>

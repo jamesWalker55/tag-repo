@@ -1,10 +1,10 @@
 import * as ffi from "@/lib/ffi";
-import { Item } from "@/lib/ffi";
+import {Item, ItemDetails} from '@/lib/ffi';
 import { ref, Ref } from "vue";
 
-export { type Item };
+export type { Item, ItemDetails };
 
-const itemCache: Ref<Map<number, Item>> = ref(new Map());
+const itemCache: Ref<Map<number, ItemDetails>> = ref(new Map());
 
 function itemIdsEqual(arr1: number[], arr2: number[]) {
   if (arr1.length !== arr2.length) return false;
@@ -26,19 +26,23 @@ export function clearItemCache() {
   itemCache.value.clear();
 }
 
-export function getCachedItem(id: number): Item | undefined {
-  return itemCache.value.get(id);
+export function getCachedItem(id: number): ItemDetails | null {
+  return itemCache.value.get(id) || null;
 }
 
-export async function getItem(
+export function setCachedItem(id: number, item: ItemDetails) {
+  itemCache.value.set(id, item);
+}
+
+export async function getItemDetails(
   id: number,
   cached: boolean = true
-): Promise<Item> {
+): Promise<ItemDetails> {
   if (cached) {
     let item = itemCache.value.get(id);
     if (item !== undefined) return item;
   }
-  const item = await ffi.getItem(id);
+  const item = await ffi.getItemDetails(id);
   itemCache.value.set(id, item);
   return item;
 }

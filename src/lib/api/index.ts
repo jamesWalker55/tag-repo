@@ -9,15 +9,15 @@ import { type ListViewColumn } from "@/lib/api/view-columns";
 import {
   clearItemCache,
   getCachedItem,
-  getItem,
-  type Item,
-  queryItemIds,
-} from "./items";
+  getItemDetails,
+  type ItemDetails,
+  queryItemIds, setCachedItem,
+} from './items';
 import { selection } from "./selection";
 
-export { revealFile, openFile, determineFileType, FileType } from "@/lib/ffi";
+export { revealFile, launchFile, determineFileType, FileType } from "@/lib/ffi";
 export {
-  type Item,
+  type ItemDetails,
   type ListViewColumn,
   ManagerStatus,
   openRepo,
@@ -25,7 +25,7 @@ export {
   closeRepo,
   setQuery,
   state,
-  getItem,
+  getItemDetails,
   refreshAll,
   selection,
 };
@@ -33,15 +33,15 @@ export {
 // listen to change events from the backend
 (async () => {
   await Promise.all([
-    listen("item-added", async (evt: Event<Item>) => {
+    listen("item-added", async (evt: Event<ItemDetails>) => {
       console.log("item-added", evt);
       // update item list without discarding cache
       state.itemIds = await queryItemIds(state.query);
     }),
-    listen("item-removed", async (evt: Event<Item>) => {
+    listen("item-removed", async (evt: Event<ItemDetails>) => {
       console.log("item-removed", evt);
       // remove the item from the item list, if it exists
-      const index = state.itemIds.indexOf(evt.payload.id);
+      const index = state.itemIds.indexOf(evt.payload.item.id);
       if (index !== -1) {
         state.itemIds.splice(index, 1);
       }
@@ -52,14 +52,10 @@ export {
         // nothing
       }
     }),
-    listen("item-renamed", async (evt: Event<Item>) => {
+    listen("item-renamed", async (evt: Event<ItemDetails>) => {
       console.log("item-renamed", evt);
-      // edit the item cache to change the path
-
-      const cachedItem = getCachedItem(evt.payload.id);
-      if (cachedItem !== undefined) {
-        cachedItem.path = evt.payload.path;
-      }
+      // put item into cache, replacing if it already exists
+      setCachedItem(evt.payload.item.id, evt.payload);
     }),
     listen("status-changed", (evt: Event<ManagerStatus | null>) => {
       console.log("Status changed to:", evt.payload);

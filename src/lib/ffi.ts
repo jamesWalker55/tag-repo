@@ -11,6 +11,11 @@ export interface Item {
   meta_tags: string;
 }
 
+export interface ItemDetails {
+  item: Item,
+  filetype: FileType,
+}
+
 export async function openRepo(path: string) {
   await invoke("open_repo", { path: path });
 }
@@ -38,16 +43,16 @@ export async function queryItemIds(query: string): Promise<number[]> {
   return await invoke("query_item_ids", { query: query });
 }
 
-export async function getItem(id: number): Promise<Item> {
-  return await invoke("get_item", { id: id });
+export async function getItemDetails(id: number): Promise<ItemDetails> {
+  return await invoke("get_item_details", { id: id });
 }
 
 export async function revealFile(path: string) {
   return await invoke("reveal_file", { path: path });
 }
 
-export async function openFile(path: string) {
-  return await invoke("open_file", { path: path });
+export async function launchFile(path: string) {
+  return await invoke("launch_file", { path: path });
 }
 
 export enum FileType {

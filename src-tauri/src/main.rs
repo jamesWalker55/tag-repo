@@ -1,7 +1,7 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use crate::manager::{ManagerStatus, RepoManager};
+use crate::manager::{FileType, ItemDetails, ManagerStatus, RepoManager};
 use crate::repo::{Item, OpenError, QueryError, Repo, SearchError};
 use serde::{Serialize, Serializer};
 use std::path::{Path, PathBuf};
@@ -164,12 +164,15 @@ enum GetItemError {
 impl_serialize_to_string!(GetItemError);
 
 #[tauri::command]
-async fn get_item(state: tauri::State<'_, AppState>, id: i64) -> Result<Item, GetItemError> {
+async fn get_item_details(
+    state: tauri::State<'_, AppState>,
+    id: i64,
+) -> Result<ItemDetails, GetItemError> {
     let manager = state.manager.read().await;
     let Some(manager) = &*manager else {
         return Err(GetItemError::NoOpenRepo);
     };
-    let item = manager.get_item(id).await?;
+    let item = manager.get_item_details(id).await?;
     Ok(item)
 }
 
@@ -231,75 +234,16 @@ enum OpenFileError {
 impl_serialize_to_string!(OpenFileError);
 
 #[tauri::command]
-fn open_file(path: String) -> Result<(), OpenFileError> {
+fn launch_file(path: String) -> Result<(), OpenFileError> {
     open::that(path)?;
     Ok(())
 }
 
-#[derive(Serialize)]
-enum FileType {
-    Audio,
-    Document,
-    Image,
-    Video,
-    Unknown,
-}
-
-macro_rules! file_types {
-    ($($file_type:tt),*) => {
-        [$(stringify!($file_type)),*]
-    };
-}
-
-const EXT_AUDIO: &'static [&'static str] = &file_types![
-    aac, ac3, aif, aifc, aiff, au, cda, dts, fla, flac, it, m1a, m2a, m3u, m4a, mid, midi, mka,
-    mod, mp2, mp3, mpa, ogg, opus, ra, rmi, snd, spc, umx, voc, wav, wma, xm
-];
-
-const EXT_DOCUMENT: &'static [&'static str] = &file_types![
-    c, chm, cpp, csv, cxx, doc, docm, docx, dot, dotm, dotx, h, hpp, htm, html, hxx, ini, java,
-    lua, mht, mhtml, odt, pdf, potm, potx, ppam, pps, ppsm, ppsx, ppt, pptm, pptx, rtf, sldm, sldx,
-    thmx, txt, vsd, wpd, wps, wri, xlam, xls, xlsb, xlsm, xlsx, xltm, xltx, xml
-];
-
-const EXT_IMAGE: &'static [&'static str] =
-    &file_types![ani, bmp, gif, ico, jpe, jpeg, jpg, pcx, png, psd, tga, tif, tiff, webp, wmf];
-
-const EXT_VIDEO: &'static [&'static str] = &file_types![
-    3g2, 3gp, 3gp2, 3gpp, amr, amv, asf, avi, bdmv, bik, d2v, divx, drc, dsa, dsm, dss, dsv, evo,
-    f4v, flc, fli, flic, flv, hdmov, ifo, ivf, m1v, m2p, m2t, m2ts, m2v, m4b, m4p, m4v, mkv, mov,
-    mp2v, mp4, mp4v, mpe, mpeg, mpg, mpls, mpv2, mpv4, mts, ogm, ogv, pss, pva, qt, ram, ratdvd,
-    rm, rmm, rmvb, roq, rpm, smil, smk, swf, tp, tpr, ts, vob, vp6, webm, wm, wmp, wmv
-];
-
-#[derive(Error, Debug, Serialize)]
-enum DetermineFileTypeError {
-    #[error("malformed path")]
-    InvalidPath,
-}
-
 #[tauri::command]
-fn determine_filetype(path: String) -> Result<FileType, DetermineFileTypeError> {
-    let path: &Path = path.as_ref();
-    let Some(extension) = path.extension() else {
-        return Ok(FileType::Unknown);
-    };
+fn determine_filetype(path: String) -> FileType {
+    use crate::manager::determine_filetype;
 
-    let extension = extension
-        .to_str()
-        .ok_or(DetermineFileTypeError::InvalidPath)?;
-
-    if EXT_AUDIO.contains(&extension) {
-        Ok(FileType::Audio)
-    } else if EXT_DOCUMENT.contains(&extension) {
-        Ok(FileType::Document)
-    } else if EXT_IMAGE.contains(&extension) {
-        Ok(FileType::Image)
-    } else if EXT_VIDEO.contains(&extension) {
-        Ok(FileType::Video)
-    } else {
-        Ok(FileType::Unknown)
-    }
+    determine_filetype(path)
 }
 
 #[tokio::main]
@@ -341,9 +285,9 @@ async fn main() {
             close_repo,
             current_status,
             query_item_ids,
-            get_item,
+            get_item_details,
             reveal_file,
-            open_file,
+            launch_file,
             determine_filetype,
         ])
         .plugin(tauri_plugin_window_state::Builder::default().build())
