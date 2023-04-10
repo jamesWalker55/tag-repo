@@ -5,11 +5,17 @@ import { Selection } from "./selection";
 import { ListViewColumn } from "./view-columns";
 
 export interface AppState {
+  // the repo path, will be null if no repo loaded
   path: string | null;
+  // the status of the repo, will be null if no repo loaded
   status: ManagerStatus | null;
+  // the currently-displayed query
   query: string;
+  // the currently-displayed item list
   itemIds: number[];
+  // the headers/columns displayed in the list view
   listViewColumns: ListViewColumn[];
+  // the selection in the list view
   itemIdSelection: Selection | null;
 }
 
