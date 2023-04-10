@@ -137,7 +137,7 @@ const debug = false;
   >
     <div
       v-for="(col, i) in state.listViewColumns"
-      class="absolute flex h-6 flex-none items-center border-b border-r border-neutral-300 bg-white px-2 hover:bg-slate-100"
+      class="absolute flex h-6 flex-none items-center overflow-clip border-b border-r border-neutral-300 bg-white px-2 hover:bg-slate-100"
       :style="{
         width: `${Math.max(col.width, COLUMN_MIN_WIDTH)}px`,
         left: `${columnBreakpoints[i] + (columnVisualOffsets[i] || 0)}px`,
