@@ -25,7 +25,6 @@ const menuItems = computed(() => [
   <VueFileToolbarMenu
     id="toolbar"
     :content="menuItems"
-    data-tauri-drag-region
   />
   <FeedbackModal
     v-if="feedbackPopup"
