@@ -130,7 +130,9 @@ const debug = false;
 </script>
 
 <template>
-  <div class="sticky top-0 flex h-6">
+  <div
+    class="right-side-filler sticky top-0 flex h-6 w-full min-w-max border-b border-neutral-100 bg-white"
+  >
     <template v-for="(col, i) in state.listViewColumns">
       <div
         v-if="col.type === 'path'"
@@ -211,3 +213,9 @@ const debug = false;
     />
   </div>
 </template>
+
+<style scoped>
+.right-side-filler {
+  box-shadow: 100vw 0 0 white;
+}
+</style>
