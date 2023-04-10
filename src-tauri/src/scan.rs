@@ -194,39 +194,39 @@ mod tests {
         assert_unordered_eq(scanned_paths.iter().map(|x| x.as_str()), expected)
     }
 
-    #[test]
-    fn set_benchmark() -> () {
-        let path = PathBuf::from(r#"D:\Audio Samples\"#);
-        let start = Instant::now();
-        let paths = scan_dir(path, Options::default()).unwrap();
-        let duration = start.elapsed();
-        println!("Time elapsed for scan: {:?}", duration);
-        println!("Number of paths: {}", paths.len());
-
-        let start = Instant::now();
-        let paths: HashSet<String> = HashSet::from_iter(paths.iter().map(|x| x.to_string()));
-        let duration = start.elapsed();
-        println!("Time elapsed for set: {:?}", duration);
-        println!("Number of paths: {}", paths.len());
-    }
-
-    #[test]
-    fn benchmark() -> () {
-        let path = PathBuf::from(r#"D:\Audio Samples\"#);
-        let start = Instant::now();
-        let r = scan_dir(path, Options::default());
-        let duration = start.elapsed();
-
-        println!("Time elapsed: {:?}", duration);
-
-        match r {
-            Ok(items) => {
-                println!("Items: {}", items.len());
-                // 151293
-            }
-            Err(e) => {
-                dbg!(e);
-            }
-        }
-    }
+    // #[test]
+    // fn set_benchmark() -> () {
+    //     let path = PathBuf::from(r#"D:\Audio Samples\"#);
+    //     let start = Instant::now();
+    //     let paths = scan_dir(path, Options::default()).unwrap();
+    //     let duration = start.elapsed();
+    //     println!("Time elapsed for scan: {:?}", duration);
+    //     println!("Number of paths: {}", paths.len());
+    //
+    //     let start = Instant::now();
+    //     let paths: HashSet<String> = HashSet::from_iter(paths.iter().map(|x| x.to_string()));
+    //     let duration = start.elapsed();
+    //     println!("Time elapsed for set: {:?}", duration);
+    //     println!("Number of paths: {}", paths.len());
+    // }
+    //
+    // #[test]
+    // fn benchmark() -> () {
+    //     let path = PathBuf::from(r#"D:\Audio Samples\"#);
+    //     let start = Instant::now();
+    //     let r = scan_dir(path, Options::default());
+    //     let duration = start.elapsed();
+    //
+    //     println!("Time elapsed: {:?}", duration);
+    //
+    //     match r {
+    //         Ok(items) => {
+    //             println!("Items: {}", items.len());
+    //             // 151293
+    //         }
+    //         Err(e) => {
+    //             dbg!(e);
+    //         }
+    //     }
+    // }
 }

@@ -107,6 +107,34 @@ pub struct Repo {
     conn: Connection,
 }
 
+pub trait IntoTags {
+    fn into_tags(self) -> Vec<String>;
+}
+
+impl IntoTags for String {
+    fn into_tags(self) -> Vec<String> {
+        self.split_whitespace().map(|x| x.to_string()).collect()
+    }
+}
+
+impl IntoTags for &str {
+    fn into_tags(self) -> Vec<String> {
+        self.split_whitespace().map(|x| x.to_string()).collect()
+    }
+}
+
+impl IntoTags for Vec<String> {
+    fn into_tags(self) -> Vec<String> {
+        self
+    }
+}
+
+impl IntoTags for Vec<&str> {
+    fn into_tags(self) -> Vec<String> {
+        self.iter().map(|x| x.to_string()).collect()
+    }
+}
+
 impl Repo {
     /// Common function used to convert a query row into an item.
     ///
@@ -157,13 +185,13 @@ impl Repo {
     pub(crate) fn insert_item<T, U>(&self, path: T, tags: U) -> Result<Item, InsertError>
     where
         T: AsRef<str>,
-        U: AsRef<str>,
+        U: IntoTags,
     {
         let path = path.as_ref();
-        let tags = tags.as_ref();
+        let tags = tags.into_tags();
         let result = self.conn.execute(
             "INSERT INTO items (path, tags) VALUES (?1, ?2)",
-            (&path, &tags),
+            (&path, tags.join(" ")),
         );
 
         match result {
@@ -181,12 +209,13 @@ impl Repo {
         }
     }
 
-    pub(crate) fn insert_items<T>(
+    pub(crate) fn insert_items<T, U>(
         &mut self,
-        items_params: impl Iterator<Item = (T, T)>,
+        items_params: impl Iterator<Item = (T, U)>,
     ) -> Result<(), InsertError>
     where
         T: AsRef<str>,
+        U: IntoTags,
     {
         // I attempted to optimise this following this guide:
         // https://avi.im/blag/2021/fast-sqlite-inserts/
@@ -196,8 +225,8 @@ impl Repo {
             let mut stmt = tx.prepare_cached("INSERT INTO items (path, tags) VALUES (?1, ?2)")?;
             for (path, tags) in items_params {
                 let path = path.as_ref();
-                let tags = tags.as_ref();
-                stmt.execute(params![path, tags])?;
+                let tags = tags.into_tags();
+                stmt.execute(params![path, tags.join(" ")])?;
             }
         }
         tx.commit()?;
@@ -246,11 +275,11 @@ impl Repo {
     pub(crate) fn update_tags(
         &self,
         item_id: i64,
-        tags: impl AsRef<str>,
+        tags: impl IntoTags,
     ) -> Result<(), UpdateError> {
         let rv = self.conn.execute(
             "UPDATE items SET tags = :tags WHERE id = :id",
-            params![tags.as_ref(), item_id],
+            params![tags.into_tags().join(" "), item_id],
         );
         match rv {
             Ok(_) => Ok(()),
@@ -687,26 +716,26 @@ mod tests {
 
         use super::*;
 
-        #[test]
-        fn my_test() {
-            println!("Creating repo");
-            let start = Instant::now();
-            let mut tr = empty_testrepo();
-            let repo = &mut tr.repo;
-            println!("  Took: {:?}", start.elapsed());
-
-            println!("Scanning dir");
-            let start = Instant::now();
-            let paths = scan_dir(r#"D:\Audio Samples\"#, Options::default()).unwrap();
-            println!("  Took: {:?}", start.elapsed());
-
-            println!("Adding paths");
-            println!("  Inserting {} paths...", paths.len());
-            let start = Instant::now();
-            repo.insert_items(paths.iter().map(|p| (p.as_str(), "asd")))
-                .unwrap();
-            println!("  Took: {:?}", start.elapsed());
-            println!("Done!");
-        }
+        // #[test]
+        // fn my_test() {
+        //     println!("Creating repo");
+        //     let start = Instant::now();
+        //     let mut tr = empty_testrepo();
+        //     let repo = &mut tr.repo;
+        //     println!("  Took: {:?}", start.elapsed());
+        //
+        //     println!("Scanning dir");
+        //     let start = Instant::now();
+        //     let paths = scan_dir(r#"D:\Audio Samples\"#, Options::default()).unwrap();
+        //     println!("  Took: {:?}", start.elapsed());
+        //
+        //     println!("Adding paths");
+        //     println!("  Inserting {} paths...", paths.len());
+        //     let start = Instant::now();
+        //     repo.insert_items(paths.iter().map(|p| (p.as_str(), "asd")))
+        //         .unwrap();
+        //     println!("  Took: {:?}", start.elapsed());
+        //     println!("Done!");
+        // }
     }
 }
