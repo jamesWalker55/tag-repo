@@ -77,7 +77,7 @@ function onItemMouseDown(e: MouseEvent) {
       >
         <ItemIcon
           :filetype="itemData.filetype"
-          class="h-[16px] w-[16px] flex-none text-neutral-600"
+          class="h-16px w-16px flex-none text-neutral-600"
         />
         <span class="flex-1 overflow-clip whitespace-nowrap">
           {{ path.basename(itemData.item.path) }}
