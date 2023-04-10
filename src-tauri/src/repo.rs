@@ -1,23 +1,27 @@
 use std::collections::{HashMap, HashSet};
 use std::fs::create_dir;
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
+
+use indoc::indoc;
+use itertools::Itertools;
+use lazy_static::lazy_static;
+use relative_path::RelativePathBuf;
+use rusqlite::functions::FunctionFlags;
+use rusqlite::Error::{QueryReturnedNoRows, SqliteFailure};
+use rusqlite::{ffi, params, Connection, ErrorCode, Row};
+use rusqlite_migration::{Migrations, M};
+use serde::{Serialize, Serializer};
+use tauri::regex::Regex;
+#[cfg(test)]
+use tempfile::{tempdir, TempDir};
+use thiserror::Error;
+use tracing::debug;
 
 use crate::diff::{diff_path_list, DiffError};
 use crate::query::to_sql;
 use crate::query::ParseError;
 use crate::scan::{scan_dir, Options, ScanError};
-use indoc::indoc;
-use itertools::Itertools;
-use lazy_static::lazy_static;
-use relative_path::RelativePathBuf;
-use rusqlite::Error::{QueryReturnedNoRows, SqliteFailure};
-use rusqlite::{ffi, params, Connection, ErrorCode, Row};
-use rusqlite_migration::{Migrations, M};
-use serde::{Serialize, Serializer};
-#[cfg(test)]
-use tempfile::{tempdir, TempDir};
-use thiserror::Error;
-use tracing::debug;
 
 #[derive(Error, Debug)]
 pub enum OpenError {
@@ -434,6 +438,70 @@ lazy_static! {
         ]);
 }
 
+fn add_tag_functions(conn: &Connection) -> rusqlite::Result<()> {
+    conn.create_scalar_function(
+        "validate_tags",
+        1,
+        FunctionFlags::SQLITE_UTF8 | FunctionFlags::SQLITE_DETERMINISTIC,
+        |ctx| {
+            assert_eq!(ctx.len(), 1, "called with unexpected number of arguments");
+
+            let input = ctx.get::<String>(0)?;
+            let result: String = input.split_ascii_whitespace().sorted().join(" ");
+            Ok(result)
+        },
+    )?;
+    conn.create_scalar_function(
+        "insert_tags",
+        -1,
+        FunctionFlags::SQLITE_UTF8 | FunctionFlags::SQLITE_DETERMINISTIC,
+        |ctx| {
+            assert!(ctx.len() >= 2, "at least 2 arguments must be given");
+
+            let old_tags = ctx.get::<String>(0)?;
+            let mut old_tags = old_tags.into_tags();
+
+            for i in 1..ctx.len() {
+                let new_tag = ctx.get::<String>(i)?;
+                if new_tag.is_empty() {
+                    continue;
+                }
+                match old_tags.binary_search(&new_tag) {
+                    Ok(_pos) => { /* already in list, do nothing */ }
+                    Err(pos) => old_tags.insert(pos, new_tag),
+                }
+            }
+            Ok(old_tags.join(" "))
+        },
+    )?;
+    conn.create_scalar_function(
+        "remove_tags",
+        -1,
+        FunctionFlags::SQLITE_UTF8 | FunctionFlags::SQLITE_DETERMINISTIC,
+        |ctx| {
+            assert!(ctx.len() >= 2, "at least 2 arguments must be given");
+
+            let old_tags = ctx.get::<String>(0)?;
+            let mut old_tags = old_tags.into_tags();
+
+            for i in 1..ctx.len() {
+                let tag_to_remove = ctx.get::<String>(i)?;
+                if tag_to_remove.is_empty() {
+                    continue;
+                }
+                match old_tags.binary_search(&tag_to_remove) {
+                    Ok(pos) => {
+                        old_tags.remove(pos);
+                    }
+                    Err(_pos) => { /* not in list, do nothing */ }
+                }
+            }
+            Ok(old_tags.join(" "))
+        },
+    )?;
+    Ok(())
+}
+
 pub(crate) fn open_database(db_path: impl AsRef<Path>) -> Result<Connection, OpenError> {
     let db_path = db_path.as_ref();
     let mut conn = Connection::open(db_path).map_err(OpenError::FailedToCreateDatabase)?;
@@ -447,6 +515,8 @@ pub(crate) fn open_database(db_path: impl AsRef<Path>) -> Result<Connection, Ope
         .unwrap();
     conn.pragma_update(None, "case_sensitive_like", false)
         .unwrap();
+
+    add_tag_functions(&conn).unwrap();
 
     MIGRATIONS
         .to_latest(&mut conn)
@@ -715,6 +785,115 @@ mod tests {
         let tr = testrepo_2();
         let items = tr.repo.query_items("a b -c").unwrap();
         dbg!(items);
+    }
+
+    #[test]
+    fn custom_validate_tags_1() {
+        let tr = empty_testrepo();
+        let input = "a b c";
+        let expected = "a b c";
+        let result: String = tr
+            .repo
+            .conn
+            .query_row("SELECT validate_tags(?1)", params![input], |row| row.get(0))
+            .unwrap();
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn custom_validate_tags_2() {
+        let tr = empty_testrepo();
+        let input = "  c  b  a  ";
+        let expected = "a b c";
+        let result: String = tr
+            .repo
+            .conn
+            .query_row("SELECT validate_tags(?1)", params![input], |row| row.get(0))
+            .unwrap();
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn custom_validate_tags_3() {
+        let tr = empty_testrepo();
+        let input = "   ";
+        let expected = "";
+        let result: String = tr
+            .repo
+            .conn
+            .query_row("SELECT validate_tags(?1)", params![input], |row| row.get(0))
+            .unwrap();
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn custom_insert_tags_1() {
+        let tr = empty_testrepo();
+        let result: String = tr
+            .repo
+            .conn
+            .query_row(
+                "SELECT insert_tags(?, ?, ?, ?, ?)",
+                params!["", "b", "a", "d", "asdq"],
+                |row| row.get(0),
+            )
+            .unwrap();
+        let expected = "a asdq b d";
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn custom_insert_tags_2() {
+        let tr = empty_testrepo();
+        let result: String = tr
+            .repo
+            .conn
+            .query_row(
+                "SELECT insert_tags(?, ?, ?, ?, ?, ?, ?)",
+                params!["bee egg", "apple", "bee", "banana", "cat", "", "fish"],
+                |row| row.get(0),
+            )
+            .unwrap();
+        let expected = "apple banana bee cat egg fish";
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn custom_remove_tags_1() {
+        let tr = empty_testrepo();
+        let result: String = tr
+            .repo
+            .conn
+            .query_row(
+                "SELECT remove_tags(?, ?, ?)",
+                params!["a asdq b d fish goat", "asdq", "d"],
+                |row| row.get(0),
+            )
+            .unwrap();
+        let expected = "a b fish goat";
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn custom_remove_tags_2() {
+        let tr = empty_testrepo();
+        let result: String = tr
+            .repo
+            .conn
+            .query_row(
+                "SELECT remove_tags(?, ?, ?, ?, ?)",
+                params![
+                    "apple banana bee cat egg fish",
+                    "cat",
+                    "yqwfeuwqbfduq",
+                    "apple",
+                    "fish"
+                ],
+                |row| row.get(0),
+            )
+            .unwrap();
+        let expected = "banana bee egg";
+        assert_eq!(result, expected);
     }
 
     // #[test]
