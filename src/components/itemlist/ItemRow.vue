@@ -10,6 +10,7 @@ import {
 import { computed, reactive, Ref, ref, watch } from "vue";
 import ItemIcon from "@/components/itemlist/ItemIcon.vue";
 import path from "path-browserify";
+import { tagsToString } from "@/lib/utils";
 
 interface Props {
   // the item id of this row
@@ -95,7 +96,9 @@ function onItemMouseDown(e: MouseEvent) {
         class="flex truncate px-1"
         :style="{ width: `${col.width}px` }"
       >
-        <span v-if="itemData.item.tags">{{ itemData.item.tags }}</span>
+        <span v-if="itemData.item.tags.length > 0">
+          {{ tagsToString(itemData.item.tags) }}
+        </span>
         <span
           v-else
           class="italic"

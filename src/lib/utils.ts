@@ -140,5 +140,18 @@ export function findClosestIndex(arr: number[], num: number) {
 }
 
 export function unreachable(x: never): never {
-  throw new Error("This statement should never be reached.")
+  throw new Error("This statement should never be reached.");
+}
+
+export function tagsToString(tags: string[]): string {
+  const result = [];
+  for (const tag of tags) {
+    const hasSpace = tag.indexOf(" ") !== -1;
+    if (hasSpace) {
+      result.push(`"${tag}"`);
+    } else {
+      result.push(tag);
+    }
+  }
+  return result.join(" ");
 }

@@ -7,7 +7,7 @@ import { invoke } from "@tauri-apps/api";
 export interface Item {
   id: number;
   path: string;
-  tags: string;
+  tags: string[];
   meta_tags: string;
 }
 
