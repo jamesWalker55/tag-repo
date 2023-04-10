@@ -5,6 +5,8 @@ import { getItemDetails, selection, state } from "@/lib/api";
 import ItemIcon from "@/components/itemlist/ItemIcon.vue";
 import LoadingDots from "@/components/LoadingDots.vue";
 import { Spinner, FTMultiple, VerticalDots, HorizontalDots } from "@/lib/icons";
+import Tag from "@/components/Tag.vue";
+import path from "path-browserify";
 
 enum PanelMode {
   NO_ITEMS = "NO_ITEMS",
@@ -68,10 +70,22 @@ const items: Ref<ItemDetails[] | null> = ref(null);
   // fetch data asynchronously
   fetchItems(selection.selected.value).then();
 }
+
+const displayedTags = computed(() => {
+  const newItems = items.value;
+  if (newItems === null) return [];
+
+  if (newItems.length === 1) return newItems[0].item.tags;
+
+  const uniqueTags = new Set(newItems.flatMap((item) => item.item.tags));
+  const sortedUniqueTags = Array.from(uniqueTags).sort();
+
+  return sortedUniqueTags;
+});
 </script>
 
 <template>
-  <div class="flex flex-col h-full px-3 py-2">
+  <div class="flex h-full flex-col px-3 py-2">
     <!-- title bar -->
     <div class="mb-5 flex h-5 flex-none flex-row items-center gap-2">
       <!-- icon -->
@@ -117,38 +131,56 @@ const items: Ref<ItemDetails[] | null> = ref(null);
     </div>
     <!-- tags list -->
     <div class="flex flex-1 flex-col">
-      <div class="font-bold text-neutral-500">Tags</div>
+      <div class="font-bold text-neutral-500">
+        <template v-if="items !== null && items.length > 1">
+          Common Tags
+        </template>
+        <template v-else>Tags</template>
+      </div>
       <div v-if="items === null" class="animate-pulse italic text-neutral-400">
         Loading<LoadingDots />
       </div>
-      <div v-else-if="items.length === 0" class="italic text-neutral-400">
+      <div
+        v-else-if="displayedTags.length === 0"
+        class="italic text-neutral-400"
+      >
         No tags
       </div>
-      <div v-else-if="items.length === 1" class="">
-        a apple b bee cat dog egg tag test adipiscing aliquam amet arcu consectetur dolor dui elit est etiam id imperdiet in ipsum lacus libero ligula lorem massa molestie pellentesque quis risus sagittis sit suscipit suspendisse ullamcorper vel vestibulum
+      <div v-else>
+        <template v-for="tag in displayedTags">
+          <Tag :name="tag" :item-id="items.map((i) => i.item.id)" />
+          {{ " " }}
+        </template>
       </div>
-      <!-- TODO: You must represent tags as a list in the backend! -->
     </div>
     <div class="flex-none">
       <div class="font-bold text-neutral-600">Properties</div>
       <div v-if="items === null">
-        <div></div>
-        <div>{{items}}</div>
+        <div class="italic text-neutral-400">None</div>
       </div>
       <div v-else-if="items.length === 0">
-        <div></div>
-        <div>{{items}}</div>
+        <div class="italic text-neutral-400">None</div>
       </div>
       <div v-else-if="items.length === 1">
         <div class="flex">
-          <span class="block w-2">Full path:</span>
-          <span>Full path:</span>
+          <span class="block w-24 truncate whitespace-nowrap text-neutral-400"
+            >Relative path</span
+          >
+          <span class="flex-1 truncate whitespace-nowrap">
+            {{ items[0].item.path }}
+          </span>
         </div>
-        <div>{{items}}</div>
+        <div class="flex">
+          <span class="block w-24 truncate whitespace-nowrap text-neutral-400">
+            Extension
+          </span>
+          <span class="flex-1 truncate whitespace-nowrap">
+            {{ path.extname(items[0].item.path) || "(none)" }}
+          </span>
+        </div>
       </div>
       <div v-else>
-        <div></div>
-        <div>{{items}}</div>
+        <div class="italic text-neutral-400">None</div>
       </div>
     </div>
     <!--<div class="h-36"></div>-->
