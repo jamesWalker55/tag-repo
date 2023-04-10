@@ -1,10 +1,14 @@
 <script lang="ts" setup>
-import { selection, state } from "@/lib/api";
+import { state } from "@/lib/api";
 import { createEventListenerRegistry } from "@/lib/utils";
 import { Ref, ref } from "vue";
-import PropertiesPanelEmpty from "@/components/PropertiesPanelEmpty.vue";
-import PropertiesPanelSingle from "@/components/PropertiesPanelSingle.vue";
-import PropertiesPanelMultiple from "@/components/PropertiesPanelMultiple.vue";
+import { PanelSizeKey } from "@/lib/api/state";
+
+interface Props {
+  sizeKey: PanelSizeKey;
+}
+
+const props = defineProps<Props>();
 
 const containerElement: Ref<HTMLDivElement | null> = ref(null);
 
@@ -16,11 +20,11 @@ function onResizerMouseDown(downEvt: MouseEvent) {
   if (container !== null) {
     initialHeight = container.getBoundingClientRect().height;
   } else {
-    initialHeight = state.propertiesPanelHeight;
+    initialHeight = state.panelSizes[props.sizeKey];
   }
   listeners.add(window, "mousemove", (moveEvt: MouseEvent) => {
     const newHeight = initialHeight + initialY - moveEvt.clientY;
-    state.propertiesPanelHeight = Math.round(newHeight);
+    state.panelSizes[props.sizeKey] = Math.round(newHeight);
   });
   listeners.add(window, "mouseup", (_: MouseEvent) => {
     listeners.clear();
@@ -29,18 +33,15 @@ function onResizerMouseDown(downEvt: MouseEvent) {
 </script>
 
 <template>
-  <div ref="containerElement" class="flex flex-col">
+  <div ref="containerElement" class="flex flex-col overflow-clip">
     <!-- the resizer -->
     <component
       is="div"
-      class="h-1.5 cursor-row-resize border-b border-t border-neutral-300 bg-neutral-50"
+      class="h-1.5 flex-none cursor-row-resize border-b border-t border-neutral-300 bg-neutral-50"
       @mousedown="onResizerMouseDown"
     />
-    <PropertiesPanelEmpty v-if="selection.selectedCount.value === 0" />
-    <PropertiesPanelSingle
-      v-else-if="selection.selectedCount.value === 1"
-      :id="selection.indexToItemId(selection.selected.value[0])"
-    />
-    <PropertiesPanelMultiple v-else />
+    <div class="min-h-0 flex-1">
+      <slot />
+    </div>
   </div>
 </template>

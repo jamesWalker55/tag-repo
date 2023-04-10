@@ -21,9 +21,6 @@ export default {
       width: {
         "title-button": "2.85rem",
       },
-      gridTemplateRows: {
-        app: "max-content minmax(0, 1fr) max-content",
-      },
     },
   },
 };

@@ -18,7 +18,11 @@ export interface AppState {
   // the selection in the list view
   itemIdSelection: Selection | null;
   // properties panel height
-  propertiesPanelHeight: number;
+  panelSizes: {
+    bottomPanel: number;
+    leftPanel: number;
+    rightPanel: number;
+  };
 }
 
 // The app state. DO NOT MODIFY FROM CHILD COMPONENTS.
@@ -35,8 +39,15 @@ export const state: AppState = reactive({
     { type: "tags", width: 200 },
   ],
   itemIdSelection: null,
-  propertiesPanelHeight: 160,
+  // size of various panels
+  panelSizes: {
+    bottomPanel: 160,
+    leftPanel: 160,
+    rightPanel: 160,
+  },
 });
+
+export type PanelSizeKey = keyof AppState["panelSizes"];
 
 const refreshFuncs: (() => Promise<void>)[] = [];
 
@@ -63,4 +74,4 @@ export async function refreshAll() {
 }
 
 // fetch data right now
-refreshAll().then()
+refreshAll().then();
