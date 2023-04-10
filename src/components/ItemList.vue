@@ -103,7 +103,14 @@ const debug = false;
   <div
     ref="container"
     class="relative h-full w-full overflow-auto border-r-2 border-white text-sm"
-    @click="selection.clear()"
+    @click="
+      (e) => {
+        // This is disabled for now, due to a bug.
+        // If you drag your mouse across multiple rows, it gets treated as a click on
+        // this element.
+        // selection.clear();
+      }
+    "
   >
     <!-- The container resizer, it's a 1px div located at the bottom right corner -->
     <component
