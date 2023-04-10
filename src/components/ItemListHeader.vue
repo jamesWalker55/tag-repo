@@ -7,6 +7,7 @@ import {
 } from "@/lib/utils";
 import { getSpacingSize } from "@/lib/tailwindcss";
 import { computed, reactive, ref } from "vue";
+import { COLUMN_MIN_WIDTH } from "@/lib/constants";
 
 const columnBreakpoints = computed(() => {
   const positions: number[] = [0];
@@ -20,8 +21,6 @@ const columnBreakpoints = computed(() => {
 });
 
 const resizeHandleWidth = getSpacingSize("2");
-
-const COLUMN_MIN_WIDTH = 16;
 
 function onResizerMouseDown(
   colIdx: number,
