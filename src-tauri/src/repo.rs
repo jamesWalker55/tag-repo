@@ -7,6 +7,7 @@ use crate::query::to_sql;
 use crate::query::ParseError;
 use crate::scan::{scan_dir, Options, ScanError};
 use indoc::indoc;
+use itertools::Itertools;
 use lazy_static::lazy_static;
 use relative_path::RelativePathBuf;
 use rusqlite::Error::{QueryReturnedNoRows, SqliteFailure};
@@ -113,25 +114,25 @@ pub trait IntoTags {
 
 impl IntoTags for String {
     fn into_tags(self) -> Vec<String> {
-        self.split_whitespace().map(|x| x.to_string()).collect()
+        self.split_whitespace().map(|x| x.to_string()).sorted().collect()
     }
 }
 
 impl IntoTags for &str {
     fn into_tags(self) -> Vec<String> {
-        self.split_whitespace().map(|x| x.to_string()).collect()
+        self.split_whitespace().map(|x| x.to_string()).sorted().collect()
     }
 }
 
 impl IntoTags for Vec<String> {
     fn into_tags(self) -> Vec<String> {
-        self
+        self.iter().cloned().sorted().collect()
     }
 }
 
 impl IntoTags for Vec<&str> {
     fn into_tags(self) -> Vec<String> {
-        self.iter().map(|x| x.to_string()).collect()
+        self.iter().map(|x| x.to_string()).sorted().collect()
     }
 }
 
