@@ -70,6 +70,29 @@ watch(
 );
 
 const isSelected = computed(() => selection.contains(props.listIndex));
+
+function onItemMouseDown(e: MouseEvent) {
+  // only allow left mouse click
+  if ((e.buttons & 1) !== 1) {
+    return;
+  }
+
+  if (e.shiftKey && e.ctrlKey) {
+    selection.addTo(props.listIndex);
+  } else if (e.shiftKey) {
+    selection.extendTo(props.listIndex);
+  } else if (e.ctrlKey) {
+    if (isSelected) {
+      selection.remove(props.listIndex);
+    } else {
+      selection.add(props.listIndex);
+    }
+  } else {
+    selection.isolate(props.listIndex);
+  }
+  // await clipboard.writeText(await path.join(state.path, itemData.path));
+  // await revealFile(await join(state.path, itemData.path));
+}
 </script>
 
 <template>
@@ -82,30 +105,7 @@ const isSelected = computed(() => selection.contains(props.listIndex));
         : 'bg-sky-200 outline outline-1 outline-sky-300 hover:bg-sky-200 hover:outline-sky-400'
     "
     @click.stop
-    @mousedown="
-      (e: MouseEvent) => {
-        // only allow left mouse click
-        if ((e.buttons & 1) !== 1) {
-          return;
-        }
-
-        if (e.shiftKey && e.ctrlKey) {
-          selection.addTo(listIndex);
-        } else if (e.shiftKey) {
-          selection.extendTo(listIndex);
-        } else if (e.ctrlKey) {
-          if (isSelected) {
-            selection.remove(listIndex);
-          } else {
-            selection.add(listIndex);
-          }
-        } else {
-          selection.isolate(listIndex);
-        }
-        // await clipboard.writeText(await path.join(state.path, itemData.path));
-        // await revealFile(await join(state.path, itemData.path));
-      }
-    "
+    @mousedown="onItemMouseDown"
   >
     <!-- v-if has higher priority than v-for, see https://vuejs.org/guide/essentials/list.html#v-for-with-v-if -->
     <template v-for="col in state.listViewColumns">
