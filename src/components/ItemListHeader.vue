@@ -19,8 +19,6 @@ const columnBreakpoints = computed(() => {
 
 const resizeHandleWidth = getSpacingSize("2");
 
-const windowHandle = window;
-
 function onResizerMouseDown(
   colIdx: number,
   col: ListViewColumn,
@@ -29,11 +27,11 @@ function onResizerMouseDown(
   const listeners = createEventListenerRegistry();
   const initialX = downEvt.clientX;
   const initialWidth = col.width;
-  listeners.add(windowHandle, "mousemove", (moveEvt: MouseEvent) => {
+  listeners.add(window, "mousemove", (moveEvt: MouseEvent) => {
     const newWidth = initialWidth - initialX + moveEvt.clientX;
     col.width = Math.round(newWidth);
   });
-  listeners.add(windowHandle, "mouseup", (_: MouseEvent) => {
+  listeners.add(window, "mouseup", (_: MouseEvent) => {
     listeners.clear();
   });
 }
@@ -47,7 +45,7 @@ function onColumnMouseDown(
 ) {
   const listeners = createEventListenerRegistry();
   const initialX = downEvt.clientX;
-  listeners.add(windowHandle, "mousemove", (moveEvt: MouseEvent) => {
+  listeners.add(window, "mousemove", (moveEvt: MouseEvent) => {
     const dx = moveEvt.clientX - initialX;
     if (Math.abs(dx) >= COLUMN_DRAG_THRESHOLD) {
       // remove existing listeners
@@ -56,7 +54,7 @@ function onColumnMouseDown(
       handleColumnDrag(colIdx, col, downEvt, moveEvt);
     }
   });
-  listeners.add(windowHandle, "mouseup", (upEvt: MouseEvent) => {
+  listeners.add(window, "mouseup", (upEvt: MouseEvent) => {
     // remove existing listeners
     listeners.clear();
     // then let handleColumnClick do the rest (it may create new listeners)
@@ -88,8 +86,8 @@ function handleColumnDrag(
     columnVisualOffsets[colIdx] = dx;
   }
   onMouseMove(moveEvt);
-  listeners.add(windowHandle, "mousemove", onMouseMove);
-  listeners.add(windowHandle, "mouseup", (upEvt: MouseEvent) => {
+  listeners.add(window, "mousemove", onMouseMove);
+  listeners.add(window, "mouseup", (upEvt: MouseEvent) => {
     // remove existing listeners
     listeners.clear();
 
