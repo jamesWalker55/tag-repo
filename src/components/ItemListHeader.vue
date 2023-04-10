@@ -135,73 +135,27 @@ const debug = false;
   <div
     class="right-side-filler sticky top-0 flex h-6 w-full min-w-max border-b border-neutral-100 bg-white"
   >
-    <template v-for="(col, i) in state.listViewColumns">
-      <div
-        v-if="col.type === 'path'"
-        class="absolute flex h-6 flex-none items-center border-b border-r border-neutral-300 bg-white px-2 hover:bg-slate-100"
-        :style="{
-          width: `${Math.max(col.width, COLUMN_MIN_WIDTH)}px`,
-          left: `${columnBreakpoints[i] + (columnVisualOffsets[i] || 0)}px`,
-        }"
-        :class="columnVisualOffsets[i] ? 'z-10 border-l opacity-50' : ''"
-        @click.stop
-        @mousedown="(e) => onColumnMouseDown(i, col, e)"
-      >
-        Path
-      </div>
-      <div
-        v-else-if="col.type === 'tags'"
-        class="absolute flex h-6 flex-none items-center border-b border-r border-neutral-300 bg-white px-2 hover:bg-slate-100"
-        :style="{
-          width: `${Math.max(col.width, COLUMN_MIN_WIDTH)}px`,
-          left: `${columnBreakpoints[i] + (columnVisualOffsets[i] || 0)}px`,
-        }"
-        :class="columnVisualOffsets[i] ? 'z-10 border-l opacity-50' : ''"
-        @click.stop
-        @mousedown="(e) => onColumnMouseDown(i, col, e)"
-      >
-        Tags
-      </div>
-      <div
-        v-else-if="col.type === 'extension'"
-        class="absolute flex h-6 flex-none items-center border-b border-r border-neutral-300 bg-white px-2 hover:bg-slate-100"
-        :style="{
-          width: `${Math.max(col.width, COLUMN_MIN_WIDTH)}px`,
-          left: `${columnBreakpoints[i] + (columnVisualOffsets[i] || 0)}px`,
-        }"
-        :class="columnVisualOffsets[i] ? 'z-10 border-l opacity-50' : ''"
-        @click.stop
-        @mousedown="(e) => onColumnMouseDown(i, col, e)"
-      >
-        Extension
-      </div>
-      <div
-        v-else-if="col.type === 'name'"
-        class="absolute flex h-6 flex-none items-center border-b border-r border-neutral-300 bg-white px-2 hover:bg-slate-100"
-        :style="{
-          width: `${Math.max(col.width, COLUMN_MIN_WIDTH)}px`,
-          left: `${columnBreakpoints[i] + (columnVisualOffsets[i] || 0)}px`,
-        }"
-        :class="columnVisualOffsets[i] ? 'z-10 border-l opacity-50' : ''"
-        @click.stop
-        @mousedown="(e) => onColumnMouseDown(i, col, e)"
-      >
-        Name
-      </div>
-      <div
-        v-else
-        class="absolute flex h-6 flex-none items-center border-b border-r border-neutral-300 bg-white px-2 italic text-red-500 hover:bg-slate-100"
-        :style="{
-          width: `${Math.max(col.width, COLUMN_MIN_WIDTH)}px`,
-          left: `${columnBreakpoints[i] + (columnVisualOffsets[i] || 0)}px`,
-        }"
-        :class="columnVisualOffsets[i] ? 'z-10 border-l opacity-50' : ''"
-        @click.stop
-        @mousedown="(e) => onColumnMouseDown(i, col, e)"
-      >
-        Not implemented, please notify the developer!
-      </div>
-    </template>
+    <div
+      v-for="(col, i) in state.listViewColumns"
+      class="absolute flex h-6 flex-none items-center border-b border-r border-neutral-300 bg-white px-2 hover:bg-slate-100"
+      :style="{
+        width: `${Math.max(col.width, COLUMN_MIN_WIDTH)}px`,
+        left: `${columnBreakpoints[i] + (columnVisualOffsets[i] || 0)}px`,
+      }"
+      :class="columnVisualOffsets[i] ? 'z-10 border-l opacity-50' : ''"
+      @click.stop
+      @mousedown="(e) => onColumnMouseDown(i, col, e)"
+    >
+      <template v-if="col.type === 'path'">Path</template>
+      <template v-else-if="col.type === 'tags'">Tags</template>
+      <template v-else-if="col.type === 'extension'">Extension</template>
+      <template v-else-if="col.type === 'name'">Name</template>
+      <template v-else>
+        <span class="italic text-red-500">
+          Not implemented, please notify the developer!
+        </span>
+      </template>
+    </div>
     <component
       is="div"
       v-for="(col, i) in state.listViewColumns"
