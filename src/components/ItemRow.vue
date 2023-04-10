@@ -99,8 +99,10 @@ const log = console.log;
     "
     @mousedown="
       (e: MouseEvent) => {
-        if (state.path === null) throw 'repo path is null?!';
-        if (itemData === null) throw 'item data is null?!';
+        // only allow left mouse click
+        if ((e.buttons & 1) !== 1) {
+          return;
+        }
 
         if (e.shiftKey && e.ctrlKey) {
           selection.addTo(listIndex);
