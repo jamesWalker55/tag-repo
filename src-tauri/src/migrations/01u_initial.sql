@@ -21,9 +21,10 @@ CREATE VIRTUAL TABLE tag_query USING fts5 (
   content=items,
   content_rowid=id,
 
-  -- Use the Unicode61 tokenizer
+  -- Use the ascii tokenizer, we want to preserve the original tags as much as possible
+  -- TODO: Implement your own tokenizer that only splits by a single character, e.g. \x01
   -- https://www.sqlite.org/fts5.html#unicode61_tokenizer
-  tokenize="unicode61"
+  tokenize="ascii"
 );
 
 CREATE TRIGGER items_trigger_ai AFTER INSERT ON items BEGIN
