@@ -205,6 +205,7 @@ function createSelectionManager(state: AppState) {
         if (indexOfIndex === -1) throw "item id doesn't exist in selection!";
 
         selection.indexes.splice(indexOfIndex, 1);
+        selection.lastToggledIndex = index;
         return;
     }
     unreachable(selectionType);
