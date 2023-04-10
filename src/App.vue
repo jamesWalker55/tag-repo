@@ -3,45 +3,11 @@ import TitleBar from "./components/TitleBar.vue";
 import QueryBar from "./components/QueryBar.vue";
 import StatusBar from "./components/StatusBar.vue";
 import ItemList from "./components/ItemList.vue";
-import { selection, state } from "@/lib/api";
+import { selection } from "@/lib/api";
 import { computed } from "vue";
-import BottomPanel from "@/components/BottomPanel.vue";
-import { PANEL_MIN_HEIGHT, PANEL_MIN_WIDTH } from "@/lib/constants";
-import RightPanel from "@/components/RightPanel.vue";
-import LeftPanel from '@/components/LeftPanel.vue';
+import PanelsContainer from "@/components/PanelsContainer.vue";
 
 const propertiesVisible = computed(() => selection.selectedCount.value > 0);
-
-const mainGridRows = computed(() => {
-  const lowerBoundedPanelHeight = Math.max(
-    PANEL_MIN_HEIGHT,
-    state.panelSizes["bottomPanel"]
-  );
-  const rows = [
-    "minmax(0, 1fr)",
-    `minmax(auto, ${lowerBoundedPanelHeight}px)`,
-  ];
-
-  return rows.join(" ");
-});
-
-const mainGridCols = computed(() => {
-  const lowerBoundedLeftPanelWidth = Math.max(
-    PANEL_MIN_WIDTH,
-    state.panelSizes["leftPanel"],
-  );
-  const lowerBoundedRightPanelWidth = Math.max(
-    PANEL_MIN_WIDTH,
-    state.panelSizes["rightPanel"],
-  );
-  const rows = [
-    `minmax(auto, ${lowerBoundedLeftPanelWidth}px)`,
-    "minmax(0, 1fr)",
-    `minmax(auto, ${lowerBoundedRightPanelWidth}px)`,
-  ];
-
-  return rows.join(" ");
-});
 </script>
 
 <template>
@@ -51,18 +17,19 @@ const mainGridCols = computed(() => {
   >
     <TitleBar class="flex-none" />
     <QueryBar class="flex-none" />
-    <main class="main-grid relative grid">
+    <PanelsContainer
+      is="main"
+      class="relative flex-1"
+      right-size-key="rightPanel"
+      left-size-key="leftPanel"
+      bottom-size-key="bottomPanel"
+    >
       <ItemList style="grid-area: m" />
-      <BottomPanel size-key="bottomPanel" style="grid-area: b">
-        bottom content
-      </BottomPanel>
-      <LeftPanel size-key="leftPanel" style="grid-area: l">
-        side content
-      </LeftPanel>
-      <RightPanel size-key="rightPanel" style="grid-area: r">
-        side content
-      </RightPanel>
-    </main>
+      <template #bottom>
+        <div>hello!</div>
+      </template>
+      <template #right> hello! </template>
+    </PanelsContainer>
     <StatusBar />
   </div>
 </template>
@@ -70,12 +37,5 @@ const mainGridCols = computed(() => {
 <style scoped>
 .app-grid {
   grid-template-rows: max-content max-content minmax(0, 1fr) max-content;
-}
-.main-grid {
-  grid-template-rows: v-bind("mainGridRows");
-  grid-template-columns: v-bind("mainGridCols");
-  grid-template-areas:
-    "l m r"
-    "l b b";
 }
 </style>
