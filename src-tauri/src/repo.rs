@@ -97,7 +97,7 @@ pub enum SyncError {
 pub struct Item {
     pub(crate) id: i64,
     pub(crate) path: String,
-    pub(crate) tags: String,
+    pub(crate) tags: Vec<String>,
     pub(crate) meta_tags: String,
 }
 
@@ -147,7 +147,11 @@ impl Repo {
         Ok(Item {
             id: row.get::<_, i64>(0)?,
             path: row.get::<_, String>(1)?,
-            tags: row.get::<_, String>(2)?,
+            tags: row
+                .get::<_, String>(2)?
+                .split(" ")
+                .map(|x| x.to_string())
+                .collect(),
             meta_tags: row.get::<_, String>(3)?,
         })
     }
@@ -272,11 +276,7 @@ impl Repo {
         Ok(())
     }
 
-    pub(crate) fn update_tags(
-        &self,
-        item_id: i64,
-        tags: impl IntoTags,
-    ) -> Result<(), UpdateError> {
+    pub(crate) fn update_tags(&self, item_id: i64, tags: impl IntoTags) -> Result<(), UpdateError> {
         let rv = self.conn.execute(
             "UPDATE items SET tags = :tags WHERE id = :id",
             params![tags.into_tags().join(" "), item_id],
@@ -593,7 +593,7 @@ mod tests {
         let item = repo.get_item_by_path("apple").unwrap();
         assert_eq!(item.id, 1);
         assert_eq!(item.path, "apple");
-        assert_eq!(item.tags, "food red");
+        assert_eq!(item.tags, vec!["food", "red"]);
     }
 
     #[test]
@@ -603,7 +603,7 @@ mod tests {
         let item = repo.get_item_by_id(1).unwrap();
         assert_eq!(item.id, 1);
         assert_eq!(item.path, "apple");
-        assert_eq!(item.tags, "food red");
+        assert_eq!(item.tags, vec!["food", "red"]);
     }
 
     #[test]
@@ -635,6 +635,7 @@ mod tests {
 
         // fetch item again
         let item = repo.get_item_by_path("apple").unwrap();
+        let new_tags: Vec<_> = new_tags.split(" ").map(String::from).collect();
         assert_eq!(item.tags, new_tags);
     }
 
