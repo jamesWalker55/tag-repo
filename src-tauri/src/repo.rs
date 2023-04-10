@@ -114,13 +114,19 @@ pub trait IntoTags {
 
 impl IntoTags for String {
     fn into_tags(self) -> Vec<String> {
-        self.split_whitespace().map(|x| x.to_string()).sorted().collect()
+        self.split_whitespace()
+            .map(|x| x.to_string())
+            .sorted()
+            .collect()
     }
 }
 
 impl IntoTags for &str {
     fn into_tags(self) -> Vec<String> {
-        self.split_whitespace().map(|x| x.to_string()).sorted().collect()
+        self.split_whitespace()
+            .map(|x| x.to_string())
+            .sorted()
+            .collect()
     }
 }
 
@@ -148,11 +154,7 @@ impl Repo {
         Ok(Item {
             id: row.get::<_, i64>(0)?,
             path: row.get::<_, String>(1)?,
-            tags: row
-                .get::<_, String>(2)?
-                .split(" ")
-                .map(|x| x.to_string())
-                .collect(),
+            tags: Self::convert_raw_tags(row.get::<_, String>(2)?),
             meta_tags: row.get::<_, String>(3)?,
         })
     }
@@ -166,6 +168,17 @@ impl Repo {
     /// ```
     fn row_to_id(row: &Row) -> Result<i64, rusqlite::Error> {
         row.get::<_, i64>(0)
+    }
+
+    /// Convert a raw tag string from the database into a vector of strings
+    fn convert_raw_tags(raw_tags: String) -> Vec<String> {
+        if raw_tags.is_empty() {
+            // we MUST handle the empty case separately, because if you call #split() on an empty
+            // string, you get a single element ""
+            vec![]
+        } else {
+            raw_tags.split(" ").map(String::from).collect()
+        }
     }
 
     pub fn open(repo_path: impl AsRef<Path>) -> Result<Repo, OpenError> {
