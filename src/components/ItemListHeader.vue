@@ -140,6 +140,7 @@ const debug = false;
           left: `${columnBreakpoints[i] + (columnVisualOffsets[i] || 0)}px`,
         }"
         :class="columnVisualOffsets[i] ? 'z-10 border-l opacity-50' : ''"
+        @click.stop
         @mousedown="(e) => onColumnMouseDown(i, col, e)"
       >
         Path
@@ -152,6 +153,7 @@ const debug = false;
           left: `${columnBreakpoints[i] + (columnVisualOffsets[i] || 0)}px`,
         }"
         :class="columnVisualOffsets[i] ? 'z-10 border-l opacity-50' : ''"
+        @click.stop
         @mousedown="(e) => onColumnMouseDown(i, col, e)"
       >
         Tags
@@ -164,6 +166,7 @@ const debug = false;
           left: `${columnBreakpoints[i] + (columnVisualOffsets[i] || 0)}px`,
         }"
         :class="columnVisualOffsets[i] ? 'z-10 border-l opacity-50' : ''"
+        @click.stop
         @mousedown="(e) => onColumnMouseDown(i, col, e)"
       >
         Extension
@@ -176,6 +179,7 @@ const debug = false;
           left: `${columnBreakpoints[i] + (columnVisualOffsets[i] || 0)}px`,
         }"
         :class="columnVisualOffsets[i] ? 'z-10 border-l opacity-50' : ''"
+        @click.stop
         @mousedown="(e) => onColumnMouseDown(i, col, e)"
       >
         Name
@@ -188,6 +192,7 @@ const debug = false;
           left: `${columnBreakpoints[i] + (columnVisualOffsets[i] || 0)}px`,
         }"
         :class="columnVisualOffsets[i] ? 'z-10 border-l opacity-50' : ''"
+        @click.stop
         @mousedown="(e) => onColumnMouseDown(i, col, e)"
       >
         Not implemented, please notify the developer!

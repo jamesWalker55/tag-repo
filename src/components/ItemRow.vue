@@ -97,6 +97,7 @@ const log = console.log;
         ? 'hover:bg-slate-50 hover:outline hover:outline-1 hover:outline-neutral-200'
         : 'bg-sky-200 outline outline-1 outline-sky-300 hover:bg-sky-200 hover:outline-sky-400'
     "
+    @click.stop
     @mousedown="
       (e: MouseEvent) => {
         // only allow left mouse click

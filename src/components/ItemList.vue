@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import ItemListHeader from "@/components/ItemListHeader.vue";
 import ItemRow from "./ItemRow.vue";
-import { state } from "@/lib/api";
+import { selection, state } from "@/lib/api";
 import { createEventListenerRegistry, parseRemSize } from "@/lib/utils";
 import tailwind, { getSpacingSize } from "@/lib/tailwindcss";
 import { computed } from "@vue/reactivity";
@@ -103,6 +103,7 @@ const debug = false;
   <div
     ref="container"
     class="relative h-full w-full overflow-auto border-r-2 border-white text-sm"
+    @click="selection.clear()"
   >
     <!-- The container resizer, it's a 1px div located at the bottom right corner -->
     <component
