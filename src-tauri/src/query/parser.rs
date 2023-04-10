@@ -444,4 +444,9 @@ mod expr_tests {
             ]),
         );
     }
+
+    // TODO: Detect unicode spaces
+    // #[test] fn cjk01() { assert_expr("你好　亞視啲",
+    //     and(vec![t("你好"), t("亞視啲")]),
+    // ); }
 }
