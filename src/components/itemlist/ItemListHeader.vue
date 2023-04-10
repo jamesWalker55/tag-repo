@@ -165,7 +165,7 @@ const debug = false;
         width: `${resizeHandleWidth}px`,
       }"
       @click.stop
-      @mousedown="(e) => onResizerMouseDown(i, col, e)"
+      @mousedown="(e: MouseEvent) => onResizerMouseDown(i, col, e)"
     />
   </div>
 </template>
