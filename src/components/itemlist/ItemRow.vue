@@ -21,12 +21,14 @@ const props = defineProps<Props>();
 
 const itemData: Ref<ItemDetails | null> = ref(null);
 
-async function fetchItemData(id: number) {
-  itemData.value = await getItemDetails(id);
-}
+{
+  async function fetchItemData(id: number) {
+    itemData.value = await getItemDetails(id);
+  }
 
-// fetch data asynchronously
-fetchItemData(props.id).then();
+  // fetch data asynchronously
+  fetchItemData(props.id).then();
+}
 
 const isSelected = computed(() => selection.contains(props.listIndex));
 
