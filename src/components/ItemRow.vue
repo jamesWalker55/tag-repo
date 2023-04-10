@@ -82,7 +82,7 @@ function onItemMouseDown(e: MouseEvent) {
   } else if (e.shiftKey) {
     selection.extendTo(props.listIndex);
   } else if (e.ctrlKey) {
-    if (isSelected) {
+    if (isSelected.value) {
       selection.remove(props.listIndex);
     } else {
       selection.add(props.listIndex);
