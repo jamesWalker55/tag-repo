@@ -92,8 +92,12 @@ const log = console.log;
   <div
     v-if="itemData !== null"
     class="item flex h-6 w-full min-w-max items-center hover:bg-slate-50"
-    :class="isSelected ? '!bg-red-500' : ''"
-    @click="
+    :class="
+      !isSelected
+        ? 'hover:bg-slate-50 hover:outline hover:outline-1 hover:outline-neutral-200'
+        : 'bg-sky-200 outline outline-1 outline-sky-300 hover:bg-sky-200 hover:outline-sky-400'
+    "
+    @mousedown="
       (e: MouseEvent) => {
         if (state.path === null) throw 'repo path is null?!';
         if (itemData === null) throw 'item data is null?!';
@@ -128,7 +132,6 @@ const log = console.log;
           class="h-[16px] w-[16px] flex-none text-neutral-600"
         />
         <span class="flex-1 overflow-clip whitespace-nowrap">
-          {{ listIndex }}
           {{ extraData.filename }}
         </span>
       </div>
@@ -145,7 +148,7 @@ const log = console.log;
         :style="{ width: `${col.width}px` }"
       >
         <span v-if="itemData.tags">{{ itemData.tags }}</span>
-        <span v-else class="italic text-neutral-300">(no tags)</span>
+        <span v-else class="italic" :class="!isSelected ? 'text-neutral-300' : 'text-neutral-400'">(no tags)</span>
       </div>
       <div
         v-else-if="col.type === 'extension'"
