@@ -19,6 +19,12 @@ export { default as FTImage } from "~icons/fluent/image-16-regular";
 export { default as FTText } from "~icons/fluent/document-text-16-regular";
 export { default as FTFolder } from "~icons/fluent/folder-16-regular";
 export { default as FTMisc } from "~icons/fluent/document-16-regular";
+export { default as FTMultiple } from "~icons/fluent/document-multiple-16-regular";
+
+// Utility icons
+export { default as Spinner } from "~icons/fluent/spinner-ios-20-filled";
+export { default as HorizontalDots } from "~icons/fluent/more-horizontal-16-regular";
+export { default as VerticalDots } from "~icons/fluent/more-vertical-16-regular";
 
 // Misc
 export { default as FaceSmile } from "~icons/heroicons/face-smile";

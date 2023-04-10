@@ -8,7 +8,8 @@ import { computed } from "vue";
 import PanelsContainer from "@/components/PanelsContainer.vue";
 import ItemProperties from "@/components/ItemProperties.vue";
 
-const propertiesVisible = computed(() => selection.selectedCount.value > 0);
+// const propertiesVisible = computed(() => selection.selectedCount.value > 0);
+const propertiesVisible = true;
 </script>
 
 <template>
