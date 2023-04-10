@@ -121,7 +121,7 @@ const debug = false;
       :style="{
         top: `${(n + indexRangeToRender[0] - 1) * itemHeight + headerHeight}px`,
       }"
-      :key="n + indexRangeToRender[0] - 1"
+      :key="state.itemIds[n + indexRangeToRender[0] - 1]"
     />
     <div
       class="fixed bottom-2 right-2 border bg-white opacity-50 shadow"
