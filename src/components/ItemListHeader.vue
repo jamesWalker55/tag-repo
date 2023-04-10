@@ -165,6 +165,7 @@ const debug = false;
         left: `${columnBreakpoints[i + 1] - resizeHandleWidth / 2}px`,
         width: `${resizeHandleWidth}px`,
       }"
+      @click.stop
       @mousedown="(e) => onResizerMouseDown(i, col, e)"
     />
   </div>
