@@ -1,4 +1,7 @@
-use crate::repo::{Item, OpenError, QueryError, RemoveError, Repo, SearchError, SyncError};
+use crate::repo::{
+    InsertTagsError, Item, OpenError, QueryError, RemoveError, RemoveTagsError, Repo, SearchError,
+    SyncError,
+};
 use crate::scan::{classify_path, scan_dir, to_relative_path, Options, PathType, ScanError};
 use crate::watch::{BestWatcher, WindowsNormWatcher};
 use futures::executor::block_on;
@@ -279,6 +282,89 @@ impl<R: Runtime> RepoManager<R> {
         }?;
         let details = ItemDetails::from_item(item);
         Ok(details)
+    }
+
+    pub async fn insert_tags(
+        &self,
+        ids: Vec<i64>,
+        tags: Vec<String>,
+    ) -> Result<(), InsertTagsError> {
+        if ids.len() == 0 {
+            return Ok(());
+        }
+        // clone a reference to the repo
+        let repo = self.repo.clone();
+        let app_handle = self.app_handle.clone();
+        tokio::task::spawn_blocking(move || {
+            let mut repo = block_on(async { repo.lock().await });
+            let ids = ids;
+            if ids.len() == 1 {
+                let rv = repo.insert_tags(*ids.get(0).unwrap(), tags);
+                let item = repo
+                    .get_item_by_id(*ids.get(0).unwrap())
+                    .expect("failed to get item after inserting tags");
+                app_handle
+                    .emit_all("item-tags-added", ItemDetails::from_item(item))
+                    .expect("Failed to emit event");
+                rv
+            } else {
+                let rv = repo.batch_insert_tags(&ids, tags);
+                let items: Result<Vec<_>, _> = ids
+                    .iter()
+                    .map(|id| {
+                        Ok::<_, SearchError>(ItemDetails::from_item(repo.get_item_by_id(*id)?))
+                    })
+                    .collect();
+                let items = items.expect("failed to get items after batch-inserting tags");
+                app_handle
+                    .emit_all("batch-item-tags-added", items)
+                    .expect("Failed to emit event");
+                rv
+            }
+        })
+        .await
+        .expect("failed to join with thread that's inserting tags")?;
+        Ok(())
+    }
+
+    pub async fn remove_tags(
+        &self,
+        ids: Vec<i64>,
+        tags: Vec<String>,
+    ) -> Result<(), RemoveTagsError> {
+        // clone a reference to the repo
+        let repo = self.repo.clone();
+        let app_handle = self.app_handle.clone();
+        tokio::task::spawn_blocking(move || {
+            let mut repo = block_on(async { repo.lock().await });
+            let ids = ids;
+            if ids.len() == 1 {
+                let rv = repo.remove_tags(*ids.get(0).unwrap(), tags);
+                let item = repo
+                    .get_item_by_id(*ids.get(0).unwrap())
+                    .expect("failed to get item after removing tags");
+                app_handle
+                    .emit_all("item-tags-removed", ItemDetails::from_item(item))
+                    .expect("Failed to emit event");
+                rv
+            } else {
+                let rv = repo.batch_remove_tags(&ids, tags);
+                let items: Result<Vec<_>, _> = ids
+                    .iter()
+                    .map(|id| {
+                        Ok::<_, SearchError>(ItemDetails::from_item(repo.get_item_by_id(*id)?))
+                    })
+                    .collect();
+                let items = items.expect("failed to get items after batch-removing tags");
+                app_handle
+                    .emit_all("batch-item-tags-removed", items)
+                    .expect("Failed to emit event");
+                rv
+            }
+        })
+        .await
+        .expect("failed to join with thread that's removing tags")?;
+        Ok(())
     }
 
     pub async fn watch(&self) -> Result<(), WatchError> {

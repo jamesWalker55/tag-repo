@@ -200,6 +200,54 @@ async fn query_item_ids(
 }
 
 #[derive(Error, Debug)]
+enum InsertTagsError {
+    #[error("no active repo")]
+    NoOpenRepo,
+    #[error("no item with given id found")]
+    InsertTagsError(#[from] repo::InsertTagsError),
+}
+
+impl_serialize_to_string!(InsertTagsError);
+
+#[tauri::command]
+async fn insert_tags(
+    state: tauri::State<'_, AppState>,
+    ids: Vec<i64>,
+    tags: Vec<String>,
+) -> Result<(), InsertTagsError> {
+    let manager = state.manager.read().await;
+    let Some(manager) = &*manager else {
+        return Err(InsertTagsError::NoOpenRepo);
+    };
+    manager.insert_tags(ids, tags).await?;
+    Ok(())
+}
+
+#[derive(Error, Debug)]
+enum RemoveTagsError {
+    #[error("no active repo")]
+    NoOpenRepo,
+    #[error("no item with given id found")]
+    RemoveTagsError(#[from] repo::RemoveTagsError),
+}
+
+impl_serialize_to_string!(RemoveTagsError);
+
+#[tauri::command]
+async fn remove_tags(
+    state: tauri::State<'_, AppState>,
+    ids: Vec<i64>,
+    tags: Vec<String>,
+) -> Result<(), RemoveTagsError> {
+    let manager = state.manager.read().await;
+    let Some(manager) = &*manager else {
+        return Err(RemoveTagsError::NoOpenRepo);
+    };
+    manager.remove_tags(ids, tags).await?;
+    Ok(())
+}
+
+#[derive(Error, Debug)]
 enum RevealFileError {
     #[error("support for your operating system has not been implemented yet")]
     OperatingSystemNotSupported,
@@ -289,6 +337,8 @@ async fn main() {
             reveal_file,
             launch_file,
             determine_filetype,
+            insert_tags,
+            remove_tags,
         ])
         .plugin(tauri_plugin_window_state::Builder::default().build())
         .run(tauri::generate_context!())

@@ -1,5 +1,5 @@
 import { watch } from "vue";
-import { ManagerStatus } from "@/lib/ffi";
+import { ManagerStatus, insertTags, removeTags } from "@/lib/ffi";
 import { Event, listen } from "@tauri-apps/api/event";
 import { appWindow } from "@tauri-apps/api/window";
 import { refreshAll, state } from "./state";
@@ -11,8 +11,9 @@ import {
   getCachedItem,
   getItemDetails,
   type ItemDetails,
-  queryItemIds, setCachedItem,
-} from './items';
+  queryItemIds,
+  setCachedItem,
+} from "./items";
 import { selection } from "./selection";
 
 export { revealFile, launchFile, determineFileType, FileType } from "@/lib/ffi";
@@ -28,6 +29,8 @@ export {
   getItemDetails,
   refreshAll,
   selection,
+  insertTags,
+  removeTags,
 };
 
 // listen to change events from the backend
@@ -74,6 +77,18 @@ export {
       //  you can remove them from the selection
       selection.clear();
     }),
+    listen("item-tags-added", async (evt: Event<ItemDetails>) => {
+      setCachedItem(evt.payload.item.id, evt.payload);
+    }),
+    listen("batch-item-tags-added", async (evt: Event<ItemDetails>) => {
+      setCachedItem(evt.payload.item.id, evt.payload);
+    }),
+    listen("item-tags-removed", async (evt: Event<ItemDetails>) => {
+      setCachedItem(evt.payload.item.id, evt.payload);
+    }),
+    listen("batch-item-tags-removed", async (evt: Event<ItemDetails>) => {
+      setCachedItem(evt.payload.item.id, evt.payload);
+    }),
   ]);
 })();
 
@@ -95,7 +110,7 @@ watch(
   () => state.path,
   async (newPath) => {
     // clear selection, we're in a new repo now
-    selection.clear()
+    selection.clear();
     // execute several async functions at once
     await Promise.all([
       // update the window title
@@ -120,7 +135,7 @@ watch(
     // re-query for new items
     const newItems = await queryItemIds(state.query);
     // clear selection, we're moving to a new item list
-    selection.clear()
+    selection.clear();
     // clear item cache in case the item has changed upstream
     clearItemCache();
     // actually change the item list
