@@ -28,14 +28,14 @@ CREATE VIRTUAL TABLE tag_query USING fts5 (
 );
 
 CREATE TRIGGER items_trigger_ai AFTER INSERT ON items BEGIN
-  INSERT INTO tag_query(id, tags, meta_tags) VALUES (NEW.id, NEW.tags, NEW.meta_tags);
+  INSERT INTO tag_query(rowid, tags, meta_tags) VALUES (NEW.id, NEW.tags, NEW.meta_tags);
 END;
 
 CREATE TRIGGER items_trigger_ad AFTER DELETE ON items BEGIN
-  INSERT INTO tag_query(tag_query, id, tags, meta_tags) VALUES('delete', OLD.id, OLD.tags, OLD.meta_tags);
+  INSERT INTO tag_query(tag_query, rowid, tags, meta_tags) VALUES('delete', OLD.id, OLD.tags, OLD.meta_tags);
 END;
 
 CREATE TRIGGER items_trigger_au AFTER UPDATE ON items BEGIN
-  INSERT INTO tag_query(tag_query, id, tags, meta_tags) VALUES('delete', OLD.id, old.tags, old.meta_tags);
-  INSERT INTO tag_query(id, tags, meta_tags) VALUES (NEW.id, NEW.tags, NEW.meta_tags);
+  INSERT INTO tag_query(tag_query, rowid, tags, meta_tags) VALUES('delete', OLD.id, OLD.tags, OLD.meta_tags);
+  INSERT INTO tag_query(rowid, tags, meta_tags) VALUES (NEW.id, NEW.tags, NEW.meta_tags);
 END;
