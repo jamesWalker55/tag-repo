@@ -98,6 +98,18 @@ pub enum SyncError {
     ScanError(#[from] ScanError),
 }
 
+#[derive(Error, Debug)]
+pub enum InsertTagsError {
+    #[error("an error occurred in rusqlite, {0}")]
+    BackendError(#[from] rusqlite::Error),
+}
+
+#[derive(Error, Debug)]
+pub enum RemoveTagsError {
+    #[error("an error occurred in rusqlite, {0}")]
+    BackendError(#[from] rusqlite::Error),
+}
+
 #[derive(Debug, Serialize, Clone)]
 pub struct Item {
     pub(crate) id: i64,
@@ -110,6 +122,14 @@ pub struct Item {
 pub struct Repo {
     path: PathBuf,
     conn: Connection,
+}
+
+fn repeat_vars(count: usize) -> String {
+    assert_ne!(count, 0);
+    let mut s = "?,".repeat(count);
+    // Remove trailing comma
+    s.pop();
+    s
 }
 
 pub trait IntoTags {
@@ -140,7 +160,19 @@ impl IntoTags for Vec<String> {
     }
 }
 
+impl IntoTags for &Vec<String> {
+    fn into_tags(self) -> Vec<String> {
+        self.iter().cloned().sorted().collect()
+    }
+}
+
 impl IntoTags for Vec<&str> {
+    fn into_tags(self) -> Vec<String> {
+        self.iter().map(|x| x.to_string()).sorted().collect()
+    }
+}
+
+impl IntoTags for &Vec<&str> {
     fn into_tags(self) -> Vec<String> {
         self.iter().map(|x| x.to_string()).sorted().collect()
     }
@@ -331,6 +363,108 @@ impl Repo {
         self.conn.execute(
             "UPDATE items SET path = ?2 WHERE path = ?1",
             params![old_path, new_path],
+        )?;
+        Ok(())
+    }
+
+    pub(crate) fn insert_tags(
+        &self,
+        item_id: i64,
+        tags: impl IntoTags,
+    ) -> Result<(), InsertTagsError> {
+        let tags = tags.into_tags();
+        if tags.len() == 0 {
+            return Ok(());
+        }
+        let sql = format!(
+            "UPDATE items SET tags = insert_tags(tags, {}) WHERE id = ?",
+            // this function will panic if you give it 0 length
+            repeat_vars(tags.len()),
+        );
+        // converting item_id to a string is fine, sqlite converts types dynamically
+        let item_id = item_id.to_string();
+        self.conn.execute(
+            &sql,
+            rusqlite::params_from_iter(tags.iter().chain(Some(&item_id))),
+        )?;
+        Ok(())
+    }
+
+    pub(crate) fn batch_insert_tags(
+        &self,
+        item_ids: &Vec<i64>,
+        tags: impl IntoTags,
+    ) -> Result<(), InsertTagsError> {
+        if item_ids.len() == 0 {
+            return Ok(());
+        }
+        let tags = tags.into_tags();
+        if tags.len() == 0 {
+            return Ok(());
+        }
+
+        let sql = format!(
+            "UPDATE items SET tags = insert_tags(tags, {}) WHERE id IN ({})",
+            // this function will panic if you give it 0 length
+            repeat_vars(tags.len()),
+            repeat_vars(item_ids.len()),
+        );
+        let item_ids: Vec<_> = item_ids.iter().map(|x| x.to_string()).collect();
+        self.conn.execute(
+            &sql,
+            // converting item_id to a string is fine, sqlite converts types dynamically
+            rusqlite::params_from_iter(tags.iter().chain(item_ids.iter())),
+        )?;
+        Ok(())
+    }
+
+    pub(crate) fn remove_tags(
+        &self,
+        item_id: i64,
+        tags: impl IntoTags,
+    ) -> Result<(), RemoveTagsError> {
+        let tags = tags.into_tags();
+        if tags.len() == 0 {
+            return Ok(());
+        }
+        let sql = format!(
+            "UPDATE items SET tags = remove_tags(tags, {}) WHERE id = ?",
+            // this function will panic if you give it 0 length
+            repeat_vars(tags.len()),
+        );
+        // converting item_id to a string is fine, sqlite converts types dynamically
+        let item_id = item_id.to_string();
+        self.conn.execute(
+            &sql,
+            rusqlite::params_from_iter(tags.iter().chain(Some(&item_id))),
+        )?;
+        Ok(())
+    }
+
+    pub(crate) fn batch_remove_tags(
+        &self,
+        item_ids: &Vec<i64>,
+        tags: impl IntoTags,
+    ) -> Result<(), RemoveTagsError> {
+        if item_ids.len() == 0 {
+            return Ok(());
+        }
+        let tags = tags.into_tags();
+        if tags.len() == 0 {
+            return Ok(());
+        }
+
+        let sql = format!(
+            "UPDATE items SET tags = remove_tags(tags, {}) WHERE id IN ({})",
+            // this function will panic if you give it 0 length
+            repeat_vars(tags.len()),
+            repeat_vars(item_ids.len()),
+        );
+        let item_ids: Vec<_> = item_ids.iter().map(|x| x.to_string()).collect();
+        self.conn.execute(
+            &sql,
+            // converting item_id to a string is fine, sqlite converts types dynamically
+            rusqlite::params_from_iter(tags.iter().chain(item_ids.iter())),
         )?;
         Ok(())
     }
@@ -894,6 +1028,124 @@ mod tests {
             .unwrap();
         let expected = "banana bee egg";
         assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn can_insert_tags_1() {
+        let mut tr = testrepo_1();
+        let repo = &mut tr.repo;
+
+        // id 1 must be "apple"
+        let item = repo.get_item_by_id(1).unwrap();
+        let old_tags: Vec<_> = vec!["food", "red"].into_iter().map(String::from).collect();
+        assert_eq!(item.path, "apple");
+        assert_eq!(item.tags, old_tags);
+
+        // insert some tags to it
+        let inserted_tags = vec!["fruit", "plant"];
+        repo.insert_tags(item.id, &inserted_tags).unwrap();
+
+        // check that the tags have been added
+        let item = repo.get_item_by_id(1).unwrap();
+        let new_tags: Vec<_> = vec!["food", "fruit", "plant", "red"]
+            .into_iter()
+            .map(String::from)
+            .collect();
+        assert_eq!(item.tags, new_tags);
+    }
+
+    #[test]
+    fn can_batch_insert_tags_1() {
+        let mut tr = testrepo_1();
+        let repo = &mut tr.repo;
+
+        // id 1 must be "apple"
+        let item = repo.get_item_by_id(1).unwrap();
+        let old_tags: Vec<_> = vec!["food", "red"].into_iter().map(String::from).collect();
+        assert_eq!(item.path, "apple");
+        assert_eq!(item.tags, old_tags);
+        // id 2 must be "bee"
+        let item = repo.get_item_by_id(2).unwrap();
+        let old_tags: Vec<_> = vec!["animal", "yellow"]
+            .into_iter()
+            .map(String::from)
+            .collect();
+        assert_eq!(item.path, "bee");
+        assert_eq!(item.tags, old_tags);
+
+        // insert some tags to it
+        let inserted_tags = vec!["aaaa", "bbbb", "ffff", "zzzz", ""];
+        repo.batch_insert_tags(&vec![1i64, 2i64], &inserted_tags)
+            .unwrap();
+
+        // check that the tags have been added
+        let item = repo.get_item_by_id(1).unwrap();
+        let new_tags: Vec<_> = vec!["aaaa", "bbbb", "ffff", "food", "red", "zzzz"]
+            .into_iter()
+            .map(String::from)
+            .collect();
+        assert_eq!(item.tags, new_tags);
+
+        let item = repo.get_item_by_id(2).unwrap();
+        let new_tags: Vec<_> = vec!["aaaa", "animal", "bbbb", "ffff", "yellow", "zzzz"]
+            .into_iter()
+            .map(String::from)
+            .collect();
+        assert_eq!(item.tags, new_tags);
+    }
+    #[test]
+    fn can_remove_tags_1() {
+        let mut tr = testrepo_1();
+        let repo = &mut tr.repo;
+
+        // id 1 must be "apple"
+        let item = repo.get_item_by_id(1).unwrap();
+        let old_tags: Vec<_> = vec!["food", "red"].into_iter().map(String::from).collect();
+        assert_eq!(item.path, "apple");
+        assert_eq!(item.tags, old_tags);
+
+        // remove some tags to it
+        let removed_tags = vec!["food"];
+        repo.remove_tags(item.id, &removed_tags).unwrap();
+
+        // check that the tags have been added
+        let item = repo.get_item_by_id(1).unwrap();
+        let new_tags: Vec<_> = vec!["red"].into_iter().map(String::from).collect();
+        assert_eq!(item.tags, new_tags);
+    }
+
+    #[test]
+    fn can_batch_remove_tags_1() {
+        let mut tr = testrepo_1();
+        let repo = &mut tr.repo;
+
+        // id 1 must be "apple"
+        let item = repo.get_item_by_id(1).unwrap();
+        let old_tags: Vec<_> = vec!["food", "red"].into_iter().map(String::from).collect();
+        assert_eq!(item.path, "apple");
+        assert_eq!(item.tags, old_tags);
+        // id 2 must be "bee"
+        let item = repo.get_item_by_id(2).unwrap();
+        let old_tags: Vec<_> = vec!["animal", "yellow"]
+            .into_iter()
+            .map(String::from)
+            .collect();
+        assert_eq!(item.path, "bee");
+        assert_eq!(item.tags, old_tags);
+
+        // remove some tags to it
+        let removed_tags = vec!["food", "animal", "qwerty", "yellow", ""];
+        repo.batch_remove_tags(&vec![1i64, 2i64], &removed_tags)
+            .unwrap();
+
+        // check that the tags have been added
+        let item = repo.get_item_by_id(1).unwrap();
+        let new_tags: Vec<_> = vec!["red"].into_iter().map(String::from).collect();
+        assert_eq!(item.tags, new_tags);
+
+        let item = repo.get_item_by_id(2).unwrap();
+        let new_tags: Vec<String> = vec![];
+        assert_eq!(item.tags, new_tags);
     }
 
     // #[test]
