@@ -37,16 +37,16 @@ export const state: AppState = reactive({
   itemCache: {},
   listViewColumns: [
     { type: "name", width: 300 },
+    { type: "tags", width: 160 },
     { type: "extension", width: 60 },
     { type: "path", width: 500 },
-    { type: "tags", width: 200 },
   ],
   itemIdSelection: null,
   // size of various panels
   panelSizes: {
     bottomPanel: 160,
     leftPanel: 160,
-    rightPanel: 160,
+    rightPanel: 300,
   },
 });
 
