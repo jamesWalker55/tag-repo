@@ -1,75 +1,12 @@
 <script lang="ts" setup>
-import { FileType, ItemDetails } from "@/lib/ffi";
+import { FileType, insertTags, ItemDetails } from "@/lib/ffi";
 import { computed, ComputedRef, ref, Ref, watch } from "vue";
 import { requestItemToBeFetched, selection, state } from "@/lib/api";
 import ItemIcon from "@/components/itemlist/ItemIcon.vue";
 import LoadingDots from "@/components/LoadingDots.vue";
-import { Spinner, FTMultiple, VerticalDots, HorizontalDots } from "@/lib/icons";
+import { Spinner, FTMultiple, VerticalDots, AddTags } from "@/lib/icons";
 import Tag from "@/components/Tag.vue";
 import path from "path-browserify";
-
-// enum PanelMode {
-//   NO_ITEMS = "NO_ITEMS",
-//   SINGLE_ITEM = "SINGLE_ITEM",
-//   MULTIPLE_ITEMS = "MULTIPLE_ITEMS",
-// }
-//
-// const panelMode: ComputedRef<PanelMode> = computed(() => {
-//   if (selection.selectedCount.value === 0) {
-//     return PanelMode.NO_ITEMS;
-//   } else if (selection.selectedCount.value === 1) {
-//     return PanelMode.SINGLE_ITEM;
-//   } else {
-//     return PanelMode.MULTIPLE_ITEMS;
-//   }
-// });
-
-// const items: Ref<ItemDetails[] | null> = ref(null);
-// {
-//   let latestPromise = null;
-//
-//   async function fetchItems(selectedIndexes: number[]) {
-//     console.log("fetching items:", selectedIndexes);
-//
-//     // set to `null` to indicate properties is loading
-//     items.value = null;
-//
-//     const promises = [];
-//     for (const index of selectedIndexes) {
-//       const itemId = selection.indexToItemId(index);
-//       promises.push(getItemDetails(itemId));
-//     }
-//     // const promises = selectedIndexes.map((index) => {
-//     //   const itemId = selection.indexToItemId(index);
-//     //   return getItemDetails(itemId);
-//     // });
-//     const allPromises = Promise.all(promises);
-//     latestPromise = allPromises;
-//     const newItems = await Promise.all(promises);
-//     if (latestPromise !== allPromises) {
-//       // another promise was requested while we were awaiting
-//       // discard this promise
-//       return;
-//     }
-//     items.value = newItems;
-//     // items.value = null;
-//   }
-//
-//   watch(
-//     selection.selected,
-//     fetchItems,
-//     // `deep` is necessary to monitor the selection correctly.
-//     // Why? The selection is sometimes changed by pushing to its array, but
-//     // sometimes changed by directly replacing with a new selection object.
-//     // Without `deep`, the watch function can only monitor when the selection
-//     // object gets replaced. If an item is pushed / spliced to the selection,
-//     // that will not be detected by the watch unless `deep` is true.
-//     { deep: true }
-//   );
-//
-//   // fetch data asynchronously
-//   fetchItems(selection.selected.value).then();
-// }
 
 const items = computed(() =>
   selection.selected.value.map((index) => {
@@ -106,6 +43,34 @@ const displayedTags = computed(() => {
     return sortedUniqueTags;
   }
 });
+
+const tagInputField: Ref<HTMLInputElement | null> = ref(null);
+watch(tagInputField, (newField) => {
+  if (newField !== null) {
+    // field has just appeared
+    newField.focus();
+  }
+});
+
+// if this is null, then the input is invisible
+// otherwise, the input is visible
+const tagInputValue: Ref<string | null> = ref(null);
+
+function onAddTagsClick() {
+  if (items.value === undefined) return;
+  if (tagInputValue.value === null) return;
+  if (!allItemsLoaded.value) return;
+
+  console.log("tagInputValue.value:", tagInputValue.value);
+
+  console.log();
+  insertTags(
+    items.value.map((item) => item!.item.id),
+    tagInputValue.value.split(/(\s+)/)
+  );
+  tagInputValue.value = null;
+}
+const log = console.log;
 </script>
 
 <template>
@@ -176,7 +141,35 @@ const displayedTags = computed(() => {
           {{ " " }}
         </template>
       </div>
+      <div
+        v-if="tagInputValue === null"
+        class="mt-2 flex h-6 cursor-pointer flex-row items-center gap-1 text-base text-neutral-400 hover:text-neutral-700 hover:underline hover:decoration-dotted"
+        @click="tagInputValue = ''"
+      >
+        <AddTags />
+        <span>Add tags</span>
+      </div>
+      <div v-else class="mt-2 flex h-6 flex-row items-center gap-1 text-base">
+        <input
+          type="text"
+          ref="tagInputField"
+          v-model="tagInputValue"
+          class="flex-1 rounded px-2 py-0.5 text-neutral-700 outline outline-1 outline-slate-300"
+          @keydown.enter="onAddTagsClick"
+          @keydown.esc="
+            (e) => {
+              tagInputValue = null;
+              log(e);
+            }
+          "
+        />
+        <AddTags
+          class="cursor-pointer text-neutral-400 hover:text-neutral-700"
+          @click="onAddTagsClick"
+        />
+      </div>
     </div>
+    <!-- properties -->
     <div class="flex-none">
       <div class="font-bold text-neutral-600">Properties</div>
       <div v-if="!allItemsLoaded || itemCount === 0">
