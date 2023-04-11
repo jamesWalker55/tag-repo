@@ -23,7 +23,7 @@ use tokio::sync::mpsc::error::SendError;
 use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver};
 use tokio::sync::{Mutex, RwLock};
 use tokio::time::timeout;
-use tracing::{debug, error, info};
+use tracing::{debug, error, info, instrument};
 
 #[derive(Debug, Copy, Clone, Serialize)]
 pub enum ManagerStatus {
@@ -302,26 +302,38 @@ impl<R: Runtime> RepoManager<R> {
             let ids = ids;
             if ids.len() == 1 {
                 let rv = repo.insert_tags(*ids.get(0).unwrap(), tags);
-                let item = repo
-                    .get_item_by_id(*ids.get(0).unwrap())
-                    .expect("failed to get item after inserting tags");
-                app_handle
-                    .emit_all("item-tags-added", ItemDetails::from_item(item))
-                    .expect("Failed to emit event");
-                rv
+                match rv {
+                    Ok(_) => {
+                        let item = repo
+                            .get_item_by_id(*ids.get(0).unwrap())
+                            .expect("failed to get item after inserting tags");
+                        app_handle
+                            .emit_all("item-tags-added", ItemDetails::from_item(item))
+                            .expect("Failed to emit event");
+                        Ok(())
+                    }
+                    Err(err) => Err(err),
+                }
             } else {
                 let rv = repo.batch_insert_tags(&ids, tags);
-                let items: Result<Vec<_>, _> = ids
-                    .iter()
-                    .map(|id| {
-                        Ok::<_, SearchError>(ItemDetails::from_item(repo.get_item_by_id(*id)?))
-                    })
-                    .collect();
-                let items = items.expect("failed to get items after batch-inserting tags");
-                app_handle
-                    .emit_all("batch-item-tags-added", items)
-                    .expect("Failed to emit event");
-                rv
+                match rv {
+                    Ok(_) => {
+                        let items: Result<Vec<_>, _> = ids
+                            .iter()
+                            .map(|id| {
+                                Ok::<_, SearchError>(ItemDetails::from_item(
+                                    repo.get_item_by_id(*id)?,
+                                ))
+                            })
+                            .collect();
+                        let items = items.expect("failed to get items after batch-inserting tags");
+                        app_handle
+                            .emit_all("batch-item-tags-added", items)
+                            .expect("Failed to emit event");
+                        Ok(())
+                    }
+                    Err(err) => Err(err),
+                }
             }
         })
         .await
@@ -329,6 +341,7 @@ impl<R: Runtime> RepoManager<R> {
         Ok(())
     }
 
+    #[instrument]
     pub async fn remove_tags(
         &self,
         ids: Vec<i64>,
@@ -342,26 +355,38 @@ impl<R: Runtime> RepoManager<R> {
             let ids = ids;
             if ids.len() == 1 {
                 let rv = repo.remove_tags(*ids.get(0).unwrap(), tags);
-                let item = repo
-                    .get_item_by_id(*ids.get(0).unwrap())
-                    .expect("failed to get item after removing tags");
-                app_handle
-                    .emit_all("item-tags-removed", ItemDetails::from_item(item))
-                    .expect("Failed to emit event");
-                rv
+                match rv {
+                    Ok(_) => {
+                        let item = repo
+                            .get_item_by_id(*ids.get(0).unwrap())
+                            .expect("failed to get item after removing tags");
+                        app_handle
+                            .emit_all("item-tags-removed", ItemDetails::from_item(item))
+                            .expect("Failed to emit event");
+                        Ok(())
+                    }
+                    Err(err) => Err(err),
+                }
             } else {
                 let rv = repo.batch_remove_tags(&ids, tags);
-                let items: Result<Vec<_>, _> = ids
-                    .iter()
-                    .map(|id| {
-                        Ok::<_, SearchError>(ItemDetails::from_item(repo.get_item_by_id(*id)?))
-                    })
-                    .collect();
-                let items = items.expect("failed to get items after batch-removing tags");
-                app_handle
-                    .emit_all("batch-item-tags-removed", items)
-                    .expect("Failed to emit event");
-                rv
+                match rv {
+                    Ok(_) => {
+                        let items: Result<Vec<_>, _> = ids
+                            .iter()
+                            .map(|id| {
+                                Ok::<_, SearchError>(ItemDetails::from_item(
+                                    repo.get_item_by_id(*id)?,
+                                ))
+                            })
+                            .collect();
+                        let items = items.expect("failed to get items after batch-removing tags");
+                        app_handle
+                            .emit_all("batch-item-tags-removed", items)
+                            .expect("Failed to emit event");
+                        Ok(())
+                    }
+                    Err(err) => Err(err),
+                }
             }
         })
         .await

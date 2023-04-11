@@ -1,9 +1,15 @@
 <script lang="ts" setup>
+import { removeTags } from "@/lib/api";
+
 const props = defineProps<{ name: string; itemId: number | number[] }>();
 
 function onClick() {
-  // TODO: Remove this tag from the item
-  console.log("Removing tag", props.name, "from items", props.itemId);
+  const itemId = props.itemId;
+  if (typeof itemId === "number") {
+    removeTags([itemId], [props.name]);
+  } else {
+    removeTags(itemId, [props.name]);
+  }
 }
 </script>
 

@@ -78,15 +78,19 @@ export {
       selection.clear();
     }),
     listen("item-tags-added", async (evt: Event<ItemDetails>) => {
+      console.log("item-tags-added", evt);
       setCachedItem(evt.payload.item.id, evt.payload);
     }),
     listen("batch-item-tags-added", async (evt: Event<ItemDetails>) => {
+      console.log("batch-item-tags-added", evt);
       setCachedItem(evt.payload.item.id, evt.payload);
     }),
     listen("item-tags-removed", async (evt: Event<ItemDetails>) => {
+      console.log("item-tags-removed", evt);
       setCachedItem(evt.payload.item.id, evt.payload);
     }),
     listen("batch-item-tags-removed", async (evt: Event<ItemDetails>) => {
+      console.log("batch-item-tags-removed", evt);
       setCachedItem(evt.payload.item.id, evt.payload);
     }),
   ]);

@@ -203,7 +203,7 @@ async fn query_item_ids(
 enum InsertTagsError {
     #[error("no active repo")]
     NoOpenRepo,
-    #[error("no item with given id found")]
+    #[error("failed to insert tags, {0}")]
     InsertTagsError(#[from] repo::InsertTagsError),
 }
 
@@ -227,7 +227,7 @@ async fn insert_tags(
 enum RemoveTagsError {
     #[error("no active repo")]
     NoOpenRepo,
-    #[error("no item with given id found")]
+    #[error("failed to remove tags, {0}")]
     RemoveTagsError(#[from] repo::RemoveTagsError),
 }
 
