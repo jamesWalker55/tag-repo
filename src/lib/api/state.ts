@@ -1,6 +1,6 @@
 import { reactive } from "vue";
 import * as ffi from "@/lib/ffi";
-import { ManagerStatus } from "@/lib/ffi";
+import {ItemDetails, ManagerStatus} from '@/lib/ffi';
 import { Selection } from "./selection";
 import { ListViewColumn } from "./view-columns";
 
@@ -13,6 +13,8 @@ export interface AppState {
   query: string;
   // the currently-displayed item list
   itemIds: number[];
+  // the item cache, this will be changed regularly
+  itemCache: Record<number, ItemDetails | undefined>;
   // the headers/columns displayed in the list view
   listViewColumns: ListViewColumn[];
   // the selection in the list view
@@ -32,6 +34,7 @@ export const state: AppState = reactive({
   status: null,
   query: "",
   itemIds: [],
+  itemCache: {},
   listViewColumns: [
     { type: "name", width: 300 },
     { type: "extension", width: 60 },

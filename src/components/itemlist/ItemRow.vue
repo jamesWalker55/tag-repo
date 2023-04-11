@@ -2,11 +2,10 @@
 import {
   determineFileType,
   FileType,
-  getItemDetails,
-  ItemDetails,
+  ItemDetails, requestItemToBeFetched,
   selection,
   state,
-} from "@/lib/api";
+} from '@/lib/api';
 import { computed, reactive, Ref, ref, watch } from "vue";
 import ItemIcon from "@/components/itemlist/ItemIcon.vue";
 import path from "path-browserify";
@@ -20,16 +19,7 @@ interface Props {
 }
 const props = defineProps<Props>();
 
-const itemData: Ref<ItemDetails | null> = ref(null);
-
-{
-  async function fetchItemData(id: number) {
-    itemData.value = await getItemDetails(id);
-  }
-
-  // fetch data asynchronously
-  fetchItemData(props.id).then();
-}
+requestItemToBeFetched(props.id).then();
 
 const isSelected = computed(() => selection.contains(props.listIndex));
 
@@ -59,7 +49,7 @@ function onItemMouseDown(e: MouseEvent) {
 
 <template>
   <div
-    v-if="itemData !== null"
+    v-if="state.itemCache[id] !== undefined"
     class="item flex h-6 w-full min-w-max items-center"
     :class="
       !isSelected
@@ -77,11 +67,11 @@ function onItemMouseDown(e: MouseEvent) {
         :style="{ width: `${col.width}px` }"
       >
         <ItemIcon
-          :filetype="itemData.filetype"
+          :filetype="state.itemCache[id].filetype"
           class="h-16px w-16px flex-none text-neutral-600"
         />
         <span class="flex-1 overflow-clip whitespace-nowrap">
-          {{ path.basename(itemData.item.path) }}
+          {{ path.basename(state.itemCache[id].item.path) }}
         </span>
       </div>
       <div
@@ -89,15 +79,15 @@ function onItemMouseDown(e: MouseEvent) {
         class="flex truncate px-1 text-neutral-700"
         :style="{ width: `${col.width}px` }"
       >
-        {{ itemData.item.path }}
+        {{ state.itemCache[id].item.path }}
       </div>
       <div
         v-else-if="col.type === 'tags'"
         class="flex truncate px-1"
         :style="{ width: `${col.width}px` }"
       >
-        <span v-if="itemData.item.tags.length > 0">
-          {{ tagsToString(itemData.item.tags) }}
+        <span v-if="state.itemCache[id].item.tags.length > 0">
+          {{ tagsToString(state.itemCache[id].item.tags) }}
         </span>
         <span
           v-else
@@ -112,7 +102,7 @@ function onItemMouseDown(e: MouseEvent) {
         class="flex truncate px-1"
         :style="{ width: `${col.width}px` }"
       >
-        {{ path.extname(itemData.item.path) }}
+        {{ path.extname(state.itemCache[id].item.path) }}
       </div>
       <div
         v-else

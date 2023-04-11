@@ -7,12 +7,11 @@ import { closeRepo, openRepo, promptOpenRepo } from "./repo";
 import { setQuery } from "./query";
 import { type ListViewColumn } from "@/lib/api/view-columns";
 import {
-  clearItemCache,
-  getCachedItem,
-  getItemDetails,
   type ItemDetails,
   queryItemIds,
+  clearItemCache,
   setCachedItem,
+  requestItemToBeFetched,
 } from "./items";
 import { selection } from "./selection";
 
@@ -26,11 +25,11 @@ export {
   closeRepo,
   setQuery,
   state,
-  getItemDetails,
   refreshAll,
   selection,
   insertTags,
   removeTags,
+  requestItemToBeFetched,
 };
 
 // listen to change events from the backend

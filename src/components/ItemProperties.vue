@@ -1,86 +1,110 @@
 <script lang="ts" setup>
 import { FileType, ItemDetails } from "@/lib/ffi";
 import { computed, ComputedRef, ref, Ref, watch } from "vue";
-import { getItemDetails, selection, state } from "@/lib/api";
+import { requestItemToBeFetched, selection, state } from "@/lib/api";
 import ItemIcon from "@/components/itemlist/ItemIcon.vue";
 import LoadingDots from "@/components/LoadingDots.vue";
 import { Spinner, FTMultiple, VerticalDots, HorizontalDots } from "@/lib/icons";
 import Tag from "@/components/Tag.vue";
 import path from "path-browserify";
 
-enum PanelMode {
-  NO_ITEMS = "NO_ITEMS",
-  SINGLE_ITEM = "SINGLE_ITEM",
-  MULTIPLE_ITEMS = "MULTIPLE_ITEMS",
-}
+// enum PanelMode {
+//   NO_ITEMS = "NO_ITEMS",
+//   SINGLE_ITEM = "SINGLE_ITEM",
+//   MULTIPLE_ITEMS = "MULTIPLE_ITEMS",
+// }
+//
+// const panelMode: ComputedRef<PanelMode> = computed(() => {
+//   if (selection.selectedCount.value === 0) {
+//     return PanelMode.NO_ITEMS;
+//   } else if (selection.selectedCount.value === 1) {
+//     return PanelMode.SINGLE_ITEM;
+//   } else {
+//     return PanelMode.MULTIPLE_ITEMS;
+//   }
+// });
 
-const panelMode: ComputedRef<PanelMode> = computed(() => {
-  if (selection.selectedCount.value === 0) {
-    return PanelMode.NO_ITEMS;
-  } else if (selection.selectedCount.value === 1) {
-    return PanelMode.SINGLE_ITEM;
-  } else {
-    return PanelMode.MULTIPLE_ITEMS;
+// const items: Ref<ItemDetails[] | null> = ref(null);
+// {
+//   let latestPromise = null;
+//
+//   async function fetchItems(selectedIndexes: number[]) {
+//     console.log("fetching items:", selectedIndexes);
+//
+//     // set to `null` to indicate properties is loading
+//     items.value = null;
+//
+//     const promises = [];
+//     for (const index of selectedIndexes) {
+//       const itemId = selection.indexToItemId(index);
+//       promises.push(getItemDetails(itemId));
+//     }
+//     // const promises = selectedIndexes.map((index) => {
+//     //   const itemId = selection.indexToItemId(index);
+//     //   return getItemDetails(itemId);
+//     // });
+//     const allPromises = Promise.all(promises);
+//     latestPromise = allPromises;
+//     const newItems = await Promise.all(promises);
+//     if (latestPromise !== allPromises) {
+//       // another promise was requested while we were awaiting
+//       // discard this promise
+//       return;
+//     }
+//     items.value = newItems;
+//     // items.value = null;
+//   }
+//
+//   watch(
+//     selection.selected,
+//     fetchItems,
+//     // `deep` is necessary to monitor the selection correctly.
+//     // Why? The selection is sometimes changed by pushing to its array, but
+//     // sometimes changed by directly replacing with a new selection object.
+//     // Without `deep`, the watch function can only monitor when the selection
+//     // object gets replaced. If an item is pushed / spliced to the selection,
+//     // that will not be detected by the watch unless `deep` is true.
+//     { deep: true }
+//   );
+//
+//   // fetch data asynchronously
+//   fetchItems(selection.selected.value).then();
+// }
+
+const items = computed(() =>
+  selection.selected.value.map((index) => {
+    const itemId = state.itemIds[index];
+    requestItemToBeFetched(itemId);
+    return state.itemCache[itemId];
+  })
+);
+
+const itemCount = computed(() => items.value.length);
+
+const allItemsLoaded = computed(() => {
+  for (const item of items.value) {
+    if (item === undefined) {
+      return false;
+    }
   }
+  return true;
 });
 
-const items: Ref<ItemDetails[] | null> = ref(null);
-{
-  let latestPromise = null;
-
-  async function fetchItems(selectedIndexes: number[]) {
-    console.log("fetching items:", selectedIndexes);
-
-    // set to `null` to indicate properties is loading
-    items.value = null;
-
-    const promises = [];
-    for (const index of selectedIndexes) {
-      const itemId = selection.indexToItemId(index);
-      promises.push(getItemDetails(itemId));
-    }
-    // const promises = selectedIndexes.map((index) => {
-    //   const itemId = selection.indexToItemId(index);
-    //   return getItemDetails(itemId);
-    // });
-    const allPromises = Promise.all(promises);
-    latestPromise = allPromises;
-    const newItems = await Promise.all(promises);
-    if (latestPromise !== allPromises) {
-      // another promise was requested while we were awaiting
-      // discard this promise
-      return;
-    }
-    items.value = newItems;
-    // items.value = null;
-  }
-
-  watch(
-    selection.selected,
-    fetchItems,
-    // `deep` is necessary to monitor the selection correctly.
-    // Why? The selection is sometimes changed by pushing to its array, but
-    // sometimes changed by directly replacing with a new selection object.
-    // Without `deep`, the watch function can only monitor when the selection
-    // object gets replaced. If an item is pushed / spliced to the selection,
-    // that will not be detected by the watch unless `deep` is true.
-    { deep: true }
-  );
-
-  // fetch data asynchronously
-  fetchItems(selection.selected.value).then();
-}
-
 const displayedTags = computed(() => {
-  const newItems = items.value;
-  if (newItems === null) return [];
+  if (!allItemsLoaded.value) return [];
 
-  if (newItems.length === 1) return newItems[0].item.tags;
+  if (itemCount.value === 0) {
+    return [];
+  } else if (itemCount.value === 1) {
+    // must not be undefined since `allItemsLoaded` is true
+    return items.value[0]!.item.tags;
+  } else {
+    // must not be undefined since `allItemsLoaded` is true
+    const uniqueTags = new Set(items.value.flatMap((item) => item!.item.tags));
+    const sortedUniqueTags = Array.from(uniqueTags).sort();
 
-  const uniqueTags = new Set(newItems.flatMap((item) => item.item.tags));
-  const sortedUniqueTags = Array.from(uniqueTags).sort();
-
-  return sortedUniqueTags;
+    return sortedUniqueTags;
+  }
 });
 </script>
 
@@ -90,17 +114,17 @@ const displayedTags = computed(() => {
     <div class="mb-5 flex h-5 flex-none flex-row items-center gap-2">
       <!-- icon -->
       <ItemIcon
-        v-if="items === null"
+        v-if="!allItemsLoaded"
         :filetype="FileType.UNKNOWN"
         class="h-16px w-16px flex-none animate-pulse rounded-full text-neutral-400"
       />
       <ItemIcon
-        v-else-if="items.length === 0"
+        v-else-if="itemCount === 0"
         :filetype="FileType.UNKNOWN"
         class="h-16px w-16px flex-none text-neutral-500"
       />
       <ItemIcon
-        v-else-if="items.length === 1"
+        v-else-if="itemCount === 1"
         :filetype="items[0].filetype"
         class="h-16px w-16px flex-none text-neutral-600"
       />
@@ -108,17 +132,17 @@ const displayedTags = computed(() => {
       <!-- text -->
       <span
         is="div"
-        v-if="items === null"
+        v-if="!allItemsLoaded"
         class="h-4 flex-1 animate-pulse rounded-full bg-neutral-100 italic"
       />
       <span
-        v-else-if="items.length === 0"
+        v-else-if="itemCount === 0"
         class="min-w-0 flex-1 truncate whitespace-nowrap italic text-neutral-400"
       >
         No item selected
       </span>
       <span
-        v-else-if="items.length === 1"
+        v-else-if="itemCount === 1"
         class="min-w-0 flex-1 truncate whitespace-nowrap"
       >
         {{ items[0].item.path }}
@@ -132,12 +156,12 @@ const displayedTags = computed(() => {
     <!-- tags list -->
     <div class="flex flex-1 flex-col">
       <div class="font-bold text-neutral-500">
-        <template v-if="items !== null && items.length > 1">
+        <template v-if="allItemsLoaded && itemCount > 1">
           Common Tags
         </template>
         <template v-else>Tags</template>
       </div>
-      <div v-if="items === null" class="animate-pulse italic text-neutral-400">
+      <div v-if="!allItemsLoaded" class="animate-pulse italic text-neutral-400">
         Loading<LoadingDots />
       </div>
       <div
@@ -155,13 +179,10 @@ const displayedTags = computed(() => {
     </div>
     <div class="flex-none">
       <div class="font-bold text-neutral-600">Properties</div>
-      <div v-if="items === null">
+      <div v-if="!allItemsLoaded || itemCount === 0">
         <div class="italic text-neutral-400">None</div>
       </div>
-      <div v-else-if="items.length === 0">
-        <div class="italic text-neutral-400">None</div>
-      </div>
-      <div v-else-if="items.length === 1">
+      <div v-else-if="itemCount === 1">
         <div class="flex">
           <span class="block w-24 truncate whitespace-nowrap text-neutral-400"
             >Relative path</span
@@ -183,16 +204,5 @@ const displayedTags = computed(() => {
         <div class="italic text-neutral-400">None</div>
       </div>
     </div>
-    <!--<div class="h-36"></div>-->
-    <!--<div><b>Panel mode:</b> {{ panelMode }}</div>-->
-    <!--<div><b>Selection:</b> {{ selection.selected }}</div>-->
-    <!--<div><b>"items" array:</b> {{ items?.map((x) => x.item.path) }}</div>-->
-    <!--{{-->
-    <!--  selection.selected.value.map((index) => {-->
-    <!--    const itemId = selection.indexToItemId(index);-->
-    <!--    // return getCachedItem(itemId);-->
-    <!--  })-->
   </div>
 </template>
-
-<style scoped></style>
