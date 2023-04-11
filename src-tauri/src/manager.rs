@@ -112,7 +112,9 @@ pub fn determine_filetype(path: impl AsRef<Path>) -> FileType {
     }
 }
 
-#[tracing::instrument]
+// this prints a lot of text to the console
+// either reduce the text or remove it entirely
+// #[tracing::instrument]
 async fn event_handler<R: Runtime>(
     repo: Arc<Mutex<Repo>>,
     repo_path: PathBuf,
