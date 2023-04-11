@@ -180,7 +180,7 @@ async fn get_item_details(
 enum QueryItemIdsError {
     #[error("no active repo")]
     NoOpenRepo,
-    #[error("no item with given id found")]
+    #[error("failed to query items, {0}")]
     QueryError(#[from] QueryError),
 }
 

@@ -1093,6 +1093,46 @@ mod tests {
             .collect();
         assert_eq!(item.tags, new_tags);
     }
+
+    #[test]
+    fn can_batch_insert_tags_then_query() {
+        let mut tr = testrepo_1();
+        let repo = &mut tr.repo;
+
+        // insert some tags to items 1, 2
+        let inserted_tags = vec!["aaaa", "bbbb", "ffff", "zzzz", ""];
+        repo.batch_insert_tags(&vec![1i64, 2i64], &inserted_tags)
+            .unwrap();
+
+        // check that the tags have been added
+        let item = repo.get_item_by_id(1).unwrap();
+        let new_tags: Vec<_> = vec!["aaaa", "bbbb", "ffff", "food", "red", "zzzz"]
+            .into_iter()
+            .map(String::from)
+            .collect();
+        assert_eq!(item.tags, new_tags);
+
+        let item = repo.get_item_by_id(2).unwrap();
+        let new_tags: Vec<_> = vec!["aaaa", "animal", "bbbb", "ffff", "yellow", "zzzz"]
+            .into_iter()
+            .map(String::from)
+            .collect();
+        assert_eq!(item.tags, new_tags);
+
+        fn expect_query(repo: &Repo, query: &str, expected: Vec<&str>) {
+            let items = repo.query_items(query).unwrap();
+
+            assert_unordered_eq(items.iter().map(|x| x.path.as_str()), expected);
+        }
+
+        let mut tr = testrepo_1();
+        let repo = &mut tr.repo;
+
+        expect_query(&repo, "animal", vec!["bee", "cat", "dog"]);
+        expect_query(&repo, "food", vec!["apple", "egg"]);
+        expect_query(&repo, "yellow", vec!["bee", "cat"]);
+    }
+
     #[test]
     fn can_remove_tags_1() {
         let mut tr = testrepo_1();
