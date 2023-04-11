@@ -2,10 +2,11 @@
 import {
   determineFileType,
   FileType,
-  ItemDetails, requestItemToBeFetched,
+  ItemDetails,
+  requestItemToBeFetched,
   selection,
   state,
-} from '@/lib/api';
+} from "@/lib/api";
 import { computed, reactive, Ref, ref, watch } from "vue";
 import ItemIcon from "@/components/itemlist/ItemIcon.vue";
 import path from "path-browserify";
@@ -19,7 +20,17 @@ interface Props {
 }
 const props = defineProps<Props>();
 
-requestItemToBeFetched(props.id).then();
+requestItemToBeFetched(props.id);
+
+watch(
+  () => state.itemCache,
+  (newItemData) => {
+    if (newItemData[props.id] === undefined) {
+      // this means the item cache was cleared, we need to reload it
+      requestItemToBeFetched(props.id);
+    }
+  }
+);
 
 const isSelected = computed(() => selection.contains(props.listIndex));
 
