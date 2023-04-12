@@ -23,6 +23,7 @@ import MenuItem from "@/components/menu/MenuItem.vue";
 import MenuSeparator from "@/components/menu/MenuSeparator.vue";
 import MenuArbitraryItem from "@/components/menu/MenuArbitraryItem.vue";
 import { clipboard } from "@tauri-apps/api";
+import { launchSelectedItems } from "@/lib/api/actions";
 
 interface Props {
   // the item id of this row
@@ -74,6 +75,8 @@ function onItemMouseDown(e: MouseEvent) {
   // await clipboard.writeText(await path.join(state.path, itemData.path));
   // await revealFile(await join(state.path, itemData.path));
 }
+
+const log = console.log;
 </script>
 
 <template>
@@ -86,6 +89,7 @@ function onItemMouseDown(e: MouseEvent) {
         : 'bg-sky-200 outline outline-1 outline-sky-300 hover:bg-sky-200 hover:outline-sky-400'
     "
     @mousedown="onItemMouseDown"
+    @dblclick="launchSelectedItems"
   >
     <!-- v-if has higher priority than v-for, see https://vuejs.org/guide/essentials/list.html#v-for-with-v-if -->
     <template v-for="col in state.listViewColumns">

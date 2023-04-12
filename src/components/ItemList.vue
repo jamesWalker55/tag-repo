@@ -17,13 +17,18 @@ import { CopyFilePath, OpenFile, PreviewFile, RevealFile } from "@/lib/icons";
 import MenuItem from "@/components/menu/MenuItem.vue";
 import MenuSeparator from "@/components/menu/MenuSeparator.vue";
 import { clipboard } from "@tauri-apps/api";
+import { launchSelectedItems } from "@/lib/api/actions";
 
 const container: Ref<HTMLDivElement | null> = ref(null);
 
 const listeners = createEventListenerRegistry();
 let observer: ResizeObserver | null = null;
 
+// width of the viewport
 const viewWidth: Ref<number> = ref(0);
+// height of the viewport
+// NOTE: this includes the header as well.
+// to exclude the header, use virtualViewHeight
 const viewHeight: Ref<number> = ref(0);
 
 function updateViewSize(container: HTMLDivElement) {
@@ -89,7 +94,13 @@ onBeforeUnmount(() => {
 const itemHeight = getSpacingSize("6");
 const headerHeight = getSpacingSize("6");
 
-const containerHeight = computed(() => state.itemIds.length * itemHeight);
+// the actual amount of vertical space that's rendering items
+// you need to subtract the header
+const virtualViewHeight = computed(() => viewHeight.value - headerHeight);
+
+const containerHeight = computed(
+  () => headerHeight + state.itemIds.length * itemHeight
+);
 const containerWidth = computed(() =>
   state.listViewColumns.reduce((acc, col) => acc + col.width, 0)
 );
@@ -98,7 +109,8 @@ const preloadPadding = itemHeight * 10; // px
 
 const indexRangeToRender = computed(() => {
   const renderTop = scrollTop.value - preloadPadding;
-  const renderBottom = scrollTop.value + viewHeight.value + preloadPadding;
+  const renderBottom =
+    scrollTop.value + virtualViewHeight.value + preloadPadding;
   const itemsBeforeTop = Math.floor(renderTop / itemHeight);
   const itemsUntilBottom = Math.ceil(renderBottom / itemHeight);
   let startIndex = Math.max(itemsBeforeTop - 1, 0);
@@ -110,13 +122,42 @@ const indexRangeToRender = computed(() => {
 const debug = false;
 
 const menu = ref<InstanceType<typeof ContextMenu> | null>(null);
+
+function scrollToIndex(index: number) {
+  const el = container.value;
+  if (el === null) return;
+
+  const viewTop = el.scrollTop;
+  const viewBottom = el.scrollTop + virtualViewHeight.value;
+
+  const itemTop = index * itemHeight;
+  const itemBottom = (index + 1) * itemHeight;
+
+  if (itemTop < viewTop) {
+    // item is above the view
+    el.scrollTop = itemTop;
+  } else if (itemBottom > viewBottom) {
+    // item is below the view
+    el.scrollTop = itemBottom - virtualViewHeight.value;
+  } else {
+    // item is in view, do nothing
+  }
+}
+
+function scrollToFocusedIndex() {
+  const focusedIndex = selection.focusedIndex();
+  if (focusedIndex !== null) {
+    scrollToIndex(focusedIndex);
+  }
+}
+
 const log = console.log;
 </script>
 
 <template>
   <div
     ref="container"
-    class="relative h-full w-full overflow-auto border-r-2 border-white text-sm"
+    class="relative h-full w-full overflow-auto border-r-2 border-white text-sm focus:outline-none"
     @click="
       (e) => {
         // This is disabled for now, due to a bug.
@@ -126,6 +167,48 @@ const log = console.log;
       }
     "
     @contextmenu.prevent.stop="(e) => menu?.show(e)"
+    tabindex="-1"
+    @keydown.enter="launchSelectedItems"
+    @keydown.up.prevent="
+      (e) => {
+        if (e.shiftKey) {
+          selection.extendUp();
+        } else {
+          selection.isolateUp();
+        }
+        scrollToFocusedIndex();
+      }
+    "
+    @keydown.down.prevent="
+      (e) => {
+        if (e.shiftKey) {
+          selection.extendDown();
+        } else {
+          selection.isolateDown();
+        }
+        scrollToFocusedIndex();
+      }
+    "
+    @keydown="
+      (e) => {
+        // don't do anything if there's nothing in the list
+        if (state.itemIds.length === 0) return;
+
+        let eventNotHandled;
+        if (e.key === 'Home') {
+          selection.isolate(0);
+          scrollToFocusedIndex();
+        } else if (e.key === 'End') {
+          selection.isolate(state.itemIds.length - 1);
+          scrollToFocusedIndex();
+        } else {
+          eventNotHandled = true;
+        }
+        if (!eventNotHandled) {
+          e.preventDefault();
+        }
+      }
+    "
   >
     <!-- The container resizer, it's a 1px div located at the bottom right corner -->
     <component

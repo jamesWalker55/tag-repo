@@ -255,6 +255,147 @@ function createSelectionManager(state: AppState) {
     state.itemIdSelection = null;
   }
 
+  /** This is used for keyboard navigation, when you press "down" on the list */
+  function isolateDown() {
+    // ensure there is at least 1 item in the list
+    if (state.itemIds.length === 0) return;
+
+    const maxIndex = state.itemIds.length - 1;
+
+    const selection = state.itemIdSelection;
+    if (selection === null) {
+      isolate(0);
+      return;
+    }
+
+    let newIndex: number;
+
+    const selectionType = selection.type;
+    switch (selectionType) {
+      case SelectionType.RANGE:
+        newIndex = Math.min(selection.extendToIndex + 1, maxIndex);
+        isolate(newIndex);
+        return;
+      case SelectionType.SEPARATE:
+        newIndex = Math.min(selection.lastToggledIndex + 1, maxIndex);
+        isolate(newIndex);
+        return;
+      default:
+        unreachable(selectionType);
+    }
+  }
+
+  /** This is used for keyboard navigation, when you press "up" on the list */
+  function isolateUp() {
+    // ensure there is at least 1 item in the list
+    if (state.itemIds.length === 0) return;
+
+    const maxIndex = state.itemIds.length - 1;
+
+    const selection = state.itemIdSelection;
+    if (selection === null) {
+      isolate(maxIndex);
+      return;
+    }
+
+    let newIndex: number;
+
+    const selectionType = selection.type;
+    switch (selectionType) {
+      case SelectionType.RANGE:
+        newIndex = Math.max(selection.extendToIndex - 1, 0);
+        isolate(newIndex);
+        return;
+      case SelectionType.SEPARATE:
+        newIndex = Math.max(selection.lastToggledIndex - 1, 0);
+        isolate(newIndex);
+        return;
+      default:
+        unreachable(selectionType);
+    }
+  }
+
+  /** This is used for keyboard navigation, when you press "shift+down" on the list */
+  function extendDown() {
+    // ensure there is at least 1 item in the list
+    if (state.itemIds.length === 0) return;
+
+    const maxIndex = state.itemIds.length - 1;
+
+    const selection = state.itemIdSelection;
+    if (selection === null) {
+      isolate(0);
+      return;
+    }
+
+    let newIndex: number;
+
+    const selectionType = selection.type;
+    switch (selectionType) {
+      case SelectionType.RANGE:
+        newIndex = Math.min(selection.extendToIndex + 1, maxIndex);
+        extendTo(newIndex);
+        return;
+      case SelectionType.SEPARATE:
+        newIndex = Math.min(selection.lastToggledIndex + 1, maxIndex);
+        extendTo(newIndex);
+        return;
+      default:
+        unreachable(selectionType);
+    }
+  }
+
+  /** This is used for keyboard navigation, when you press "shift+up" on the list */
+  function extendUp() {
+    // ensure there is at least 1 item in the list
+    if (state.itemIds.length === 0) return;
+
+    const maxIndex = state.itemIds.length - 1;
+
+    const selection = state.itemIdSelection;
+    if (selection === null) {
+      isolate(maxIndex);
+      return;
+    }
+
+    let newIndex: number;
+
+    const selectionType = selection.type;
+    switch (selectionType) {
+      case SelectionType.RANGE:
+        newIndex = Math.max(selection.extendToIndex - 1, 0);
+        extendTo(newIndex);
+        return;
+      case SelectionType.SEPARATE:
+        newIndex = Math.max(selection.lastToggledIndex - 1, 0);
+        extendTo(newIndex);
+        return;
+      default:
+        unreachable(selectionType);
+    }
+  }
+
+  /** This returns the index that is "focused", usually the last-toggled item by the user */
+  function focusedIndex(): number | null {
+    // ensure there is at least 1 item in the list
+    if (state.itemIds.length === 0) return null;
+
+    const selection = state.itemIdSelection;
+    if (selection === null) {
+      return null;
+    }
+
+    const selectionType = selection.type;
+    switch (selectionType) {
+      case SelectionType.RANGE:
+        return selection.extendToIndex;
+      case SelectionType.SEPARATE:
+        return selection.lastToggledIndex;
+      default:
+        unreachable(selectionType);
+    }
+  }
+
   return {
     selected: selectedIndexes,
     selectedCount: selectedCount,
@@ -267,6 +408,11 @@ function createSelectionManager(state: AppState) {
     remove: remove,
     extendTo: extendTo,
     clear: clear,
+    isolateDown: isolateDown,
+    isolateUp: isolateUp,
+    extendDown: extendDown,
+    extendUp: extendUp,
+    focusedIndex: focusedIndex,
   };
 }
 
