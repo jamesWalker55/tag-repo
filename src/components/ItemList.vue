@@ -1,11 +1,22 @@
 <script lang="ts" setup>
 import ItemListHeader from "@/components/itemlist/ItemListHeader.vue";
 import ItemRow from "./itemlist/ItemRow.vue";
-import { selection, state } from "@/lib/api";
-import { createEventListenerRegistry, parseRemSize } from "@/lib/utils";
-import tailwind, { getSpacingSize } from "@/lib/tailwindcss";
-import { computed } from "@vue/reactivity";
-import { onBeforeUnmount, onMounted, onUnmounted, Ref, ref, watch } from "vue";
+import {
+  actions,
+  requestItemToBeFetched,
+  revealFile,
+  selection,
+  state,
+} from "@/lib/api";
+import { createEventListenerRegistry } from "@/lib/utils";
+import { getSpacingSize } from "@/lib/tailwindcss";
+import { computed, onBeforeUnmount, onMounted, ref, Ref } from "vue";
+import path from "path-browserify";
+import ContextMenu from "@/components/ContextMenu.vue";
+import { CopyFilePath, OpenFile, PreviewFile, RevealFile } from "@/lib/icons";
+import MenuItem from "@/components/menu/MenuItem.vue";
+import MenuSeparator from "@/components/menu/MenuSeparator.vue";
+import { clipboard } from "@tauri-apps/api";
 
 const container: Ref<HTMLDivElement | null> = ref(null);
 
@@ -97,6 +108,9 @@ const indexRangeToRender = computed(() => {
 });
 
 const debug = false;
+
+const menu = ref<InstanceType<typeof ContextMenu> | null>(null);
+const log = console.log;
 </script>
 
 <template>
@@ -111,6 +125,7 @@ const debug = false;
         // selection.clear();
       }
     "
+    @contextmenu.prevent.stop="(e) => menu?.show(e)"
   >
     <!-- The container resizer, it's a 1px div located at the bottom right corner -->
     <component
@@ -145,5 +160,65 @@ const debug = false;
     </div>
     <!-- I put the header after the items to make it appear above the items -->
     <ItemListHeader />
+    <ContextMenu ref="menu" v-slot="{ closeMenu }">
+      <MenuItem
+        :text="
+          selection.selectedCount.value === 1 ? 'Open' : 'Open selected files'
+        "
+        @click="
+          (e) => {
+            actions.launchSelectedItems();
+            closeMenu();
+          }
+        "
+      >
+        <template #icon="{ defaultClasses }">
+          <OpenFile class="h-16px w-16px" :class="defaultClasses" />
+        </template>
+      </MenuItem>
+      <MenuItem
+        :text="
+          selection.selectedCount.value === 1
+            ? 'Reveal in folder'
+            : 'Reveal files in folder'
+        "
+        @click="
+          (e) => {
+            actions.revealSelectedItems();
+            closeMenu();
+          }
+        "
+      >
+        <template #icon="{ defaultClasses }">
+          <RevealFile class="h-16px w-16px" :class="defaultClasses" />
+        </template>
+      </MenuItem>
+      <MenuItem
+        text="Preview"
+        @click="
+          (e) => {
+            // TODO
+          }
+        "
+      >
+        <template #icon="{ defaultClasses }">
+          <PreviewFile class="h-16px w-16px" :class="defaultClasses" />
+        </template>
+      </MenuItem>
+      <MenuSeparator />
+      <MenuItem
+        :text="selection.selectedCount.value === 1 ? 'Copy path' : 'Copy paths'"
+        @click="
+          (e) => {
+            actions.copySelectedItemPaths();
+            closeMenu(e);
+          }
+        "
+      >
+        <template #icon="{ defaultClasses }">
+          <CopyFilePath class="h-16px w-16px" :class="defaultClasses" />
+        </template>
+      </MenuItem>
+    </ContextMenu>
   </div>
 </template>

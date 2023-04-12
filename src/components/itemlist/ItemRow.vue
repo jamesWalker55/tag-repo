@@ -1,16 +1,28 @@
 <script lang="ts" setup>
 import {
-  determineFileType,
-  FileType,
-  ItemDetails,
   requestItemToBeFetched,
+  revealFile,
   selection,
   state,
 } from "@/lib/api";
-import { computed, reactive, Ref, ref, watch } from "vue";
+import { computed, ref, watch } from "vue";
 import ItemIcon from "@/components/itemlist/ItemIcon.vue";
 import path from "path-browserify";
 import { tagsToString } from "@/lib/utils";
+import ContextMenu from "@/components/ContextMenu.vue";
+import {
+  Copy,
+  Cut,
+  Paste,
+  RevealFile,
+  OpenFile,
+  PreviewFile,
+  CopyFilePath,
+} from "@/lib/icons";
+import MenuItem from "@/components/menu/MenuItem.vue";
+import MenuSeparator from "@/components/menu/MenuSeparator.vue";
+import MenuArbitraryItem from "@/components/menu/MenuArbitraryItem.vue";
+import { clipboard } from "@tauri-apps/api";
 
 interface Props {
   // the item id of this row
@@ -36,7 +48,9 @@ const isSelected = computed(() => selection.contains(props.listIndex));
 
 function onItemMouseDown(e: MouseEvent) {
   // only allow left mouse click
-  if ((e.buttons & 1) !== 1) {
+  const isLeftClick = (e.buttons & 1) === 1;
+  const isRightClick = (e.buttons & 2) === 2;
+  if (!isLeftClick && !isRightClick) {
     return;
   }
 
@@ -51,7 +65,11 @@ function onItemMouseDown(e: MouseEvent) {
       selection.add(props.listIndex);
     }
   } else {
-    selection.isolate(props.listIndex);
+    if (isRightClick && isSelected.value) {
+      // keep selection as is, don't change it
+    } else {
+      selection.isolate(props.listIndex);
+    }
   }
   // await clipboard.writeText(await path.join(state.path, itemData.path));
   // await revealFile(await join(state.path, itemData.path));

@@ -14,6 +14,7 @@ import {
   requestItemToBeFetched,
 } from "./items";
 import { selection } from "./selection";
+import * as actions from './actions';
 
 export { revealFile, launchFile, determineFileType, FileType } from "@/lib/ffi";
 export {
@@ -30,6 +31,7 @@ export {
   insertTags,
   removeTags,
   requestItemToBeFetched,
+  actions,
 };
 
 // listen to change events from the backend

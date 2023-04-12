@@ -21,6 +21,12 @@ export { default as FTFolder } from "~icons/fluent/folder-16-regular";
 export { default as FTMisc } from "~icons/fluent/document-16-regular";
 export { default as FTMultiple } from "~icons/fluent/document-multiple-16-regular";
 
+// item context menu icons
+export { default as OpenFile } from "~icons/fluent/open-16-regular";
+export { default as RevealFile } from "~icons/fluent/folder-open-16-regular";
+export { default as PreviewFile } from "~icons/fluent/eye-16-regular";
+export { default as CopyFilePath } from "~icons/fluent/copy-16-regular";
+
 // Utility icons
 export { default as Spinner } from "~icons/fluent/spinner-ios-20-filled";
 export { default as HorizontalDots } from "~icons/fluent/more-horizontal-16-regular";

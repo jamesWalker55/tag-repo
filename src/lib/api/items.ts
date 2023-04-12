@@ -18,6 +18,7 @@ export function setCachedItem(id: number, item: ItemDetails) {
 }
 
 export async function requestItemToBeFetched(id: number) {
+  console.log("requesting item:", id);
   if (state.itemCache[id] === undefined) {
     state.itemCache[id] = await ffi.getItemDetails(id);
   }

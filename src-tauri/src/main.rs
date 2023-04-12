@@ -1,12 +1,12 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use crate::manager::{FileType, ItemDetails, ManagerStatus, RepoManager};
-use crate::repo::{Item, OpenError, QueryError, Repo, SearchError};
-use serde::{Serialize, Serializer};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::Duration;
+
+use normpath::PathExt;
+use serde::{Serialize, Serializer};
 use tauri::{AppHandle, Manager, PhysicalSize, Runtime, Wry};
 use thiserror::Error;
 use tokio::sync::{Mutex, RwLock};
@@ -14,6 +14,9 @@ use tokio::time::sleep;
 use tracing::{info, Level};
 use tracing_subscriber::FmtSubscriber;
 use window_shadows::set_shadow;
+
+use crate::manager::{FileType, ItemDetails, ManagerStatus, RepoManager};
+use crate::repo::{Item, OpenError, QueryError, Repo, SearchError};
 
 mod diff;
 mod helpers;
@@ -251,22 +254,33 @@ async fn remove_tags(
 enum RevealFileError {
     #[error("support for your operating system has not been implemented yet")]
     OperatingSystemNotSupported,
-    #[error("failed to reveal file")]
+    #[error("failed to reveal file, {0}")]
     IOError(#[from] std::io::Error),
+    #[error("malformed path, {0}")]
+    MalformedPath(PathBuf),
 }
 
 impl_serialize_to_string!(RevealFileError);
 
 #[tauri::command]
 fn reveal_file(path: String) -> Result<(), RevealFileError> {
+    let path: &Path = path.as_ref();
     // for all target_os options, see:
     // https://doc.rust-lang.org/reference/conditional-compilation.html#target_os
     if cfg!(target_os = "windows") {
-        Command::new("explorer")
-            .args(["/select,", path.as_str()])
-            .spawn()?;
+        // explorer can't find the file if you use forward slashes
+        // normalise the path to remove forward slashes
+        let path = path.normalize_virtually()?;
+        let Some(path) = path.as_path().to_str() else {
+            return Err(RevealFileError::MalformedPath(path.into_path_buf()));
+        };
+        Command::new("explorer").args(["/select,", path]).spawn()?;
     } else if cfg!(target_os = "macos") {
-        Command::new("open").args(["-R", path.as_str()]).spawn()?;
+        let path = path.normalize()?;
+        let Some(path) = path.as_path().to_str() else {
+            return Err(RevealFileError::MalformedPath(path.into_path_buf()));
+        };
+        Command::new("open").args(["-R", path]).spawn()?;
     } else {
         return Err(RevealFileError::OperatingSystemNotSupported);
     };
@@ -347,10 +361,12 @@ async fn main() {
 
 #[cfg(test)]
 mod testsa {
-    use super::*;
-    use path_slash::PathExt;
     use std::env::current_dir;
     use std::path::PathBuf;
+
+    use path_slash::PathExt;
+
+    use super::*;
 
     #[test]
     fn my_test() {

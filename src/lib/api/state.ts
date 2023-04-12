@@ -19,7 +19,7 @@ export interface AppState {
   listViewColumns: ListViewColumn[];
   // the selection in the list view
   itemIdSelection: Selection | null;
-  // properties panel height
+  // app panels
   panelSizes: {
     bottomPanel: number;
     leftPanel: number;
