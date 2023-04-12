@@ -1,22 +1,14 @@
 <script lang="ts" setup>
 import ItemListHeader from "@/components/itemlist/ItemListHeader.vue";
 import ItemRow from "./itemlist/ItemRow.vue";
-import {
-  actions,
-  requestItemToBeFetched,
-  revealFile,
-  selection,
-  state,
-} from "@/lib/api";
+import { actions, selection, state } from "@/lib/api";
 import { createEventListenerRegistry } from "@/lib/utils";
 import { getSpacingSize } from "@/lib/tailwindcss";
 import { computed, onBeforeUnmount, onMounted, ref, Ref } from "vue";
-import path from "path-browserify";
 import ContextMenu from "@/components/ContextMenu.vue";
 import { CopyFilePath, OpenFile, PreviewFile, RevealFile } from "@/lib/icons";
 import MenuItem from "@/components/menu/MenuItem.vue";
 import MenuSeparator from "@/components/menu/MenuSeparator.vue";
-import { clipboard } from "@tauri-apps/api";
 import { launchSelectedItems } from "@/lib/api/actions";
 
 const container: Ref<HTMLDivElement | null> = ref(null);
@@ -150,6 +142,16 @@ function scrollToFocusedIndex() {
     scrollToIndex(focusedIndex);
   }
 }
+
+defineExpose({
+  focus: () => {
+    if (state.itemIds.length > 0) {
+      selection.isolate(0);
+      scrollToFocusedIndex();
+    }
+    container.value?.focus();
+  },
+});
 
 const log = console.log;
 </script>

@@ -23,6 +23,8 @@ function onContextMenu(e: MouseEvent) {
   }
 }
 document.addEventListener("contextmenu", onContextMenu);
+
+const itemList = ref(null);
 </script>
 
 <template>
@@ -31,13 +33,13 @@ document.addEventListener("contextmenu", onContextMenu);
     class="app-grid relative grid h-screen max-h-screen select-none border border-neutral-300 text-base"
   >
     <TitleBar class="flex-none" />
-    <QueryBar class="flex-none" />
+    <QueryBar class="flex-none" @keydown.enter="itemList.focus()" />
     <PanelsContainer
       is="main"
       class="relative flex-1"
       :right-size-key="propertiesVisible ? 'rightPanel' : null"
     >
-      <ItemList />
+      <ItemList ref="itemList" />
       <template #right>
         <ItemProperties />
       </template>

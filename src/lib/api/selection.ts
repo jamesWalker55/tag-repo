@@ -103,6 +103,11 @@ function createSelectionManager(state: AppState) {
 
   /** Select a single item, and clear all other selections */
   function isolate(index: number) {
+    // validate that index is valid
+    if (!(0 <= index && index < state.itemIds.length)) {
+      throw `attempted to isolate selection to index ${index}, but it is out of bounds`;
+    }
+
     state.itemIdSelection = {
       type: SelectionType.SEPARATE,
       indexes: [index],
