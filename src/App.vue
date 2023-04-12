@@ -7,7 +7,7 @@ import { selection } from "@/lib/api";
 import { computed, Ref, ref } from "vue";
 import PanelsContainer from "@/components/PanelsContainer.vue";
 import ItemProperties from "@/components/ItemProperties.vue";
-import PopupMenu, { MenuItem } from "@/components/ContextMenu.vue";
+import PopupMenu from "@/components/ContextMenu.vue";
 import {
   TitleMinimize,
   TitleMaximise,
@@ -19,6 +19,10 @@ import {
   Paste,
   AppLogo,
 } from "@/lib/icons";
+import Menu from "@/components/menu/Menu.vue";
+import MenuItem from "@/components/menu/MenuItem.vue";
+import MenuSeparator from "@/components/menu/MenuSeparator.vue";
+import MenuArbitraryItem from '@/components/menu/MenuArbitraryItem.vue';
 
 // const propertiesVisible = computed(() => selection.selectedCount.value > 0);
 const propertiesVisible = true;
@@ -35,19 +39,19 @@ function onContextMenu(e: MouseEvent) {
 }
 document.addEventListener("contextmenu", onContextMenu);
 
-const menuItems: MenuItem[] = [
-  { type: "item", text: "Cut", altText: "Ctrl+X", icon: Cut },
-  { type: "item", text: "Copy", altText: "Ctrl+C", icon: Copy },
-  { type: "item", text: "Paste", altText: "Ctrl+Shift+V", icon: Paste },
-  { type: "item", text: "Unknown" },
-  { type: "item", text: "Unknown", subItems: [1,2,3] },
-  { type: "item", text: "Unknown" },
-  { type: "separator" },
-  { type: "item", text: "Tools" },
-  { type: "separator" },
-  { type: "custom", content: "asd" },
-  { type: "item", text: "Tools" },
-];
+// const menuItems: MenuItem[] = [
+//   { type: "item", text: "Cut", altText: "Ctrl+X", icon: Cut },
+//   { type: "item", text: "Copy", altText: "Ctrl+C", icon: Copy },
+//   { type: "item", text: "Paste", altText: "Ctrl+Shift+V", icon: Paste },
+//   { type: "item", text: "Unknown" },
+//   { type: "item", text: "Unknown", subItems: [1,2,3] },
+//   { type: "item", text: "Unknown" },
+//   { type: "separator" },
+//   { type: "item", text: "Tools" },
+//   { type: "separator" },
+//   { type: "custom", content: "asd" },
+//   { type: "item", text: "Tools" },
+// ];
 </script>
 
 <template>
@@ -68,7 +72,20 @@ const menuItems: MenuItem[] = [
       </template>
     </PanelsContainer>
     <StatusBar />
-    <PopupMenu ref="menu" :items="menuItems" />
+    <Menu pos-x="10" pos-y="10">
+      <MenuItem text="Cut" alt-text="Ctrl+X" :icon="Cut" />
+      <MenuItem text="Copy" alt-text="Ctrl+C" :icon="Copy" />
+      <MenuItem text="Paste" alt-text="Ctrl+Shift+V" :icon="Paste" />
+      <MenuSeparator />
+      <MenuItem text="Unknown" />
+      <MenuItem text="Unknown"> 1,2,3 </MenuItem>
+      <MenuSeparator />
+      <MenuArbitraryItem>
+        Custom
+      </MenuArbitraryItem>
+      <MenuItem text="Unknown" />
+      <MenuItem text="Unknown" />
+    </Menu>
   </div>
 </template>
 
