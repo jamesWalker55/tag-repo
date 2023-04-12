@@ -10,6 +10,15 @@ import ItemProperties from "@/components/ItemProperties.vue";
 
 // const propertiesVisible = computed(() => selection.selectedCount.value > 0);
 const propertiesVisible = true;
+
+// disable the native context menu except certain elements only
+function onContextMenu(e: MouseEvent) {
+  const clickedElement = e.target as Element;
+  if (clickedElement.tagName !== "INPUT") {
+    e.preventDefault();
+  }
+}
+document.addEventListener("contextmenu", onContextMenu);
 </script>
 
 <template>
