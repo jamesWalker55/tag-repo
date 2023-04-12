@@ -88,9 +88,10 @@ const log = console.log;
         :filetype="FileType.UNKNOWN"
         class="h-16px w-16px flex-none text-neutral-500"
       />
+      <!-- must not be undefined since allItemsLoaded === true -->
       <ItemIcon
         v-else-if="itemCount === 1"
-        :filetype="items[0].filetype"
+        :filetype="items[0]!.filetype"
         class="h-16px w-16px flex-none text-neutral-600"
       />
       <FTMultiple v-else class="flex-0 h-16px w-16px text-neutral-600" />
@@ -110,7 +111,8 @@ const log = console.log;
         v-else-if="itemCount === 1"
         class="min-w-0 flex-1 truncate whitespace-nowrap"
       >
-        {{ items[0].item.path }}
+        <!-- must not be undefined since allItemsLoaded === true -->
+        {{ items[0]!.item.path }}
       </span>
       <span v-else class="min-w-0 flex-1 truncate whitespace-nowrap">
         Multiple items
@@ -137,7 +139,8 @@ const log = console.log;
       </div>
       <div v-else>
         <template v-for="tag in displayedTags">
-          <Tag :name="tag" :item-id="items.map((i) => i.item.id)" />
+          <!-- must not be undefined since allItemsLoaded === true -->
+          <Tag :name="tag" :item-id="items.map((i) => i!.item.id)" />
           {{ " " }}
         </template>
       </div>
@@ -181,7 +184,8 @@ const log = console.log;
             >Relative path</span
           >
           <span class="flex-1 truncate whitespace-nowrap">
-            {{ items[0].item.path }}
+            <!-- must not be undefined since allItemsLoaded === true -->
+            {{ items[0]!.item.path }}
           </span>
         </div>
         <div class="flex">
@@ -189,7 +193,8 @@ const log = console.log;
             Extension
           </span>
           <span class="flex-1 truncate whitespace-nowrap">
-            {{ path.extname(items[0].item.path) || "(none)" }}
+            <!-- must not be undefined since allItemsLoaded === true -->
+            {{ path.extname(items[0]!.item.path) || "(none)" }}
           </span>
         </div>
       </div>

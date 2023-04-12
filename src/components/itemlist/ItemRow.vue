@@ -78,11 +78,11 @@ function onItemMouseDown(e: MouseEvent) {
         :style="{ width: `${col.width}px` }"
       >
         <ItemIcon
-          :filetype="state.itemCache[id].filetype"
+          :filetype="state.itemCache[id]!.filetype"
           class="h-16px w-16px flex-none text-neutral-600"
         />
         <span class="flex-1 overflow-clip whitespace-nowrap">
-          {{ path.basename(state.itemCache[id].item.path) }}
+          {{ path.basename(state.itemCache[id]!.item.path) }}
         </span>
       </div>
       <div
@@ -90,15 +90,15 @@ function onItemMouseDown(e: MouseEvent) {
         class="flex truncate px-1 text-neutral-700"
         :style="{ width: `${col.width}px` }"
       >
-        {{ state.itemCache[id].item.path }}
+        {{ state.itemCache[id]!.item.path }}
       </div>
       <div
         v-else-if="col.type === 'tags'"
         class="flex truncate px-1"
         :style="{ width: `${col.width}px` }"
       >
-        <span v-if="state.itemCache[id].item.tags.length > 0">
-          {{ tagsToString(state.itemCache[id].item.tags) }}
+        <span v-if="state.itemCache[id]!.item.tags.length > 0">
+          {{ tagsToString(state.itemCache[id]!.item.tags) }}
         </span>
         <span
           v-else
@@ -113,7 +113,7 @@ function onItemMouseDown(e: MouseEvent) {
         class="flex truncate px-1"
         :style="{ width: `${col.width}px` }"
       >
-        {{ path.extname(state.itemCache[id].item.path) }}
+        {{ path.extname(state.itemCache[id]!.item.path) }}
       </div>
       <div
         v-else
