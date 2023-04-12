@@ -38,20 +38,6 @@ function onContextMenu(e: MouseEvent) {
   }
 }
 document.addEventListener("contextmenu", onContextMenu);
-
-// const menuItems: MenuItem[] = [
-//   { type: "item", text: "Cut", altText: "Ctrl+X", icon: Cut },
-//   { type: "item", text: "Copy", altText: "Ctrl+C", icon: Copy },
-//   { type: "item", text: "Paste", altText: "Ctrl+Shift+V", icon: Paste },
-//   { type: "item", text: "Unknown" },
-//   { type: "item", text: "Unknown", subItems: [1,2,3] },
-//   { type: "item", text: "Unknown" },
-//   { type: "separator" },
-//   { type: "item", text: "Tools" },
-//   { type: "separator" },
-//   { type: "custom", content: "asd" },
-//   { type: "item", text: "Tools" },
-// ];
 const log = console.log;
 </script>
 
@@ -73,15 +59,72 @@ const log = console.log;
       </template>
     </PanelsContainer>
     <StatusBar />
-    <Menu pos-x="10" pos-y="10">
-      <MenuItem text="Cut" alt-text="Ctrl+X" :icon="Cut" @click="log" />
-      <MenuItem text="Copy" alt-text="Ctrl+C" :icon="Copy" />
-      <MenuItem text="Paste" alt-text="Ctrl+Shift+V" :icon="Paste" />
+    <Menu :pos-x="10" :pos-y="10">
+      <MenuItem text="Cut" alt-text="Ctrl+X" @click="log">
+        <template #icon="{ defaultClasses }"
+          ><Cut :class="defaultClasses"
+        /></template>
+      </MenuItem>
+      <MenuItem text="Copy" alt-text="Ctrl+C">
+        <template #icon="{ defaultClasses }"
+          ><Copy :class="defaultClasses"
+        /></template>
+      </MenuItem>
+      <MenuItem text="Paste" alt-text="Ctrl+Shift+V">
+        <template #icon="{ defaultClasses }"
+          ><Paste :class="defaultClasses"
+        /></template>
+      </MenuItem>
       <MenuSeparator />
       <MenuItem text="Unknown" />
       <MenuItem text="Unknown"> 1,2,3 </MenuItem>
       <MenuSeparator />
       <MenuArbitraryItem> Custom </MenuArbitraryItem>
+      <MenuItem text="Unknown" />
+      <MenuItem text="Unknown" />
+    </Menu>
+    <Menu :pos-x="250" :pos-y="10">
+      <MenuItem text="Cut" alt-text="Ctrl+X" />
+      <MenuItem text="Copy" alt-text="Ctrl+C" />
+      <MenuItem text="Paste" alt-text="Ctrl+Shift+V" />
+      <MenuSeparator />
+      <MenuItem text="Unknown" />
+      <MenuSeparator />
+      <MenuArbitraryItem> Custom </MenuArbitraryItem>
+      <MenuItem text="Unknown" />
+      <MenuItem text="Unknown" />
+    </Menu>
+    <Menu :pos-x="10" :pos-y="300">
+      <MenuItem text="Cut" @click="log">
+        <template #icon="{ defaultClasses }"
+          ><Cut :class="defaultClasses"
+        /></template>
+      </MenuItem>
+      <MenuItem text="Copy">
+        <template #icon="{ defaultClasses }"
+          ><Copy :class="defaultClasses"
+        /></template>
+      </MenuItem>
+      <MenuItem text="Paste">
+        <template #icon="{ defaultClasses }"
+          ><Paste :class="defaultClasses"
+        /></template>
+      </MenuItem>
+      <MenuSeparator />
+      <MenuItem text="Unknown" />
+      <MenuItem text="Unknown"> 1,2,3 </MenuItem>
+      <MenuSeparator />
+      <MenuArbitraryItem> Custom </MenuArbitraryItem>
+      <MenuItem text="Unknown" />
+      <MenuItem text="Unknown" />
+    </Menu>
+    <Menu :pos-x="250" :pos-y="300">
+      <MenuItem text="Cut" />
+      <MenuItem text="Copy" />
+      <MenuItem text="Paste" />
+      <MenuSeparator />
+      <MenuItem text="Unknown" />
+      <MenuSeparator />
       <MenuItem text="Unknown" />
       <MenuItem text="Unknown" />
     </Menu>

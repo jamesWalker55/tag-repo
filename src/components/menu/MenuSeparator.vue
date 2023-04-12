@@ -1,3 +1,7 @@
 <template>
-  <div class="col-span-full h-px bg-neutral-300"></div>
+  <tr>
+    <td colspan="4 h-px">
+      <div class="h-full h-px bg-neutral-300"></div>
+    </td>
+  </tr>
 </template>

@@ -1,28 +1,27 @@
 <script lang="ts" setup>
-import type { Component } from "@vue/runtime-core";
+import { Component as ComponentType } from "@vue/runtime-core";
 import { MenuMore } from "@/lib/icons";
 
 interface Props {
   text: string;
   altText?: string;
-  icon?: string | Component;
   disabled?: boolean;
 }
 defineProps<Props>();
 </script>
 
 <template>
-  <component v-if="icon" :is="icon" class="ml-3 text-base text-neutral-600" />
-  <div v-else></div>
-  <div class="mx-3 flex h-8 items-center">
-    <div
-      class="absolute left-0 z-0 h-8 w-full w-full rounded border border-4 border-transparent opacity-0 hover:opacity-5"
-    >
-      <div class="h-full w-full rounded bg-neutral-700"></div>
-    </div>
-    {{ text }}
-  </div>
-  <div class="ml-2 mr-3 text-right">{{ altText }}</div>
-  <div v-if="$slots.default" class="mr-3"><MenuMore /></div>
-  <div v-else></div>
+  <tr class="group">
+    <td class="pl-3 group-hover:bg-neutral-100">
+      <slot name="icon" v-bind="{ defaultClasses: 'text-base text-neutral-600' }"></slot>
+    </td>
+    <td class="flex h-8 items-center px-3 group-hover:bg-neutral-100">
+      {{ text }}
+    </td>
+    <td class="pr-3 text-right group-hover:bg-neutral-100">{{ altText }}</td>
+    <td v-if="$slots.default" class="pr-3 group-hover:bg-neutral-100">
+      <MenuMore />
+    </td>
+    <td v-else class="pr-3 group-hover:bg-neutral-100"></td>
+  </tr>
 </template>

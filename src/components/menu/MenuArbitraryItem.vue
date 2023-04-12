@@ -1,5 +1,7 @@
 <template>
-  <div class="col-span-full">
-    <slot />
-  </div>
+  <tr>
+    <td colspan="4">
+      <slot />
+    </td>
+  </tr>
 </template>
