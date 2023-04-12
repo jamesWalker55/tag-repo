@@ -54,6 +54,6 @@ function getInputTextWidth() {
     v-model="queryText"
     spellcheck="false"
     ref="inputElement"
-    class="mx-1 my-1 border border-neutral-400 px-1 py-1 text-base outline-none focus:border-neutral-600 focus:shadow-sm"
+    class="mx-1 my-1 border border-neutral-400 px-1 py-1 text-base outline-none focus:border-neutral-600 focus:drop-shadow-sm"
   />
 </template>

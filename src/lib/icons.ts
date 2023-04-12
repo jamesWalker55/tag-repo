@@ -26,6 +26,7 @@ export { default as Spinner } from "~icons/fluent/spinner-ios-20-filled";
 export { default as HorizontalDots } from "~icons/fluent/more-horizontal-16-regular";
 export { default as VerticalDots } from "~icons/fluent/more-vertical-16-regular";
 export { default as AddTags } from "~icons/fluent/add-square-multiple-16-regular";
+export { default as MenuMore } from "~icons/heroicons/chevron-right";
 
 // Misc
 export { default as FaceSmile } from "~icons/heroicons/face-smile";

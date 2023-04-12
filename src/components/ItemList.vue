@@ -132,7 +132,7 @@ const debug = false;
       :key="state.itemIds[n + indexRangeToRender[0] - 1]"
     />
     <div
-      class="fixed bottom-2 right-2 border bg-white opacity-50 shadow"
+      class="fixed bottom-2 right-2 border bg-white opacity-50 drop-shadow"
       v-if="debug"
     >
       {{ indexRangeToRender }}

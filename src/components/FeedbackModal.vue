@@ -14,7 +14,7 @@ const emit = defineEmits<Emits>();
       @click="emit('closed')"
     ></div>
     <div
-      class="modal fixed left-1/2 top-1/2 z-0 flex max-h-full -translate-x-1/2 -translate-y-1/2 flex-row items-center justify-center gap-14 rounded bg-white px-14 py-10 shadow"
+      class="modal fixed left-1/2 top-1/2 z-0 flex max-h-full -translate-x-1/2 -translate-y-1/2 flex-row items-center justify-center gap-14 rounded bg-white px-14 py-10 drop-shadow"
     >
       <div class="flex flex-col items-center">
         <AppLogo class="text-7xl text-orange-600" />
@@ -41,7 +41,7 @@ const emit = defineEmits<Emits>();
           <!-- TODO -->
           <a
             href="#TODO"
-            class="rounded bg-violet-700 px-4 py-2 text-lg text-violet-50 shadow hover:bg-violet-600 hover:shadow-lg"
+            class="rounded bg-violet-700 px-4 py-2 text-lg text-violet-50 drop-shadow hover:bg-violet-600 hover:shadow-lg"
           >
             <span class="font-medium">Google</span> Forms
           </a>

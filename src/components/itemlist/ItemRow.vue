@@ -67,7 +67,6 @@ function onItemMouseDown(e: MouseEvent) {
         ? 'hover:bg-slate-50 hover:outline hover:outline-1 hover:outline-neutral-200'
         : 'bg-sky-200 outline outline-1 outline-sky-300 hover:bg-sky-200 hover:outline-sky-400'
     "
-    @click.stop
     @mousedown="onItemMouseDown"
   >
     <!-- v-if has higher priority than v-for, see https://vuejs.org/guide/essentials/list.html#v-for-with-v-if -->
