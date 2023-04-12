@@ -14,7 +14,14 @@ defineProps<Props>();
 <template>
   <component v-if="icon" :is="icon" class="ml-3 text-base text-neutral-600" />
   <div v-else></div>
-  <div class="mx-3 flex h-8 items-center">{{ text }}</div>
+  <div class="mx-3 flex h-8 items-center">
+    <div
+      class="absolute left-0 z-0 h-8 w-full w-full rounded border border-4 border-transparent opacity-0 hover:opacity-5"
+    >
+      <div class="h-full w-full rounded bg-neutral-700"></div>
+    </div>
+    {{ text }}
+  </div>
   <div class="ml-2 mr-3 text-right">{{ altText }}</div>
   <div v-if="$slots.default" class="mr-3"><MenuMore /></div>
   <div v-else></div>

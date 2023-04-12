@@ -22,7 +22,7 @@ import {
 import Menu from "@/components/menu/Menu.vue";
 import MenuItem from "@/components/menu/MenuItem.vue";
 import MenuSeparator from "@/components/menu/MenuSeparator.vue";
-import MenuArbitraryItem from '@/components/menu/MenuArbitraryItem.vue';
+import MenuArbitraryItem from "@/components/menu/MenuArbitraryItem.vue";
 
 // const propertiesVisible = computed(() => selection.selectedCount.value > 0);
 const propertiesVisible = true;
@@ -52,6 +52,7 @@ document.addEventListener("contextmenu", onContextMenu);
 //   { type: "custom", content: "asd" },
 //   { type: "item", text: "Tools" },
 // ];
+const log = console.log;
 </script>
 
 <template>
@@ -73,16 +74,14 @@ document.addEventListener("contextmenu", onContextMenu);
     </PanelsContainer>
     <StatusBar />
     <Menu pos-x="10" pos-y="10">
-      <MenuItem text="Cut" alt-text="Ctrl+X" :icon="Cut" />
+      <MenuItem text="Cut" alt-text="Ctrl+X" :icon="Cut" @click="log" />
       <MenuItem text="Copy" alt-text="Ctrl+C" :icon="Copy" />
       <MenuItem text="Paste" alt-text="Ctrl+Shift+V" :icon="Paste" />
       <MenuSeparator />
       <MenuItem text="Unknown" />
       <MenuItem text="Unknown"> 1,2,3 </MenuItem>
       <MenuSeparator />
-      <MenuArbitraryItem>
-        Custom
-      </MenuArbitraryItem>
+      <MenuArbitraryItem> Custom </MenuArbitraryItem>
       <MenuItem text="Unknown" />
       <MenuItem text="Unknown" />
     </Menu>
