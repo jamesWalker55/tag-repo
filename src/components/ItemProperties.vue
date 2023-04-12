@@ -144,33 +144,35 @@ const log = console.log;
           {{ " " }}
         </template>
       </div>
-      <div
-        v-if="tagInputValue === null"
-        class="mt-2 flex h-6 cursor-pointer flex-row items-center gap-1 text-base text-neutral-400 hover:text-neutral-700 hover:underline hover:decoration-dotted"
-        @click="tagInputValue = ''"
-      >
-        <AddTags />
-        <span>Add tags</span>
-      </div>
-      <div v-else class="mt-2 flex h-6 flex-row items-center gap-1 text-base">
-        <input
-          type="text"
-          ref="tagInputField"
-          v-model="tagInputValue"
-          class="flex-1 rounded px-2 py-0.5 text-neutral-700 outline outline-1 outline-slate-300"
-          @keydown.enter="onAddTagsClick"
-          @keydown.esc="
-            (e) => {
-              tagInputValue = null;
-              log(e);
-            }
-          "
-        />
-        <AddTags
-          class="cursor-pointer text-neutral-400 hover:text-neutral-700"
-          @click="onAddTagsClick"
-        />
-      </div>
+      <template v-if="itemCount > 0">
+        <div
+          v-if="tagInputValue === null"
+          class="mt-2 flex h-6 cursor-pointer flex-row items-center gap-1 text-base text-neutral-400 hover:text-neutral-700 hover:underline hover:decoration-dotted"
+          @click="tagInputValue = ''"
+        >
+          <AddTags />
+          <span>Add tags</span>
+        </div>
+        <div v-else class="mt-2 flex h-6 flex-row items-center gap-1 text-base">
+          <input
+            type="text"
+            ref="tagInputField"
+            v-model="tagInputValue"
+            class="flex-1 rounded px-2 py-0.5 text-neutral-700 outline outline-1 outline-slate-300"
+            @keydown.enter="onAddTagsClick"
+            @keydown.esc="
+              (e) => {
+                tagInputValue = null;
+                log(e);
+              }
+            "
+          />
+          <AddTags
+            class="cursor-pointer text-neutral-400 hover:text-neutral-700"
+            @click="onAddTagsClick"
+          />
+        </div>
+      </template>
     </div>
     <!-- properties -->
     <div class="flex-none">
