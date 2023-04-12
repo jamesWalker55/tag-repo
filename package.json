@@ -14,8 +14,7 @@
     "hotkeys-js": "^3.10.2",
     "path-browserify": "^1.0.1",
     "vue": "^3.2.45",
-    "vue-file-toolbar-menu": "^2.2.0",
-    "vue3-click-away": "^1.2.4"
+    "vue-file-toolbar-menu": "^2.2.0"
   },
   "devDependencies": {
     "@iconify/json": "^2.2.43",
