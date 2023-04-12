@@ -150,8 +150,8 @@ const log = console.log;
           class="mt-2 flex h-6 cursor-pointer flex-row items-center gap-1 text-base text-neutral-400 hover:text-neutral-700 hover:underline hover:decoration-dotted"
           @click="tagInputValue = ''"
         >
-          <AddTags />
-          <span>Add tags</span>
+          <AddTags class="flex-none" />
+          <span class="truncate whitespace-nowrap">Add tags</span>
         </div>
         <div v-else class="mt-2 flex h-6 flex-row items-center gap-1 text-base">
           <input

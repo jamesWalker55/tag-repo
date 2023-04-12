@@ -50,7 +50,7 @@ const menuItems = computed(() => [
    */
 
   @apply border-x-0 border-b-0 border-t border-solid border-neutral-200 bg-neutral-50;
-  @apply mx-2;
+  @apply px-2;
 
   /* Text styling */
   @apply text-sm;

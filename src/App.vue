@@ -3,7 +3,7 @@ import TitleBar from "./components/toolbars/TitleBar.vue";
 import QueryBar from "./components/QueryBar.vue";
 import StatusBar from "./components/toolbars/StatusBar.vue";
 import ItemList from "./components/ItemList.vue";
-import { ref } from "vue";
+import { Ref, ref } from "vue";
 import PanelsContainer from "@/components/PanelsContainer.vue";
 import ItemProperties from "@/components/ItemProperties.vue";
 import ContextMenu from "@/components/ContextMenu.vue";
@@ -24,7 +24,7 @@ function onContextMenu(e: MouseEvent) {
 }
 document.addEventListener("contextmenu", onContextMenu);
 
-const itemList = ref(null);
+const itemList: Ref<InstanceType<typeof ItemList> | null> = ref(null);
 </script>
 
 <template>
