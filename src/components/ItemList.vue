@@ -76,7 +76,6 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   // component hasn't been mounted yet, container MUST be a div at this point
-  const con = container.value!;
   listeners.clear();
   observer?.disconnect();
 });
