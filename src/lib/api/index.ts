@@ -23,6 +23,11 @@ export {
   FileType,
   getFolders,
   type Folder,
+  supportsAudioPlayback,
+  previewAudio,
+  stopAudio,
+  getAudioVolume,
+  setAudioVolume,
 } from "@/lib/ffi";
 export {
   type ItemDetails,

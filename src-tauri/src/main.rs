@@ -1,17 +1,21 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+use std::fs::File;
+use std::io::BufReader;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::Duration;
 
 use normpath::PathExt;
+use rodio::decoder::DecoderError::DecodeError;
+use rodio::{Decoder, OutputStream, OutputStreamHandle, PlayError, Sink, Source, StreamError};
 use serde::{Serialize, Serializer};
 use tauri::{AppHandle, Manager, PhysicalSize, Runtime, Wry};
 use thiserror::Error;
 use tokio::sync::{Mutex, RwLock};
 use tokio::time::sleep;
-use tracing::{info, Level};
+use tracing::{error, info, warn, Level};
 use tracing_subscriber::FmtSubscriber;
 use window_shadows::set_shadow;
 
@@ -30,14 +34,34 @@ mod tests;
 mod tree;
 pub(crate) mod watch;
 
+#[derive(Error, Debug)]
+enum CreateAudioOutputError {
+    #[error("error when constructing output stream, {0}")]
+    StreamError(#[from] StreamError),
+    #[error("error when constructing output stream, {0}")]
+    PlayError(#[from] PlayError),
+}
+
+fn get_output_stream_and_sink() -> Result<(OutputStream, Sink), CreateAudioOutputError> {
+    let (stream, stream_handle) = OutputStream::try_default()?;
+    let sink = Sink::try_new(&stream_handle)?;
+    Ok((stream, sink))
+}
+
 struct AppState {
     repo: Mutex<Option<Repo>>,
     manager: RwLock<Option<RepoManager<Wry>>>,
+    // a wrapper around the audio stream? if this is dropped then audio will stop
+    output_sink: Option<Sink>,
 }
 
-impl Default for AppState {
-    fn default() -> Self {
-        Self { repo: Mutex::new(None), manager: RwLock::new(None) }
+impl AppState {
+    fn new(output_sink: Option<Sink>) -> Self {
+        Self {
+            repo: Mutex::new(None),
+            manager: RwLock::new(None),
+            output_sink,
+        }
     }
 }
 
@@ -332,6 +356,92 @@ fn determine_filetype(path: String) -> FileType {
     determine_filetype(path)
 }
 
+#[tauri::command]
+fn supports_audio_playback(state: tauri::State<'_, AppState>) -> bool {
+    state.output_sink.is_some()
+}
+
+#[derive(Error, Debug)]
+enum PreviewAudioError {
+    #[error("no audio device available")]
+    NoOutputStream,
+    #[error("failed to open file, {0}")]
+    IOError(#[from] std::io::Error),
+    #[error("failed to decode file, {0}")]
+    DecodeError(#[from] rodio::decoder::DecoderError),
+}
+
+impl_serialize_to_string!(PreviewAudioError);
+
+fn load_music(path: impl AsRef<Path>) -> Result<Decoder<BufReader<File>>, PreviewAudioError> {
+    let path = path.as_ref();
+
+    let file = BufReader::new(File::open(&path)?);
+    let source = Decoder::new(file)?;
+    Ok(source)
+}
+
+#[tauri::command]
+fn preview_audio(
+    state: tauri::State<'_, AppState>,
+    path: String,
+    skip_milliseconds: u64,
+) -> Result<(), PreviewAudioError> {
+    let Some(sink) = &state.output_sink else {
+        return Err(PreviewAudioError::NoOutputStream)
+    };
+    // stop all current audio without pausing
+    sink.stop();
+    // try to load new audio
+    match load_music(path) {
+        Ok(mut music) => {
+            if skip_milliseconds != 0 {
+                sink.append(music.skip_duration(Duration::from_millis(skip_milliseconds)));
+            } else {
+                sink.append(music);
+            }
+            // ensure sink isn't paused
+            sink.play();
+            Ok(())
+        }
+        Err(err) => {
+            error!("failed to preview audio, {}", &err);
+            Err(err)
+        }
+    }
+}
+
+#[tauri::command]
+fn stop_audio(state: tauri::State<'_, AppState>) -> Result<(), PreviewAudioError> {
+    let Some(sink) = &state.output_sink else {
+        return Err(PreviewAudioError::NoOutputStream)
+    };
+    // stop all current audio without pausing
+    sink.stop();
+    Ok(())
+}
+
+#[tauri::command]
+fn get_audio_volume(state: tauri::State<'_, AppState>) -> Result<f32, PreviewAudioError> {
+    let Some(sink) = &state.output_sink else {
+        return Err(PreviewAudioError::NoOutputStream)
+    };
+    Ok(sink.volume())
+}
+
+#[tauri::command]
+fn set_audio_volume(
+    state: tauri::State<'_, AppState>,
+    volume: f32,
+) -> Result<(), PreviewAudioError> {
+    let Some(sink) = &state.output_sink else {
+        return Err(PreviewAudioError::NoOutputStream)
+    };
+    // stop all current audio without pausing
+    sink.set_volume(volume);
+    Ok(())
+}
+
 #[tokio::main]
 async fn main() {
     let subscriber = FmtSubscriber::builder()
@@ -343,8 +453,19 @@ async fn main() {
 
     tracing::subscriber::set_global_default(subscriber).expect("setting default subscriber failed");
 
+    // "stream" is the output audio stream, if this is dropped then audio will stop
+    let (stream, sink) = match get_output_stream_and_sink() {
+        Ok((stream, sink)) => (Some(stream), Some(sink)),
+        Err(err) => {
+            error!("failed to create audio output stream, {0}", err);
+            (None, None)
+        }
+    };
+
+    let app_state = AppState::new(sink);
+
     tauri::Builder::default()
-        .manage(AppState::default())
+        .manage(app_state)
         .setup(|app| {
             let window = app
                 .get_window("main")
@@ -378,10 +499,17 @@ async fn main() {
             insert_tags,
             remove_tags,
             get_dir_structure,
+            supports_audio_playback,
+            preview_audio,
+            stop_audio,
+            get_audio_volume,
+            set_audio_volume,
         ])
         .plugin(tauri_plugin_window_state::Builder::default().build())
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+
+    error!("main thread has dropped!");
 }
 
 #[cfg(test)]

@@ -80,3 +80,27 @@ export async function insertTags(itemIds: number[], tags: string[]) {
 export async function removeTags(itemIds: number[], tags: string[]) {
   await invoke("remove_tags", { ids: itemIds, tags: tags });
 }
+
+export async function supportsAudioPlayback(): Promise<boolean> {
+  return await invoke("supports_audio_playback");
+}
+
+export async function previewAudio(path: string, skipMilliseconds: number = 0) {
+  await invoke("preview_audio", {
+    path: path,
+    skipMilliseconds: skipMilliseconds,
+  });
+}
+
+export async function stopAudio() {
+  await invoke("stop_audio");
+}
+
+export async function getAudioVolume(): Promise<number> {
+  return await invoke("get_audio_volume");
+}
+
+/** Volume is a float between 0 and 1 */
+export async function setAudioVolume(volume: number) {
+  await invoke("set_audio_volume", { volume: volume });
+}
