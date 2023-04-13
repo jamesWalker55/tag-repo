@@ -11,6 +11,8 @@ export interface AppState {
   status: ManagerStatus | null;
   // the currently-displayed query
   query: string;
+  // a boolean that updates whenever you execute a search, indicating any query errors
+  queryIsInvalid: boolean;
   // the currently-displayed item list
   itemIds: number[];
   // the item cache, this will be changed regularly
@@ -33,6 +35,7 @@ export const state: AppState = reactive({
   path: null,
   status: null,
   query: "",
+  queryIsInvalid: false,
   itemIds: [],
   itemCache: {},
   listViewColumns: [

@@ -4,9 +4,16 @@ import { state } from "@/lib/api/state";
 
 export type { Item, ItemDetails };
 
-export async function queryItemIds(query: string) {
+export async function queryItemIds(query: string): Promise<number[]> {
   console.log("querying with this:", query);
-  return await ffi.queryItemIds(query);
+  try {
+    const itemIds = await ffi.queryItemIds(query);
+    state.queryIsInvalid = false;
+    return itemIds;
+  } catch (e) {
+    state.queryIsInvalid = true;
+    throw e;
+  }
 }
 
 export function clearItemCache() {
