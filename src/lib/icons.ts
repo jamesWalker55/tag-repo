@@ -11,6 +11,7 @@ export { default as OpenRepo } from "~icons/heroicons/folder-open";
 export { default as Cut } from "~icons/heroicons/scissors";
 export { default as Copy } from "~icons/heroicons/document-duplicate";
 export { default as Paste } from "~icons/heroicons/clipboard-document";
+export { default as Shuffle } from "~icons/heroicons/arrow-path-rounded-square";
 
 // Filetype icons
 export { default as FTAudio } from "~icons/fluent/music-note-2-16-regular";

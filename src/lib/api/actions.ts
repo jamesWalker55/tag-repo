@@ -60,3 +60,13 @@ export async function copySelectedItemPaths() {
 
   await clipboard.writeText(itemPaths.join("\n"));
 }
+
+export function shuffleList() {
+  const itemIds = state.itemIds;
+  for (var i = itemIds.length - 1; i > 0; i--) {
+    var j = Math.floor(Math.random() * (i + 1));
+    var temp = itemIds[i];
+    itemIds[i] = itemIds[j];
+    itemIds[j] = temp;
+  }
+}

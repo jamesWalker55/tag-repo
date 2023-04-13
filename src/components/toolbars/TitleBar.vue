@@ -11,6 +11,7 @@ import {
   Cut,
   Paste,
   AppLogo,
+  Shuffle,
 } from "@/lib/icons";
 
 import { appWindow } from "@tauri-apps/api/window";
@@ -18,6 +19,7 @@ import { computed, ref } from "vue";
 import * as api from "@/lib/api";
 import TitleBarSpacer from "./TitleBarSpacer.vue";
 import { openRepo, selection } from "@/lib/api";
+import { shuffleList } from "@/lib/api/actions";
 
 const menuItems = computed(() => [
   {
@@ -53,8 +55,8 @@ const menuItems = computed(() => [
     text: "Edit",
     menu: [
       // TODO: Implement select buttons
-      { text: "Select All", disabled: true },
-      { text: "Invert Selection", disabled: true },
+      // { text: "Select All", disabled: true },
+      // { text: "Invert Selection", disabled: true },
       {
         text: "Clear Selection",
         click: () => selection.clear(),
@@ -65,6 +67,7 @@ const menuItems = computed(() => [
       // { text: "Paste", icon: Paste, disabled: true },
       { is: "separator" },
       { text: "Tools", disabled: true },
+      { text: "Shuffle results", icon: Shuffle, click: shuffleList },
     ],
   },
   // Spacer
