@@ -105,9 +105,16 @@ const indexRangeToRender = computed(() => {
     scrollTop.value + virtualViewHeight.value + preloadPadding;
   const itemsBeforeTop = Math.floor(renderTop / itemHeight);
   const itemsUntilBottom = Math.ceil(renderBottom / itemHeight);
-  let startIndex = Math.max(itemsBeforeTop - 1, 0);
+
+  // fix - if the view is out of bounds (way below the list of items)
+  // a bug occurs when you execute a new query while scrolled down, and the new list is shorter than the previous
+  // you need to limit BOTH the start and end index with BOTH max and min values
+  const actualItemsCount = state.itemIds.length;
+  // subtract 1 here, we're now returning indexes that start from 0, so it's (item count - 1)
+  const startIndex = Math.max(0, Math.min(itemsBeforeTop - 1, actualItemsCount));
   // don't subtract 1 here, because a for-loop ends before the last value
-  let endIndex = Math.min(itemsUntilBottom, state.itemIds.length);
+  const endIndex = Math.max(0, Math.min(itemsUntilBottom, actualItemsCount));
+
   return [startIndex, endIndex];
 });
 
