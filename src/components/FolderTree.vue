@@ -38,6 +38,8 @@ async function fetchFolders() {
 
 fetchFolders().then();
 
+watch(() => state.path, fetchFolders);
+
 function sortedFolder(folder: Folder): [string, Folder][] {
   return Object.entries(folder).sort();
 }
@@ -93,6 +95,7 @@ const log = console.log;
           () => {
             rootFolder = null;
             fetchFolders();
+            closeMenu();
           }
         "
       >
