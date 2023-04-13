@@ -27,7 +27,7 @@ impl Default for Options {
     fn default() -> Self {
         Options {
             excluded_paths: vec![RelativePathBuf::from(".tagrepo")],
-            excluded_names: vec![],
+            excluded_names: vec![String::from(".git"), String::from(".tagrepo")],
         }
     }
 }
