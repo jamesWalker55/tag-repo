@@ -102,9 +102,16 @@ fn tag(input: &str) -> IResult<&str, Expr> {
     map(string_or_literal, Expr::Tag)(input)
 }
 
-/// allowed_key = "in"
+/// allowed_key = "in" | "ext" | "inpath" | "children" | "leading"
 fn allowed_key(input: &str) -> IResult<&str, &str> {
-    nom_tag("in")(input)
+    alt((
+        // 'inpath' must occur before 'in' to ensure nom checks for it
+        nom_tag("inpath"),
+        nom_tag("in"),
+        nom_tag("ext"),
+        nom_tag("children"),
+        nom_tag("leading"),
+    ))(input)
 }
 
 /// key_val = allowed_key ":" (string | literal)

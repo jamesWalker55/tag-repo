@@ -9,10 +9,24 @@ use std::cmp::Ordering;
 #[derive(Debug, PartialEq, Eq)]
 pub(crate) enum WhereClause<'a> {
     FTS(FTSPart<'a>),
+    InDir(Cow<'a, str>),
+    HasExt(Cow<'a, str>),
     InPath(Cow<'a, str>),
+    ChildrenOf(Cow<'a, str>),
+    LeadingPath(Cow<'a, str>),
     And(Vec<WhereClause<'a>>),
     Or(Vec<WhereClause<'a>>),
     Not(Box<WhereClause<'a>>),
+}
+
+/// Since paths are always stored using "/" in the database, we need to convert searches with "\"
+/// into "/" on Windows.
+fn convert_from_os_path(path: &str) -> String {
+    if cfg!(target_os = "windows") {
+        path.replace("\\", "/")
+    } else {
+        path.to_string()
+    }
 }
 
 impl<'a> WhereClause<'a> {
@@ -34,8 +48,36 @@ impl<'a> WhereClause<'a> {
                     format!("i.id IN (SELECT id FROM tag_query('{}'))", fts_query)
                 }
             }
+            InDir(path) => {
+                let path = convert_from_os_path(path.borrow());
+                let mut escaped_path = escape_like_pattern(&path, '\\');
+                if !escaped_path.ends_with("/") {
+                    escaped_path.push('/');
+                }
+                format!("i.path LIKE '{}%' ESCAPE '\\'", escaped_path)
+            }
+            HasExt(ext) => {
+                let escaped_ext = escape_like_pattern(ext, '\\');
+                format!("i.path LIKE '%.{}' ESCAPE '\\'", escaped_ext)
+            }
             InPath(path) => {
-                let escaped_path = escape_like_pattern(path, '\\');
+                let escaped_path = escape_like_pattern(path.borrow(), '\\');
+                format!("i.path LIKE '%{}%' ESCAPE '\\'", escaped_path)
+            }
+            ChildrenOf(path) => {
+                let path = convert_from_os_path(path.borrow());
+                let mut escaped_path = escape_like_pattern(&path, '\\');
+                if !escaped_path.ends_with("/") {
+                    escaped_path.push('/');
+                }
+                format!(
+                    "i.path LIKE '{}%' ESCAPE '\\' AND NOT i.path LIKE '{}%/%' ESCAPE '\\'",
+                    escaped_path, escaped_path
+                )
+            }
+            LeadingPath(path) => {
+                let path = convert_from_os_path(path.borrow());
+                let escaped_path = escape_like_pattern(&path, '\\');
                 format!("i.path LIKE '{}%' ESCAPE '\\'", escaped_path)
             }
             And(clauses) => {
@@ -304,7 +346,23 @@ pub(crate) fn generate_clause<'a>(root: &'a Expr<'a>) -> WhereClause<'a> {
         Expr::KeyValue(key, val) => match key.as_ref() {
             "in" => {
                 let val: &str = val.borrow();
+                WhereClause::InDir(Cow::from(val))
+            }
+            "ext" => {
+                let val: &str = val.borrow();
+                WhereClause::HasExt(Cow::from(val))
+            }
+            "inpath" => {
+                let val: &str = val.borrow();
                 WhereClause::InPath(Cow::from(val))
+            }
+            "children" => {
+                let val: &str = val.borrow();
+                WhereClause::ChildrenOf(Cow::from(val))
+            }
+            "leading" => {
+                let val: &str = val.borrow();
+                WhereClause::LeadingPath(Cow::from(val))
             }
             _ => panic!(
                 "Unrecognised key-value pair received: {:?} = {:?}",
