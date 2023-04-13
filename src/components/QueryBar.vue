@@ -1,11 +1,18 @@
 <script lang="ts" setup>
 import { Ref, ref, watch } from "vue";
-import { setQuery } from "@/lib/api";
+import { setQuery, state } from "@/lib/api";
 
 const inputElement: Ref<HTMLInputElement | null> = ref(null);
 const queryText = ref("");
 // the '!' operator asserts that the object must be non-null
 const canvasContext = document.createElement("canvas").getContext("2d")!;
+
+watch(
+  () => state.query,
+  (newQuery) => {
+    queryText.value = newQuery;
+  }
+);
 
 function getTextWidth(text: string, font: string) {
   canvasContext.font = font;

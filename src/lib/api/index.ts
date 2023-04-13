@@ -14,9 +14,16 @@ import {
   requestItemToBeFetched,
 } from "./items";
 import { selection } from "./selection";
-import * as actions from './actions';
+import * as actions from "./actions";
 
-export { revealFile, launchFile, determineFileType, FileType } from "@/lib/ffi";
+export {
+  revealFile,
+  launchFile,
+  determineFileType,
+  FileType,
+  getFolders,
+  type Folder,
+} from "@/lib/ffi";
 export {
   type ItemDetails,
   type ListViewColumn,

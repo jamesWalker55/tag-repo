@@ -45,8 +45,8 @@ export const state: AppState = reactive({
   // size of various panels
   panelSizes: {
     bottomPanel: 160,
-    leftPanel: 160,
-    rightPanel: 300,
+    leftPanel: 200,
+    rightPanel: 250,
   },
 });
 

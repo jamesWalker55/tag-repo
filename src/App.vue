@@ -6,6 +6,7 @@ import ItemList from "./components/ItemList.vue";
 import { Ref, ref } from "vue";
 import PanelsContainer from "@/components/PanelsContainer.vue";
 import ItemProperties from "@/components/ItemProperties.vue";
+import FolderTree from '@/components/FolderTree.vue';
 
 // const propertiesVisible = computed(() => selection.selectedCount.value > 0);
 const propertiesVisible = true;
@@ -32,9 +33,13 @@ const itemList: Ref<InstanceType<typeof ItemList> | null> = ref(null);
     <PanelsContainer
       is="main"
       class="relative flex-1"
+      :left-size-key="propertiesVisible ? 'leftPanel' : null"
       :right-size-key="propertiesVisible ? 'rightPanel' : null"
     >
       <ItemList ref="itemList" />
+      <template #left>
+        <FolderTree />
+      </template>
       <template #right>
         <ItemProperties />
       </template>

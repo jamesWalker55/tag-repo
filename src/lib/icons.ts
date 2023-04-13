@@ -35,6 +35,18 @@ export { default as VerticalDots } from "~icons/fluent/more-vertical-16-regular"
 export { default as AddTags } from "~icons/fluent/add-square-multiple-16-regular";
 export { default as MenuMore } from "~icons/heroicons/chevron-right";
 
+// tree panel icons
+export { default as DirTreeIcon } from "~icons/fluent/folder-20-regular";
+export { default as RefreshIcon } from "~icons/fluent/arrow-clockwise-16-regular";
+export { default as ClosePanelIcon } from "~icons/fluent/dismiss-16-regular";
+export { default as TreeMinimisedIcon } from "~icons/fluent/caret-right-12-filled";
+export { default as TreeExpandedIcon } from "~icons/fluent/caret-down-12-filled";
+
+// useful context menu icons
+export { default as CheckBoxUnchecked } from "~icons/fluent/checkbox-unchecked-16-regular";
+export { default as CheckBoxChecked } from "~icons/fluent/checkbox-checked-16-regular";
+
+
 // Misc
 export { default as FaceSmile } from "~icons/heroicons/face-smile";
 export { default as FaceFrown } from "~icons/heroicons/face-frown";
