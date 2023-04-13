@@ -4,8 +4,16 @@ import Menu from "@/components/menu/Menu.vue";
 
 const isVisible = ref(false);
 
-const clickedX = ref(0);
-const clickedY = ref(0);
+interface Rect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+// dimensions of the element that initiated the menu
+// i.e. values from getBoundingClientRect() of the menu button you clicked
+const initiatorRect: Ref<Rect> = ref({ x: 0, y: 0, width: 0, height: 0 });
 
 const menuWidth = ref(0);
 const menuHeight = ref(0);
@@ -16,15 +24,16 @@ const menuSizeKnown = computed(
 
 const bestX = computed(() => {
   const windowWidth = window.innerWidth;
+  const buttonRect = initiatorRect.value;
 
   // try to put the menu at clicked position
-  if (clickedX.value + menuWidth.value < windowWidth) {
-    return clickedX.value;
+  if (buttonRect.x + menuWidth.value < windowWidth) {
+    return buttonRect.x;
   }
 
   // try to put it backwards
-  if (clickedX.value - menuWidth.value >= 0) {
-    return clickedX.value - menuWidth.value;
+  if (buttonRect.x + buttonRect.width - menuWidth.value >= 0) {
+    return buttonRect.x + buttonRect.width - menuWidth.value;
   }
 
   // if it fit in the screen, offset it
@@ -38,15 +47,16 @@ const bestX = computed(() => {
 
 const bestY = computed(() => {
   const windowHeight = window.innerHeight;
+  const buttonRect = initiatorRect.value;
 
   // try to put the menu at clicked position
-  if (clickedY.value + menuHeight.value < windowHeight) {
-    return clickedY.value;
+  if (buttonRect.y + buttonRect.height + menuHeight.value < windowHeight) {
+    return buttonRect.y + buttonRect.height;
   }
 
   // try to put it backwards
-  if (clickedY.value - menuHeight.value >= 0) {
-    return clickedY.value - menuHeight.value;
+  if (buttonRect.y - menuHeight.value >= 0) {
+    return buttonRect.y - menuHeight.value;
   }
 
   // if it fit in the screen, offset it
@@ -66,8 +76,12 @@ function onReceiveMenuSize(width: number, height: number) {
 function showMenu(e: MouseEvent) {
   const clickedElement = e.target as Element;
   const rect = clickedElement.getBoundingClientRect();
-  clickedX.value = rect.x;
-  clickedY.value = rect.y + rect.height;
+  initiatorRect.value = {
+    x: rect.x,
+    y: rect.y,
+    width: rect.width,
+    height: rect.height,
+  };
   isVisible.value = true;
 }
 
