@@ -5,6 +5,9 @@ CREATE TABLE items (
   meta_tags TEXT NOT NULL DEFAULT 'all'
 );
 
+-- an expression index
+CREATE INDEX items_path_dirname ON items(dirname(path));
+
 -- FTS5 Documentation:
 -- https://www.sqlite.org/fts5.html
 CREATE VIRTUAL TABLE tag_query USING fts5 (

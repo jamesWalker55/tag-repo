@@ -513,6 +513,14 @@ impl Repo {
         Ok(items?)
     }
 
+    pub fn all_folders(&self) -> Result<Vec<String>, SearchError> {
+        let sql = "SELECT DISTINCT dirname(i.path) FROM items i";
+        let mut stmt = self.conn.prepare_cached(sql)?;
+        let mapped_rows = stmt.query_map([], |row| row.get::<_, String>(0))?;
+        let items: Result<Vec<_>, _> = mapped_rows.collect();
+        Ok(items?)
+    }
+
     #[tracing::instrument(skip(new_paths))]
     pub fn sync(
         &mut self,
@@ -572,7 +580,7 @@ lazy_static! {
         ]);
 }
 
-fn add_tag_functions(conn: &Connection) -> rusqlite::Result<()> {
+fn add_functions(conn: &Connection) -> rusqlite::Result<()> {
     conn.create_scalar_function(
         "validate_tags",
         1,
@@ -633,6 +641,20 @@ fn add_tag_functions(conn: &Connection) -> rusqlite::Result<()> {
             Ok(old_tags.join(" "))
         },
     )?;
+    conn.create_scalar_function(
+        "dirname",
+        1,
+        FunctionFlags::SQLITE_UTF8 | FunctionFlags::SQLITE_DETERMINISTIC,
+        |ctx| {
+            assert!(ctx.len() == 1, "called with unexpected number of arguments");
+
+            let fullpath = ctx.get::<String>(0)?;
+            let fullpath: &Path = fullpath.as_ref();
+            let parent = fullpath.parent().unwrap();
+
+            Ok(parent.to_str().unwrap().to_string())
+        },
+    )?;
     Ok(())
 }
 
@@ -650,7 +672,7 @@ pub(crate) fn open_database(db_path: impl AsRef<Path>) -> Result<Connection, Ope
     conn.pragma_update(None, "case_sensitive_like", false)
         .unwrap();
 
-    add_tag_functions(&conn).unwrap();
+    add_functions(&conn).unwrap();
 
     MIGRATIONS
         .to_latest(&mut conn)

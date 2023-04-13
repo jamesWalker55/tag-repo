@@ -47,6 +47,10 @@ export async function getItemDetails(id: number): Promise<ItemDetails> {
   return await invoke("get_item_details", { id: id });
 }
 
+export async function getFolders(): Promise<string[]> {
+  return await invoke("get_folders");
+}
+
 export async function revealFile(path: string) {
   return await invoke("reveal_file", { path: path });
 }

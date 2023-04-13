@@ -203,6 +203,26 @@ async fn query_item_ids(
 }
 
 #[derive(Error, Debug)]
+enum GetFoldersError {
+    #[error("no active repo")]
+    NoOpenRepo,
+    #[error("failed to query items, {0}")]
+    SearchError(#[from] SearchError),
+}
+
+impl_serialize_to_string!(GetFoldersError);
+
+#[tauri::command]
+async fn get_folders(state: tauri::State<'_, AppState>) -> Result<Vec<String>, GetFoldersError> {
+    let manager = state.manager.read().await;
+    let Some(manager) = &*manager else {
+        return Err(GetFoldersError::NoOpenRepo);
+    };
+    let folders = manager.get_folders().await?;
+    Ok(folders)
+}
+
+#[derive(Error, Debug)]
 enum InsertTagsError {
     #[error("no active repo")]
     NoOpenRepo,
@@ -353,6 +373,7 @@ async fn main() {
             determine_filetype,
             insert_tags,
             remove_tags,
+            get_folders,
         ])
         .plugin(tauri_plugin_window_state::Builder::default().build())
         .run(tauri::generate_context!())

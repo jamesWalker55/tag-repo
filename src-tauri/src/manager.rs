@@ -277,6 +277,20 @@ impl<R: Runtime> RepoManager<R> {
         Ok(items)
     }
 
+    pub async fn get_folders(&self) -> Result<Vec<String>, SearchError> {
+        let folders = {
+            // clone a reference to the repo
+            let repo = self.repo.clone();
+            tokio::task::spawn_blocking(move || {
+                let mut repo = block_on(async { repo.lock().await });
+                repo.all_folders()
+            })
+            .await
+            .expect("failed to join with thread that's batch-updating the database")?
+        };
+        Ok(folders)
+    }
+
     pub async fn get_item_details(&self, id: i64) -> Result<ItemDetails, SearchError> {
         let item = {
             let repo = self.repo.lock().await;
