@@ -1,8 +1,9 @@
 use crate::repo::{
-    InsertTagsError, Item, OpenError, QueryError, RemoveError, RemoveTagsError, Repo, SearchError,
-    SyncError,
+    DirStructureError, InsertTagsError, Item, OpenError, QueryError, RemoveError, RemoveTagsError,
+    Repo, SearchError, SyncError,
 };
 use crate::scan::{classify_path, scan_dir, to_relative_path, Options, PathType, ScanError};
+use crate::tree::FolderBuf;
 use crate::watch::{BestWatcher, WindowsNormWatcher};
 use futures::executor::block_on;
 use notify::event::{ModifyKind, RenameMode};
@@ -277,13 +278,13 @@ impl<R: Runtime> RepoManager<R> {
         Ok(items)
     }
 
-    pub async fn get_folders(&self) -> Result<Vec<String>, SearchError> {
+    pub async fn get_dir_structure(&self) -> Result<FolderBuf, DirStructureError> {
         let folders = {
             // clone a reference to the repo
             let repo = self.repo.clone();
             tokio::task::spawn_blocking(move || {
                 let mut repo = block_on(async { repo.lock().await });
-                repo.all_folders()
+                repo.dir_structure()
             })
             .await
             .expect("failed to join with thread that's batch-updating the database")?

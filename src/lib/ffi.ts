@@ -47,8 +47,10 @@ export async function getItemDetails(id: number): Promise<ItemDetails> {
   return await invoke("get_item_details", { id: id });
 }
 
-export async function getFolders(): Promise<string[]> {
-  return await invoke("get_folders");
+interface Folder extends Map<string, Folder> {}
+
+export async function getFolders(): Promise<Folder> {
+  return await invoke("get_dir_structure");
 }
 
 export async function revealFile(path: string) {

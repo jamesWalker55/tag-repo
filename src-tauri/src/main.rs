@@ -16,7 +16,8 @@ use tracing_subscriber::FmtSubscriber;
 use window_shadows::set_shadow;
 
 use crate::manager::{FileType, ItemDetails, ManagerStatus, RepoManager};
-use crate::repo::{Item, OpenError, QueryError, Repo, SearchError};
+use crate::repo::{DirStructureError, Item, OpenError, QueryError, Repo, SearchError};
+use crate::tree::FolderBuf;
 
 mod diff;
 mod helpers;
@@ -208,18 +209,20 @@ enum GetFoldersError {
     #[error("no active repo")]
     NoOpenRepo,
     #[error("failed to query items, {0}")]
-    SearchError(#[from] SearchError),
+    DirStructureError(#[from] DirStructureError),
 }
 
 impl_serialize_to_string!(GetFoldersError);
 
 #[tauri::command]
-async fn get_folders(state: tauri::State<'_, AppState>) -> Result<Vec<String>, GetFoldersError> {
+async fn get_dir_structure(
+    state: tauri::State<'_, AppState>,
+) -> Result<FolderBuf, GetFoldersError> {
     let manager = state.manager.read().await;
     let Some(manager) = &*manager else {
         return Err(GetFoldersError::NoOpenRepo);
     };
-    let folders = manager.get_folders().await?;
+    let folders = manager.get_dir_structure().await?;
     Ok(folders)
 }
 
@@ -374,7 +377,7 @@ async fn main() {
             determine_filetype,
             insert_tags,
             remove_tags,
-            get_folders,
+            get_dir_structure,
         ])
         .plugin(tauri_plugin_window_state::Builder::default().build())
         .run(tauri::generate_context!())

@@ -22,6 +22,7 @@ use crate::diff::{diff_path_list, DiffError};
 use crate::query::to_sql;
 use crate::query::ParseError;
 use crate::scan::{scan_dir, Options, ScanError};
+use crate::tree::{from_ordered_paths, FolderBuf, PathTreeError};
 
 #[derive(Error, Debug)]
 pub enum OpenError {
@@ -108,6 +109,14 @@ pub enum InsertTagsError {
 pub enum RemoveTagsError {
     #[error("an error occurred in rusqlite, {0}")]
     BackendError(#[from] rusqlite::Error),
+}
+
+#[derive(Error, Debug)]
+pub enum DirStructureError {
+    #[error("an error occurred in rusqlite, {0}")]
+    BackendError(#[from] rusqlite::Error),
+    #[error("malformed path, {0}")]
+    MalformedPath(PathBuf),
 }
 
 #[derive(Debug, Serialize, Clone)]
@@ -505,7 +514,7 @@ impl Repo {
         Ok(items?)
     }
 
-    pub(crate) fn all_items(&self) -> Result<Vec<Item>, SearchError> {
+    pub(crate) fn all_items(&self) -> Result<Vec<Item>, rusqlite::Error> {
         let sql = "SELECT i.id, i.path, i.tags, i.meta_tags FROM items i";
         let mut stmt = self.conn.prepare_cached(sql)?;
         let mapped_rows = stmt.query_map([], Self::row_to_item)?;
@@ -513,7 +522,7 @@ impl Repo {
         Ok(items?)
     }
 
-    pub fn all_folders(&self) -> Result<Vec<String>, SearchError> {
+    pub fn all_folders(&self) -> Result<Vec<String>, rusqlite::Error> {
         let sql = "SELECT DISTINCT dirname(i.path) FROM items i ORDER BY dirname(i.path)";
         let mut stmt = self.conn.prepare_cached(sql)?;
         let mapped_rows = stmt.query_map([], |row| row.get::<_, String>(0))?;
@@ -521,9 +530,12 @@ impl Repo {
         Ok(items?)
     }
 
-    pub fn dir_structure(&self) -> Result<Vec<String>, SearchError> {
+    pub fn dir_structure(&self) -> Result<FolderBuf, DirStructureError> {
         let paths = self.all_folders()?;
-        todo!()
+        let dirs = from_ordered_paths(&paths).map_err(|x| match x {
+            PathTreeError::MalformedPath(path) => DirStructureError::MalformedPath(path),
+        })?;
+        Ok(dirs)
     }
 
     #[tracing::instrument(skip(new_paths))]
