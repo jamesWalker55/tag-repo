@@ -26,6 +26,7 @@ mod repo;
 mod scan;
 #[cfg(test)]
 mod tests;
+mod tree;
 pub(crate) mod watch;
 
 struct AppState {

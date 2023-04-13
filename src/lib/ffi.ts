@@ -76,6 +76,5 @@ export async function insertTags(itemIds: number[], tags: string[]) {
 }
 
 export async function removeTags(itemIds: number[], tags: string[]) {
-  console.log("removing from items", itemIds, "the tags", tags);
   await invoke("remove_tags", { ids: itemIds, tags: tags });
 }

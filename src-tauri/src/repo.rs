@@ -521,6 +521,11 @@ impl Repo {
         Ok(items?)
     }
 
+    pub fn dir_structure(&self) -> Result<Vec<String>, SearchError> {
+        let paths = self.all_folders()?;
+        todo!()
+    }
+
     #[tracing::instrument(skip(new_paths))]
     pub fn sync(
         &mut self,
