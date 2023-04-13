@@ -1,7 +1,9 @@
 import { defineConfig } from "vite";
 import vue from "@vitejs/plugin-vue";
-import path from 'path'
-import Icons from 'unplugin-icons/vite';
+import path from "path";
+import Icons from "unplugin-icons/vite";
+import Components from "unplugin-vue-components/vite";
+import IconsResolver from "unplugin-icons/resolver";
 
 const mobile =
   process.env.TAURI_PLATFORM === "android" ||
@@ -9,11 +11,18 @@ const mobile =
 
 // https://vitejs.dev/config/
 export default defineConfig(async () => ({
-  plugins: [vue(), Icons()],
+  plugins: [
+    vue(),
+    Components({
+      dts: true,
+      resolvers: [IconsResolver()],
+    }),
+    Icons(),
+  ],
 
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src'),
+      "@": path.resolve(__dirname, "./src"),
     },
   },
 
@@ -37,9 +46,9 @@ export default defineConfig(async () => ({
     sourcemap: !!process.env.TAURI_DEBUG,
     rollupOptions: {
       input: {
-        main: path.resolve(__dirname, 'index.html'),
-        startup: path.resolve(__dirname, 'startup.html'),
-      }
-    }
+        main: path.resolve(__dirname, "index.html"),
+        startup: path.resolve(__dirname, "startup.html"),
+      },
+    },
   },
 }));
