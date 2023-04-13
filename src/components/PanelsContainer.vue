@@ -106,11 +106,7 @@ const gridAreas = computed(() => {
       <slot name="bottom">Bottom panel</slot>
     </BottomPanel>
 
-    <LeftPanel
-      v-if="leftSizeKey"
-      :size-key="leftSizeKey"
-      style="grid-area: l"
-    >
+    <LeftPanel v-if="leftSizeKey" :size-key="leftSizeKey" style="grid-area: l">
       <slot name="left">Left panel</slot>
     </LeftPanel>
 

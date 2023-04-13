@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { Ref, ref, watch } from "vue";
-import {setQuery} from '@/lib/api';
+import { setQuery } from "@/lib/api";
 
 const inputElement: Ref<HTMLInputElement | null> = ref(null);
 const queryText = ref("");

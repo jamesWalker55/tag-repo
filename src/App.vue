@@ -6,11 +6,6 @@ import ItemList from "./components/ItemList.vue";
 import { Ref, ref } from "vue";
 import PanelsContainer from "@/components/PanelsContainer.vue";
 import ItemProperties from "@/components/ItemProperties.vue";
-import ContextMenu from "@/components/ContextMenu.vue";
-import { Copy, Cut, Paste } from "@/lib/icons";
-import MenuItem from "@/components/menu/MenuItem.vue";
-import MenuSeparator from "@/components/menu/MenuSeparator.vue";
-import MenuArbitraryItem from "@/components/menu/MenuArbitraryItem.vue";
 
 // const propertiesVisible = computed(() => selection.selectedCount.value > 0);
 const propertiesVisible = true;

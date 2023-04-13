@@ -22,10 +22,7 @@ const menuItems = computed(() => [
 </script>
 
 <template>
-  <VueFileToolbarMenu
-    id="toolbar"
-    :content="menuItems"
-  />
+  <VueFileToolbarMenu id="toolbar" :content="menuItems" />
   <FeedbackModal
     v-if="feedbackPopup"
     @closed="feedbackPopup = !feedbackPopup"
