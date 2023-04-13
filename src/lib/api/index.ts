@@ -1,5 +1,11 @@
 import { watch } from "vue";
-import { ManagerStatus, insertTags, removeTags } from "@/lib/ffi";
+import {
+  ManagerStatus,
+  insertTags,
+  removeTags,
+  stopAudio,
+  previewAudio,
+} from "@/lib/ffi";
 import { Event, listen } from "@tauri-apps/api/event";
 import { appWindow } from "@tauri-apps/api/window";
 import { refreshAll, state } from "./state";
@@ -15,6 +21,7 @@ import {
 } from "./items";
 import { selection } from "./selection";
 import * as actions from "./actions";
+import path from "path-browserify";
 
 export {
   revealFile,
@@ -161,5 +168,42 @@ watch(
     clearItemCache();
     // actually change the item list
     state.itemIds = newItems;
+  }
+);
+// when the selection changes...
+watch(
+  () => selection.selected.value,
+  (selectedIndexes) => {
+    // if repo isn't loaded, do nothing
+    const repoPath = state.path;
+    if (repoPath === null) {
+      stopAudio().then();
+      return;
+    }
+
+    // play back audio only if 1 item selected
+    if (selectedIndexes.length !== 1) {
+      stopAudio().then();
+      return;
+    }
+
+    const index = selectedIndexes[0];
+    const itemId = state.itemIds[index];
+    const details = state.itemCache[itemId];
+    if (details === undefined) {
+      // item not loaded yet, do nothing
+      stopAudio().then();
+      return;
+    }
+    const relPath = details.item.path;
+    const extension = path.extname(relPath).toLowerCase();
+    const ALLOWED_EXTENSIONS = [".mp3", ".wav", ".ewav", ".flac", ".ogg"];
+    if (ALLOWED_EXTENSIONS.indexOf(extension) !== -1) {
+      console.log("extension:", extension);
+      const fullPath = path.join(repoPath, relPath);
+      previewAudio(fullPath).then();
+    } else {
+      stopAudio().then();
+    }
   }
 );
