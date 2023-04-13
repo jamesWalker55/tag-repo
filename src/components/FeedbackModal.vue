@@ -33,9 +33,7 @@ const emit = defineEmits<Emits>();
         </p>
         <p class="mb-2">
           If you have any feedback about tagrepo, I would greatly appreciate it
-          if you could take a moment to fill out the form linked below. Even if
-          you are happy with the software and have no particular feedback, your
-          response would still be valuable to me.
+          if you could take a moment to fill out the form linked below.
         </p>
         <p class="mb-4 mt-4 flex justify-center">
           <!-- TODO -->
