@@ -118,7 +118,7 @@ const log = console.log;
         Multiple items
       </span>
       <!-- button -->
-      <VerticalDots class="h-16px w-16px flex-none" />
+      <!--<VerticalDots class="h-16px w-16px flex-none" />-->
     </div>
     <!-- tags list -->
     <div class="flex flex-1 flex-col">
