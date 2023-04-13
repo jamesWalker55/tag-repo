@@ -24,8 +24,6 @@ const recursiveMode = ref(false);
 watch(
   () => recursiveMode.value,
   (newRecursiveMode) => {
-    console.log("recursiveMode has changed to:", newRecursiveMode);
-    console.log("  lastAddedPath.value:", lastAddedPath.value);
     if (lastAddedPath.value !== null) {
       addToQuery(lastAddedPath.value);
     }
@@ -33,12 +31,20 @@ watch(
 );
 
 async function fetchFolders() {
-  rootFolder.value = await getFolders();
+  if (state.path !== null) {
+    rootFolder.value = await getFolders();
+  } else {
+    rootFolder.value = {};
+  }
 }
 
 fetchFolders().then();
 
 watch(() => state.path, fetchFolders);
+
+function rootFoldersCount(folder: Folder): number {
+  return Object.keys(folder).length;
+}
 
 function sortedFolder(folder: Folder): [string, Folder][] {
   return Object.entries(folder).sort();
@@ -77,12 +83,18 @@ const log = console.log;
     </div>
     <!-- the tree -->
     <div v-if="rootFolder !== null" class="overflow-x-auto py-1 pl-0.5 text-sm">
-      <div v-for="[name, children] in sortedFolder(rootFolder)">
+      <div
+        v-if="rootFoldersCount(rootFolder) > 0"
+        v-for="[name, children] in sortedFolder(rootFolder)"
+      >
         <FolderTreeItem
           :name="name"
           :children="children"
           @add-to-query="addToQuery"
         />
+      </div>
+      <div v-else class="px-1 text-neutral-500">
+        No folders in this repository.
       </div>
     </div>
     <div v-else class="flex items-center justify-center">
