@@ -30,7 +30,7 @@ const itemList: Ref<InstanceType<typeof ItemList> | null> = ref(null);
 <template>
   <div
     id="container"
-    class="app-grid relative grid h-screen max-h-screen select-none border border-neutral-300 text-base"
+    class="app-grid relative grid h-screen max-h-screen select-none overflow-clip border border-neutral-300 text-base"
   >
     <TitleBar class="flex-none" />
     <QueryBar class="flex-none" @keydown.enter="itemList.focus()" />
