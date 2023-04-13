@@ -202,7 +202,6 @@ const log = console.log;
         // don't do anything if there's nothing in the list
         if (state.itemIds.length === 0) return;
 
-        let eventNotHandled;
         if (e.key === 'Home') {
           selection.isolate(0);
           scrollToFocusedIndex();
@@ -210,11 +209,11 @@ const log = console.log;
           selection.isolate(state.itemIds.length - 1);
           scrollToFocusedIndex();
         } else {
-          eventNotHandled = true;
+          // event is not handled, return early
+          return;
         }
-        if (!eventNotHandled) {
-          e.preventDefault();
-        }
+
+        e.preventDefault();
       }
     "
   >
@@ -302,7 +301,7 @@ const log = console.log;
         @click="
           (e) => {
             actions.copySelectedItemPaths();
-            closeMenu(e);
+            closeMenu();
           }
         "
       >

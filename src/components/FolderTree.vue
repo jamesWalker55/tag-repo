@@ -78,7 +78,7 @@ const log = console.log;
       </div>
       <VerticalDots
         class="box-content h-16px w-16px flex-none cursor-pointer rounded p-0.5 text-neutral-600 hover:bg-neutral-200 hover:text-neutral-800"
-        @click="(e) => menu.show(e)"
+        @click="(e: MouseEvent) => menu?.show(e)"
       />
     </div>
     <!-- the tree -->
