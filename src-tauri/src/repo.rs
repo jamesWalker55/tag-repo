@@ -514,7 +514,7 @@ impl Repo {
     }
 
     pub fn all_folders(&self) -> Result<Vec<String>, SearchError> {
-        let sql = "SELECT DISTINCT dirname(i.path) FROM items i";
+        let sql = "SELECT DISTINCT dirname(i.path) FROM items i ORDER BY dirname(i.path)";
         let mut stmt = self.conn.prepare_cached(sql)?;
         let mapped_rows = stmt.query_map([], |row| row.get::<_, String>(0))?;
         let items: Result<Vec<_>, _> = mapped_rows.collect();
