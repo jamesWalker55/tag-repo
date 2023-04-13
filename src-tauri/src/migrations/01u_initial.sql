@@ -7,6 +7,7 @@ CREATE TABLE items (
 
 -- an expression index
 CREATE INDEX items_path_dirname ON items(dirname(path));
+CREATE INDEX items_path_extname ON items(extname(path));
 
 -- FTS5 Documentation:
 -- https://www.sqlite.org/fts5.html

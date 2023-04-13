@@ -1,4 +1,5 @@
 use std::collections::{HashMap, HashSet};
+use std::ffi::OsStr;
 use std::fs::create_dir;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -663,13 +664,28 @@ fn add_functions(conn: &Connection) -> rusqlite::Result<()> {
         1,
         FunctionFlags::SQLITE_UTF8 | FunctionFlags::SQLITE_DETERMINISTIC,
         |ctx| {
-            assert!(ctx.len() == 1, "called with unexpected number of arguments");
+            assert_eq!(ctx.len(), 1, "called with unexpected number of arguments");
 
             let fullpath = ctx.get::<String>(0)?;
             let fullpath: &Path = fullpath.as_ref();
             let parent = fullpath.parent().unwrap();
 
             Ok(parent.to_str().unwrap().to_string())
+        },
+    )?;
+    conn.create_scalar_function(
+        "extname",
+        1,
+        FunctionFlags::SQLITE_UTF8 | FunctionFlags::SQLITE_DETERMINISTIC,
+        |ctx| {
+            assert_eq!(ctx.len(), 1, "called with unexpected number of arguments");
+
+            let fullpath = ctx.get::<String>(0)?;
+            let fullpath: &Path = fullpath.as_ref();
+            match fullpath.extension() {
+                None => Ok(String::from("")),
+                Some(extension) => Ok(extension.to_str().unwrap().to_string()),
+            }
         },
     )?;
     Ok(())

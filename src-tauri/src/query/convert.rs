@@ -58,7 +58,7 @@ impl<'a> WhereClause<'a> {
             }
             HasExt(ext) => {
                 let escaped_ext = escape_like_pattern(ext, '\\');
-                format!("i.path LIKE '%.{}' ESCAPE '\\'", escaped_ext)
+                format!("extname(i.path) LIKE '{}' ESCAPE '\\'", escaped_ext)
             }
             InPath(path) => {
                 let escaped_path = escape_like_pattern(path.borrow(), '\\');
