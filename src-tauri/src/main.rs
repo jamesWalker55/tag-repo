@@ -45,6 +45,8 @@ enum CreateAudioOutputError {
 fn get_output_stream_and_sink() -> Result<(OutputStream, Sink), CreateAudioOutputError> {
     let (stream, stream_handle) = OutputStream::try_default()?;
     let sink = Sink::try_new(&stream_handle)?;
+    // lower the volume to prevent hearing damage
+    sink.set_volume(0.5);
     Ok((stream, sink))
 }
 
