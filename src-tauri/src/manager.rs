@@ -100,13 +100,15 @@ pub fn determine_filetype(path: impl AsRef<Path>) -> FileType {
         return FileType::Unknown;
     };
 
-    if EXT_AUDIO.contains(&extension) {
+    let extension = extension.to_lowercase();
+
+    if EXT_AUDIO.contains(&extension.as_str()) {
         FileType::Audio
-    } else if EXT_DOCUMENT.contains(&extension) {
+    } else if EXT_DOCUMENT.contains(&extension.as_str()) {
         FileType::Document
-    } else if EXT_IMAGE.contains(&extension) {
+    } else if EXT_IMAGE.contains(&extension.as_str()) {
         FileType::Image
-    } else if EXT_VIDEO.contains(&extension) {
+    } else if EXT_VIDEO.contains(&extension.as_str()) {
         FileType::Video
     } else {
         FileType::Unknown
