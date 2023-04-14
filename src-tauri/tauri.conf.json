@@ -12,10 +12,7 @@
   },
   "tauri": {
     "allowlist": {
-      "all": true,
-      "fs": {
-        "scope": ["*"]
-      }
+      "all": true
     },
     "bundle": {
       "active": true,
@@ -30,7 +27,7 @@
       "targets": "all"
     },
     "security": {
-      "csp": "default-src 'self' asset: https://asset.localhost"
+      "csp": null
     },
     "updater": {
       "active": false
