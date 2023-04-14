@@ -35,6 +35,7 @@ export {
   stopAudio,
   getAudioVolume,
   setAudioVolume,
+  openManual,
 } from "@/lib/ffi";
 export {
   type ItemDetails,

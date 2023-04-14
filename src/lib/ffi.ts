@@ -104,3 +104,7 @@ export async function getAudioVolume(): Promise<number> {
 export async function setAudioVolume(volume: number) {
   await invoke("set_audio_volume", { volume: volume });
 }
+
+export async function openManual() {
+  await invoke("launch_manual");
+}

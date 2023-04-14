@@ -2,7 +2,7 @@
 import { appWindow } from "@tauri-apps/api/window";
 import { Ref, ref } from "vue";
 import * as api from "@/lib/api";
-import { selection, state } from "@/lib/api";
+import { openManual, selection, state } from "@/lib/api";
 import {
   shuffleList,
   toggleLeftPanelVisibility,
@@ -23,8 +23,9 @@ const fileMenu: Ref<ToolbarMenuType | null> = ref(null);
 const editMenu: Ref<ToolbarMenuType | null> = ref(null);
 const previewMenu: Ref<ToolbarMenuType | null> = ref(null);
 const viewMenu: Ref<ToolbarMenuType | null> = ref(null);
+const helpMenu: Ref<ToolbarMenuType | null> = ref(null);
 
-const allMenuRefs = [fileMenu, editMenu, previewMenu, viewMenu];
+const allMenuRefs = [fileMenu, editMenu, previewMenu, viewMenu, helpMenu];
 
 const anyMenuActive = ref(false);
 
@@ -228,6 +229,34 @@ function onButtonMouseOver(e: MouseEvent, menu: ToolbarMenuType | null) {
           @value-changed="(val) => setAudioVolume(val)"
         />
       </MenuArbitraryItem>
+    </ToolbarMenu>
+
+    <!-- Help menu -->
+    <ToolbarButton
+      @click="(e) => onButtonClick(e, helpMenu)"
+      v-click-away="(e: MouseEvent) => onButtonClickAway(e, helpMenu)"
+      @mouseover.self="(e) => onButtonMouseOver(e, helpMenu)"
+    >
+      Help
+    </ToolbarButton>
+    <ToolbarMenu ref="helpMenu" v-slot="{ closeMenu }">
+      <MenuItem
+        text="Manual"
+        @click="
+          (e) => {
+            openManual();
+            closeMenu();
+          }
+        "
+      >
+        <template #icon="{ defaultClasses }">
+          <i-fluent-book-open-16-regular
+            width="16"
+            height="16"
+            :class="defaultClasses"
+          />
+        </template>
+      </MenuItem>
     </ToolbarMenu>
 
     <!-- Spacer / info -->

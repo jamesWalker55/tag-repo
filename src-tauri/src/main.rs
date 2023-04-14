@@ -362,6 +362,13 @@ fn launch_file(path: String) -> Result<(), OpenFileError> {
 }
 
 #[tauri::command]
+fn launch_manual() -> Result<(), OpenFileError> {
+    open::that("https://jameswalker55.github.io/tag-repo-site/")
+        .unwrap_or_else(|err| error!("failed to open browser to manual, {:?}", err));
+    Ok(())
+}
+
+#[tauri::command]
 fn determine_filetype(path: String) -> FileType {
     use crate::manager::determine_filetype;
 
@@ -520,6 +527,7 @@ async fn main() {
             stop_audio,
             get_audio_volume,
             set_audio_volume,
+            launch_manual,
         ])
         .plugin(tauri_plugin_window_state::Builder::default().build())
         .run(tauri::generate_context!())
