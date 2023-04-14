@@ -312,29 +312,39 @@ enum RevealFileError {
 
 impl_serialize_to_string!(RevealFileError);
 
+// for all target_os options, see:
+// https://doc.rust-lang.org/reference/conditional-compilation.html#target_os
+#[cfg(target_os = "windows")]
 #[tauri::command]
 fn reveal_file(path: String) -> Result<(), RevealFileError> {
     let path: &Path = path.as_ref();
-    // for all target_os options, see:
-    // https://doc.rust-lang.org/reference/conditional-compilation.html#target_os
-    if cfg!(target_os = "windows") {
-        // explorer can't find the file if you use forward slashes
-        // normalise the path to remove forward slashes
-        let path = path.normalize_virtually()?;
-        let Some(path) = path.as_path().to_str() else {
+    // explorer can't find the file if you use forward slashes
+    // normalise the path to remove forward slashes
+    let path = path.normalize_virtually()?;
+    let Some(path) = path.as_path().to_str() else {
             return Err(RevealFileError::MalformedPath(path.into_path_buf()));
         };
-        Command::new("explorer").args(["/select,", path]).spawn()?;
-    } else if cfg!(target_os = "macos") {
-        let path = path.normalize()?;
-        let Some(path) = path.as_path().to_str() else {
-            return Err(RevealFileError::MalformedPath(path.into_path_buf()));
-        };
-        Command::new("open").args(["-R", path]).spawn()?;
-    } else {
-        return Err(RevealFileError::OperatingSystemNotSupported);
-    };
+    Command::new("explorer").args(["/select,", path]).spawn()?;
     Ok(())
+}
+
+#[cfg(target_os = "macos")]
+#[tauri::command]
+fn reveal_file(path: String) -> Result<(), RevealFileError> {
+    let path: &Path = path.as_ref();
+    let path = path.normalize()?;
+    let Some(path) = path.as_path().to_str() else {
+        return Err(RevealFileError::MalformedPath(path.into_path_buf()));
+    };
+    Command::new("open").args(["-R", path]).spawn()?;
+    Ok(())
+}
+
+#[cfg(not(any(target_os = "windows", target_os = "macos")))]
+#[tauri::command]
+fn reveal_file(path: String) -> Result<(), RevealFileError> {
+    let path: &Path = path.as_ref();
+    return Err(RevealFileError::OperatingSystemNotSupported);
 }
 
 #[derive(Error, Debug)]
