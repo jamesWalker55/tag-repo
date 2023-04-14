@@ -10,14 +10,36 @@ import MenuItem from "@/components/menu/MenuItem.vue";
 import MenuSeparator from "@/components/menu/MenuSeparator.vue";
 import MenuText from "@/components/menu/MenuText.vue";
 
-const fileMenu: Ref<InstanceType<typeof ToolbarMenu> | null> = ref(null);
-const editMenu: Ref<InstanceType<typeof ToolbarMenu> | null> = ref(null);
+type ToolbarMenuType = InstanceType<typeof ToolbarMenu>;
+
+const fileMenu: Ref<ToolbarMenuType | null> = ref(null);
+const editMenu: Ref<ToolbarMenuType | null> = ref(null);
+
+const allMenuRefs = [fileMenu, editMenu];
 
 const anyMenuActive = ref(false);
 
-function temporarilyHideAllMenus() {
-  fileMenu.value?.close();
-  editMenu.value?.close();
+function onButtonClick(e: MouseEvent, menu: ToolbarMenuType | null) {
+  menu?.show(e);
+  anyMenuActive.value = true;
+}
+
+function onButtonClickAway(e: MouseEvent, menu: ToolbarMenuType | null) {
+  console.log("click away:", e.target);
+  anyMenuActive.value = false;
+}
+
+function onButtonMouseOver(e: MouseEvent, menu: ToolbarMenuType | null) {
+  if (!anyMenuActive.value) return;
+
+  // close all other menus, while keeping the given menu open
+  for (let menuRef of allMenuRefs) {
+    if (menuRef.value === menu) {
+      menu?.show(e);
+    } else {
+      menuRef.value?.close();
+    }
+  }
 }
 </script>
 
@@ -33,21 +55,9 @@ function temporarilyHideAllMenus() {
 
     <!-- File menu -->
     <ToolbarButton
-      @click="
-        (e) => {
-          fileMenu?.show(e);
-          anyMenuActive = true;
-        }
-      "
-      v-click-away="(e) => (anyMenuActive = false)"
-      @mouseover="
-        (e) => {
-          if (!anyMenuActive) return;
-
-          temporarilyHideAllMenus();
-          fileMenu?.show(e);
-        }
-      "
+      @click="(e) => onButtonClick(e, fileMenu)"
+      v-click-away="(e) => onButtonClickAway(e, fileMenu)"
+      @mouseover="(e) => onButtonMouseOver(e, fileMenu)"
     >
       File
     </ToolbarButton>
@@ -92,21 +102,9 @@ function temporarilyHideAllMenus() {
 
     <!-- Edit menu -->
     <ToolbarButton
-      @click="
-        (e) => {
-          editMenu?.show(e);
-          anyMenuActive = true;
-        }
-      "
-      v-click-away="(e) => (anyMenuActive = false)"
-      @mouseover="
-        (e) => {
-          if (!anyMenuActive) return;
-
-          temporarilyHideAllMenus();
-          editMenu?.show(e);
-        }
-      "
+      @click="(e) => onButtonClick(e, editMenu)"
+      v-click-away="(e) => onButtonClickAway(e, editMenu)"
+      @mouseover="(e) => onButtonMouseOver(e, editMenu)"
     >
       Edit
     </ToolbarButton>
