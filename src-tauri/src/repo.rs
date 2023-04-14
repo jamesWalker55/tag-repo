@@ -505,6 +505,7 @@ impl Repo {
                 INNER JOIN
                     tag_query tq ON tq.id = i.id
                 WHERE {}
+                ORDER BY i.path
             "},
             where_clause
         );
