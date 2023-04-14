@@ -13,12 +13,11 @@ defineProps<Props>();
 <template>
   <tr class="group">
     <td class="pl-3 group-hover:bg-neutral-100">
-      <slot
-        name="icon"
-        v-bind="{ defaultClasses: 'text-neutral-600' }"
-      ></slot>
+      <slot name="icon" v-bind="{ defaultClasses: 'text-neutral-600' }"></slot>
     </td>
-    <td class="flex h-8 items-center px-3 group-hover:bg-neutral-100">
+    <td
+      class="flex h-8 items-center whitespace-nowrap px-3 group-hover:bg-neutral-100"
+    >
       {{ text }}
     </td>
     <td class="pr-3 text-right group-hover:bg-neutral-100">{{ altText }}</td>
