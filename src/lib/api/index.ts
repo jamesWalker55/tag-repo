@@ -174,6 +174,11 @@ watch(
 watch(
   () => selection.selected.value,
   (selectedIndexes) => {
+    if (!state.audioPreview) {
+      stopAudio().then();
+      return;
+    }
+
     // if repo isn't loaded, do nothing
     const repoPath = state.path;
     if (repoPath === null) {
@@ -207,6 +212,15 @@ watch(
     }
   }
 );
+// when the audio preview setting changes...
+watch(
+  () => state.audioPreview,
+  (audioPreview) => {
+    if (!audioPreview) {
+      stopAudio().then();
+    }
+  }
+)
 // when the audio volume changes...
 watch(
   () => state.audioVolume,
