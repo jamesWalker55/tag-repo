@@ -6,7 +6,7 @@ import { createEventListenerRegistry } from "@/lib/utils";
 import { getSpacingSize } from "@/lib/tailwindcss";
 import { computed, onBeforeUnmount, onMounted, ref, Ref } from "vue";
 import ContextMenu from "@/components/ContextMenu.vue";
-import { CopyFilePath, OpenFile, PreviewFile, RevealFile } from "@/lib/icons";
+import { CopyFilePath, OpenFile, RevealFile } from "@/lib/icons";
 import MenuItem from "@/components/menu/MenuItem.vue";
 import MenuSeparator from "@/components/menu/MenuSeparator.vue";
 import { launchSelectedItems } from "@/lib/api/actions";
@@ -281,18 +281,6 @@ const log = console.log;
       >
         <template #icon="{ defaultClasses }">
           <RevealFile class="h-16px w-16px" :class="defaultClasses" />
-        </template>
-      </MenuItem>
-      <MenuItem
-        text="Preview"
-        @click="
-          (e) => {
-            // TODO
-          }
-        "
-      >
-        <template #icon="{ defaultClasses }">
-          <PreviewFile class="h-16px w-16px" :class="defaultClasses" />
         </template>
       </MenuItem>
       <MenuSeparator />
