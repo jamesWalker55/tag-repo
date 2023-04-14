@@ -2,20 +2,24 @@
 import { appWindow } from "@tauri-apps/api/window";
 import { Ref, ref } from "vue";
 import * as api from "@/lib/api";
-import { selection } from "@/lib/api";
+import { selection, state } from "@/lib/api";
 import { shuffleList } from "@/lib/api/actions";
 import ToolbarButton from "@/components/toolbars/ToolbarButton.vue";
 import ToolbarMenu from "@/components/ToolbarMenu.vue";
 import MenuItem from "@/components/menu/MenuItem.vue";
 import MenuSeparator from "@/components/menu/MenuSeparator.vue";
 import MenuText from "@/components/menu/MenuText.vue";
+import { setAudioVolume, toggleAudioPreview } from "@/lib/api/audio-preview";
+import MenuArbitraryItem from "@/components/menu/MenuArbitraryItem.vue";
+import AudioSlider from "@/components/toolbars/AudioSlider.vue";
 
 type ToolbarMenuType = InstanceType<typeof ToolbarMenu>;
 
 const fileMenu: Ref<ToolbarMenuType | null> = ref(null);
 const editMenu: Ref<ToolbarMenuType | null> = ref(null);
+const previewMenu: Ref<ToolbarMenuType | null> = ref(null);
 
-const allMenuRefs = [fileMenu, editMenu];
+const allMenuRefs = [fileMenu, editMenu, previewMenu];
 
 const anyMenuActive = ref(false);
 
@@ -25,7 +29,6 @@ function onButtonClick(e: MouseEvent, menu: ToolbarMenuType | null) {
 }
 
 function onButtonClickAway(e: MouseEvent, menu: ToolbarMenuType | null) {
-  console.log("click away:", e.target);
   anyMenuActive.value = false;
 }
 
@@ -113,7 +116,9 @@ function onButtonMouseOver(e: MouseEvent, menu: ToolbarMenuType | null) {
         text="Clear Selection"
         @click="
           () => {
-            selection.clear();
+            if (selection.selectedCount.value !== 0) {
+              selection.clear();
+            }
             closeMenu();
           }
         "
@@ -138,6 +143,45 @@ function onButtonMouseOver(e: MouseEvent, menu: ToolbarMenuType | null) {
           />
         </template>
       </MenuItem>
+    </ToolbarMenu>
+
+    <!-- Preview menu -->
+    <ToolbarButton
+      @click="(e) => onButtonClick(e, previewMenu)"
+      v-click-away="(e) => onButtonClickAway(e, previewMenu)"
+      @mouseover.self="(e) => onButtonMouseOver(e, previewMenu)"
+    >
+      Audio
+    </ToolbarButton>
+    <ToolbarMenu ref="previewMenu" v-slot="{ closeMenu }">
+      <MenuItem
+        :text="state.audioPreview ? 'Audio preview' : 'Audio preview'"
+        @click="toggleAudioPreview()"
+      >
+        <template #icon="{ defaultClasses }">
+          <i-fluent-checkbox-checked-16-regular
+            v-if="state.audioPreview"
+            width="16"
+            height="16"
+            :class="defaultClasses"
+          />
+          <i-fluent-checkbox-unchecked-16-regular
+            v-else
+            width="16"
+            height="16"
+            :class="defaultClasses"
+          />
+        </template>
+      </MenuItem>
+      <MenuSeparator />
+      <MenuArbitraryItem>
+        <AudioSlider
+          class="h-14"
+          :disabled="!state.audioPreview"
+          :initial-value="state.audioVolume"
+          @value-changed="(val) => setAudioVolume(val)"
+        />
+      </MenuArbitraryItem>
     </ToolbarMenu>
 
     <!-- Spacer / info -->

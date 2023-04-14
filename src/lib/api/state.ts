@@ -21,6 +21,10 @@ export interface AppState {
   listViewColumns: ListViewColumn[];
   // the selection in the list view
   itemIdSelection: Selection | null;
+  // whether audio previewing is enabled
+  audioPreview: boolean;
+  // playback volume
+  audioVolume: number;
   // app panels
   panelSizes: {
     bottomPanel: number;
@@ -45,6 +49,8 @@ export const state: AppState = reactive({
     { type: "path", width: 500 },
   ],
   itemIdSelection: null,
+  audioPreview: false,
+  audioVolume: 0.5,
   // size of various panels
   panelSizes: {
     bottomPanel: 160,
@@ -70,6 +76,14 @@ export async function refreshPath() {
   const newPath = await ffi.getRepoPath();
   if (newPath !== state.path) {
     state.path = newPath;
+  }
+}
+
+refreshFuncs.push(refreshAudioVolume);
+export async function refreshAudioVolume() {
+  const volume = await ffi.getAudioVolume();
+  if (volume !== state.audioVolume) {
+    state.audioVolume = volume;
   }
 }
 
