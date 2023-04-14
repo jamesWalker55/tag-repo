@@ -15,7 +15,7 @@ defineProps<Props>();
     <td class="pl-3 group-hover:bg-neutral-100">
       <slot
         name="icon"
-        v-bind="{ defaultClasses: 'text-base text-neutral-600' }"
+        v-bind="{ defaultClasses: 'text-neutral-600' }"
       ></slot>
     </td>
     <td class="flex h-8 items-center px-3 group-hover:bg-neutral-100">

@@ -89,7 +89,7 @@ function closeMenu() {
   isVisible.value = false;
 }
 
-defineExpose({ show: showMenu });
+defineExpose({ show: showMenu, close: closeMenu });
 
 const log = console.log;
 </script>
