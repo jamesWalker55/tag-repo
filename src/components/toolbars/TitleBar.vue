@@ -57,7 +57,7 @@ function onButtonMouseOver(e: MouseEvent, menu: ToolbarMenuType | null) {
     <ToolbarButton
       @click="(e) => onButtonClick(e, fileMenu)"
       v-click-away="(e) => onButtonClickAway(e, fileMenu)"
-      @mouseover="(e) => onButtonMouseOver(e, fileMenu)"
+      @mouseover.self="(e) => onButtonMouseOver(e, fileMenu)"
     >
       File
     </ToolbarButton>
@@ -104,7 +104,7 @@ function onButtonMouseOver(e: MouseEvent, menu: ToolbarMenuType | null) {
     <ToolbarButton
       @click="(e) => onButtonClick(e, editMenu)"
       v-click-away="(e) => onButtonClickAway(e, editMenu)"
-      @mouseover="(e) => onButtonMouseOver(e, editMenu)"
+      @mouseover.self="(e) => onButtonMouseOver(e, editMenu)"
     >
       Edit
     </ToolbarButton>
