@@ -4,7 +4,7 @@ use crate::repo::{
 };
 use crate::scan::{classify_path, scan_dir, to_relative_path, Options, PathType, ScanError};
 use crate::tree::FolderBuf;
-use crate::watch::{BestWatcher, WindowsNormWatcher};
+use crate::watch::BestWatcher;
 use futures::executor::block_on;
 use notify::event::{ModifyKind, RenameMode};
 use notify::EventKind::{Create, Modify, Remove};

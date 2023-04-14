@@ -59,7 +59,7 @@ function onButtonMouseOver(e: MouseEvent, menu: ToolbarMenuType | null) {
     <!-- File menu -->
     <ToolbarButton
       @click="(e) => onButtonClick(e, fileMenu)"
-      v-click-away="(e) => onButtonClickAway(e, fileMenu)"
+      v-click-away="(e: MouseEvent) => onButtonClickAway(e, fileMenu)"
       @mouseover.self="(e) => onButtonMouseOver(e, fileMenu)"
     >
       File
@@ -106,7 +106,7 @@ function onButtonMouseOver(e: MouseEvent, menu: ToolbarMenuType | null) {
     <!-- Edit menu -->
     <ToolbarButton
       @click="(e) => onButtonClick(e, editMenu)"
-      v-click-away="(e) => onButtonClickAway(e, editMenu)"
+      v-click-away="(e: MouseEvent) => onButtonClickAway(e, editMenu)"
       @mouseover.self="(e) => onButtonMouseOver(e, editMenu)"
     >
       Edit
@@ -148,7 +148,7 @@ function onButtonMouseOver(e: MouseEvent, menu: ToolbarMenuType | null) {
     <!-- Preview menu -->
     <ToolbarButton
       @click="(e) => onButtonClick(e, previewMenu)"
-      v-click-away="(e) => onButtonClickAway(e, previewMenu)"
+      v-click-away="(e: MouseEvent) => onButtonClickAway(e, previewMenu)"
       @mouseover.self="(e) => onButtonMouseOver(e, previewMenu)"
     >
       Audio

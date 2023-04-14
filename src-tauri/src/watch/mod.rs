@@ -3,12 +3,11 @@ use std::path::Path;
 use async_trait::async_trait;
 use notify::{Event, RecursiveMode};
 
-pub use crate::watch::windows::WindowsNormWatcher;
-
-mod windows;
 
 #[cfg(target_os = "windows")]
-pub type BestWatcher = WindowsNormWatcher;
+mod windows;
+#[cfg(target_os = "windows")]
+pub type BestWatcher = windows::WindowsNormWatcher;
 #[cfg(not(target_os = "windows"))]
 pub type BestWatcher = notify::RecommendedWatcher;
 
