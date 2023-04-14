@@ -8,19 +8,19 @@ use std::process::Command;
 use std::time::Duration;
 
 use normpath::PathExt;
-use rodio::decoder::DecoderError::DecodeError;
-use rodio::{Decoder, OutputStream, OutputStreamHandle, PlayError, Sink, Source, StreamError};
+
+use rodio::{Decoder, OutputStream, PlayError, Sink, Source, StreamError};
 use serde::{Serialize, Serializer};
-use tauri::{AppHandle, Manager, PhysicalSize, Runtime, Wry};
+use tauri::{AppHandle, Manager, PhysicalSize, Wry};
 use thiserror::Error;
 use tokio::sync::{Mutex, RwLock};
 use tokio::time::sleep;
-use tracing::{error, info, warn, Level};
+use tracing::{error, Level};
 use tracing_subscriber::FmtSubscriber;
 use window_shadows::set_shadow;
 
 use crate::manager::{FileType, ItemDetails, ManagerStatus, RepoManager};
-use crate::repo::{DirStructureError, Item, OpenError, QueryError, Repo, SearchError};
+use crate::repo::{DirStructureError, QueryError, Repo, SearchError};
 use crate::tree::FolderBuf;
 
 mod diff;
@@ -93,7 +93,7 @@ async fn current_path(state: tauri::State<'_, AppState>) -> Result<Option<PathBu
 
 #[tauri::command]
 async fn open_repo(
-    mut state: tauri::State<'_, AppState>,
+    state: tauri::State<'_, AppState>,
     app_handle: AppHandle<Wry>,
     path: &str,
 ) -> Result<(), String> {
@@ -156,7 +156,7 @@ async fn open_repo(
 }
 
 #[tauri::command]
-async fn close_repo(mut state: tauri::State<'_, AppState>) -> Result<(), ()> {
+async fn close_repo(state: tauri::State<'_, AppState>) -> Result<(), ()> {
     let mut opt = state.manager.write().await;
     *opt = None;
     Ok(())
@@ -396,7 +396,7 @@ fn preview_audio(
     sink.stop();
     // try to load new audio
     match load_music(path) {
-        Ok(mut music) => {
+        Ok(music) => {
             if skip_milliseconds != 0 {
                 sink.append(music.skip_duration(Duration::from_millis(skip_milliseconds)));
             } else {
@@ -456,7 +456,7 @@ async fn main() {
     tracing::subscriber::set_global_default(subscriber).expect("setting default subscriber failed");
 
     // "stream" is the output audio stream, if this is dropped then audio will stop
-    let (stream, sink) = match get_output_stream_and_sink() {
+    let (_stream, sink) = match get_output_stream_and_sink() {
         Ok((stream, sink)) => (Some(stream), Some(sink)),
         Err(err) => {
             error!("failed to create audio output stream, {0}", err);

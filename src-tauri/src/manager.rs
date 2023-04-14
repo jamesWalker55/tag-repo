@@ -1,30 +1,27 @@
 use crate::repo::{
-    DirStructureError, InsertTagsError, Item, OpenError, QueryError, RemoveError, RemoveTagsError,
-    Repo, SearchError, SyncError,
+    DirStructureError, InsertTagsError, Item, OpenError, QueryError, RemoveTagsError, Repo,
+    SearchError, SyncError,
 };
-use crate::scan::{classify_path, scan_dir, to_relative_path, Options, PathType, ScanError};
+use crate::scan::{classify_path, scan_dir, to_relative_path, Options, PathType};
 use crate::tree::FolderBuf;
 use crate::watch::BestWatcher;
 use futures::executor::block_on;
 use notify::event::{ModifyKind, RenameMode};
 use notify::EventKind::{Create, Modify, Remove};
-use notify::{
-    Config, Event, ReadDirectoryChangesWatcher, RecommendedWatcher, RecursiveMode, Watcher,
-};
-use relative_path::{RelativePath, RelativePathBuf};
+use notify::{Config, Event, RecursiveMode, Watcher};
+
 use serde::Serialize;
-use std::fmt::{Debug, Formatter, Pointer};
+use std::fmt::Debug;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use std::thread;
-use std::time::Duration;
+
 use tauri::{AppHandle, Manager, Runtime};
 use thiserror::Error;
-use tokio::sync::mpsc::error::SendError;
+
 use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver};
 use tokio::sync::{Mutex, RwLock};
-use tokio::time::timeout;
-use tracing::{debug, error, info, instrument};
+
+use tracing::{debug, error, instrument};
 
 #[derive(Debug, Copy, Clone, Serialize)]
 pub enum ManagerStatus {
@@ -271,7 +268,7 @@ impl<R: Runtime> RepoManager<R> {
             let repo = self.repo.clone();
             let query = query.to_string();
             tokio::task::spawn_blocking(move || {
-                let mut repo = block_on(async { repo.lock().await });
+                let repo = block_on(async { repo.lock().await });
                 repo.query_ids(&query)
             })
             .await
@@ -285,7 +282,7 @@ impl<R: Runtime> RepoManager<R> {
             // clone a reference to the repo
             let repo = self.repo.clone();
             tokio::task::spawn_blocking(move || {
-                let mut repo = block_on(async { repo.lock().await });
+                let repo = block_on(async { repo.lock().await });
                 repo.dir_structure()
             })
             .await
@@ -315,7 +312,7 @@ impl<R: Runtime> RepoManager<R> {
         let repo = self.repo.clone();
         let app_handle = self.app_handle.clone();
         tokio::task::spawn_blocking(move || {
-            let mut repo = block_on(async { repo.lock().await });
+            let repo = block_on(async { repo.lock().await });
             let ids = ids;
             if ids.len() == 1 {
                 let rv = repo.insert_tags(*ids.get(0).unwrap(), tags);
@@ -368,7 +365,7 @@ impl<R: Runtime> RepoManager<R> {
         let repo = self.repo.clone();
         let app_handle = self.app_handle.clone();
         tokio::task::spawn_blocking(move || {
-            let mut repo = block_on(async { repo.lock().await });
+            let repo = block_on(async { repo.lock().await });
             let ids = ids;
             if ids.len() == 1 {
                 let rv = repo.remove_tags(*ids.get(0).unwrap(), tags);

@@ -1,9 +1,3 @@
-use std::path::Path;
-
-use async_trait::async_trait;
-use notify::{Event, RecursiveMode};
-
-
 #[cfg(target_os = "windows")]
 mod windows;
 #[cfg(target_os = "windows")]

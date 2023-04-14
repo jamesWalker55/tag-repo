@@ -1,11 +1,10 @@
-use path_slash::{PathBufExt, PathExt};
-use relative_path::{RelativePath, RelativePathBuf};
+use relative_path::RelativePathBuf;
 use std::fs;
 use std::fs::DirEntry;
 use std::io::Error;
 use std::path::{Path, PathBuf};
 use thiserror::Error;
-use tracing::{debug, info, warn};
+use tracing::{debug, warn};
 
 #[derive(Error, Debug)]
 pub enum ScanError {
@@ -144,9 +143,8 @@ fn classify_dir_items<T>(
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashSet;
+
     use std::fs::File;
-    use std::time::Instant;
 
     use tempfile::{tempdir, TempDir};
 

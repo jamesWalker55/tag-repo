@@ -1,6 +1,6 @@
 // TODO: Make this module be able to handle complicated queries like in src/repo.rs:478
 
-use super::parser::{parse, Expr};
+use super::parser::Expr;
 use crate::helpers::sql::{escape_fts5_string, escape_like_pattern};
 use itertools::Itertools;
 use std::borrow::{Borrow, Cow};

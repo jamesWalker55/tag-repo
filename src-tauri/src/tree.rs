@@ -1,10 +1,9 @@
-use itertools::{EitherOrBoth, Itertools};
 use serde::{Serialize, Serializer};
-use std::collections::hash_map::Entry;
+
 use std::collections::HashMap;
 use std::fmt::{Debug, Formatter};
-use std::path::{Component, Path, PathBuf};
-use std::rc::Rc;
+use std::path::{Path, PathBuf};
+
 use thiserror::Error;
 
 struct Folder<'a> {

@@ -1,8 +1,7 @@
-use std::collections::{HashMap, HashSet};
-use std::ffi::OsStr;
+use std::collections::HashSet;
+
 use std::fs::create_dir;
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
 
 use indoc::indoc;
 use itertools::Itertools;
@@ -12,8 +11,8 @@ use rusqlite::functions::FunctionFlags;
 use rusqlite::Error::{QueryReturnedNoRows, SqliteFailure};
 use rusqlite::{ffi, params, Connection, ErrorCode, Row};
 use rusqlite_migration::{Migrations, M};
-use serde::{Serialize, Serializer};
-use tauri::regex::Regex;
+use serde::Serialize;
+
 #[cfg(test)]
 use tempfile::{tempdir, TempDir};
 use thiserror::Error;
@@ -21,7 +20,7 @@ use tracing::debug;
 
 use crate::diff::{diff_path_list, DiffError};
 use crate::query::to_sql;
-use crate::query::ParseError;
+
 use crate::scan::{scan_dir, Options, ScanError};
 use crate::tree::{from_ordered_paths, FolderBuf, PathTreeError};
 
@@ -480,7 +479,7 @@ impl Repo {
     }
 
     pub fn query_items<'a>(&'a self, query: &'a str) -> Result<Vec<Item>, QueryError> {
-        let where_clause = to_sql(query).map_err(|x| QueryError::InvalidQuery)?;
+        let where_clause = to_sql(query).map_err(|_x| QueryError::InvalidQuery)?;
         let sql = format!(
             indoc! {"
                 SELECT i.id, i.path, i.tags, i.meta_tags
@@ -498,7 +497,7 @@ impl Repo {
     }
 
     pub fn query_ids<'a>(&'a self, query: &'a str) -> Result<Vec<i64>, QueryError> {
-        let where_clause = to_sql(query).map_err(|x| QueryError::InvalidQuery)?;
+        let where_clause = to_sql(query).map_err(|_x| QueryError::InvalidQuery)?;
         let sql = format!(
             indoc! {"
                 SELECT i.id
@@ -1251,11 +1250,6 @@ mod tests {
     // }
 
     mod scan_integration {
-        use std::time::Instant;
-
-        use crate::scan::scan_dir;
-
-        use super::*;
 
         // #[test]
         // fn my_test() {

@@ -1,7 +1,6 @@
 use futures::StreamExt;
 use relative_path::{RelativePath, RelativePathBuf};
-use std::collections::hash_map::RandomState;
-use std::collections::hash_set::Difference;
+
 use std::collections::{HashMap, HashSet};
 use thiserror::Error;
 
@@ -78,7 +77,7 @@ pub(crate) fn diff_path_list<'a>(
     before: &'a HashSet<RelativePathBuf>,
     after: &'a HashSet<RelativePathBuf>,
 ) -> Result<DiffPaths<'a>, DiffError> {
-    let mut deleted_map =
+    let deleted_map =
         path_diff_to_name_map(before.difference(&after).into_iter().map(|x| x.as_ref()))?;
     let mut created_map =
         path_diff_to_name_map(after.difference(&before).into_iter().map(|x| x.as_ref()))?;

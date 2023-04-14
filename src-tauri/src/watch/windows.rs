@@ -1,14 +1,13 @@
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
-use async_trait::async_trait;
 use notify::event::ModifyKind::Name;
 use notify::event::{CreateKind, EventAttributes, RemoveKind, RenameMode};
 use notify::EventKind::{Create, Modify, Remove};
 use notify::{
     Config, Event, EventHandler, ReadDirectoryChangesWatcher, RecursiveMode, Watcher, WatcherKind,
 };
-use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender};
+use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver};
 use tokio::time::{timeout_at, Instant};
 
 /// A wrapper for `ReadDirectoryChangesWatcher`.
@@ -57,10 +56,8 @@ impl Watcher for WindowsNormWatcher {
         // Spawn the watcher
         let (watcher_tx, watcher_rx) = unbounded_channel();
 
-        let watcher = ReadDirectoryChangesWatcher::new(
-            move |res| watcher_tx.send(res).unwrap(),
-            config,
-        )?;
+        let watcher =
+            ReadDirectoryChangesWatcher::new(move |res| watcher_tx.send(res).unwrap(), config)?;
 
         // Spawn the event handler
         // Don't need to store the JoinHandle, it should naturally terminate once the watcher drops
@@ -93,7 +90,7 @@ async fn event_handler_loop(
 ) {
     fn clear_expired_records(
         recent_deleted_paths: &mut Vec<(Instant, PathBuf, EventAttributes)>,
-        mut event_handler: &mut impl EventHandler,
+        event_handler: &mut impl EventHandler,
     ) {
         let now = Instant::now();
         let mut i = 0;

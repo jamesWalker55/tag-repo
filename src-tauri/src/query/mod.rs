@@ -43,9 +43,6 @@ mod tests {
 
     #[test]
     fn empty() {
-        assert_eq!(
-            to_sql("").unwrap(),
-            r#"true"#,
-        )
+        assert_eq!(to_sql("").unwrap(), r#"true"#,)
     }
 }
