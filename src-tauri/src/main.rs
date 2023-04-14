@@ -17,7 +17,7 @@ use tokio::sync::{Mutex, RwLock};
 use tokio::time::sleep;
 use tracing::{error, Level};
 use tracing_subscriber::FmtSubscriber;
-use window_shadows::set_shadow;
+use window_shadows::{set_shadow, Error};
 
 use crate::manager::{FileType, ItemDetails, ManagerStatus, RepoManager};
 use crate::repo::{DirStructureError, QueryError, Repo, SearchError};
@@ -485,8 +485,12 @@ async fn main() {
             window
                 .set_min_size(Some(PhysicalSize { width: 400, height: 270 }))
                 .expect("failed to set min size of window");
-            set_shadow(&window, true)
-                .expect("failed to set window shadow: 'Unsupported platform!'");
+            match set_shadow(&window, true) {
+                Ok(_) => {}
+                Err(err) => {
+                    error!("failed to set window shadows, unsupported system. {}", err);
+                }
+            }
             // app.listen_global("cool", |evt| {
             //     tokio::spawn(async move {
             //         println!("Sleeping a bit...");
