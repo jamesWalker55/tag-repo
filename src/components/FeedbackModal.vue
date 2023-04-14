@@ -1,4 +1,6 @@
 <script lang="ts" setup>
+import metadata from '@/../package.json';
+
 interface Emits {
   (e: "closed"): void;
 }
@@ -18,7 +20,7 @@ const emit = defineEmits<Emits>();
       <div class="flex flex-col items-center">
         <i-fluent-tag-32-filled class="text-7xl text-orange-600" />
         <span class="text-xl font-bold">tagrepo</span>
-        <span class="font-light">v2023.04.14</span>
+        <span class="font-light">v{{ metadata['version'] }}</span>
       </div>
       <div class="h-full w-72 flex-1 overflow-x-auto py-2 text-sm">
         <p class="mb-2">
