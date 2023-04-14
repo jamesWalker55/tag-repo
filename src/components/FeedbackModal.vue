@@ -44,7 +44,8 @@ const emit = defineEmits<Emits>();
         <p class="mb-4 mt-4 flex justify-center">
           <!-- TODO -->
           <a
-            href="#TODO"
+            href="https://forms.gle/f24ptHpJK8wjtR5o9"
+            target="_blank"
             class="rounded bg-violet-700 px-4 py-2 text-lg text-violet-50 drop-shadow hover:bg-violet-600 hover:shadow-lg"
           >
             <span class="font-medium">Google</span> Forms
