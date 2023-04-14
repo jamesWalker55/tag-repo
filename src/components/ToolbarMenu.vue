@@ -77,8 +77,8 @@ function showMenu(e: MouseEvent) {
   const clickedElement = e.target as Element;
   const rect = clickedElement.getBoundingClientRect();
   initiatorRect.value = {
-    x: rect.x,
-    y: rect.y,
+    x: rect.x - 1,
+    y: rect.y - 1,
     width: rect.width,
     height: rect.height,
   };
