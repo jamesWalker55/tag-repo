@@ -3,7 +3,11 @@ import { appWindow } from "@tauri-apps/api/window";
 import { Ref, ref } from "vue";
 import * as api from "@/lib/api";
 import { selection, state } from "@/lib/api";
-import { shuffleList } from "@/lib/api/actions";
+import {
+  shuffleList,
+  toggleLeftPanelVisibility,
+  toggleRightPanelVisibility,
+} from "@/lib/api/actions";
 import ToolbarButton from "@/components/toolbars/ToolbarButton.vue";
 import ToolbarMenu from "@/components/ToolbarMenu.vue";
 import MenuItem from "@/components/menu/MenuItem.vue";
@@ -18,8 +22,9 @@ type ToolbarMenuType = InstanceType<typeof ToolbarMenu>;
 const fileMenu: Ref<ToolbarMenuType | null> = ref(null);
 const editMenu: Ref<ToolbarMenuType | null> = ref(null);
 const previewMenu: Ref<ToolbarMenuType | null> = ref(null);
+const viewMenu: Ref<ToolbarMenuType | null> = ref(null);
 
-const allMenuRefs = [fileMenu, editMenu, previewMenu];
+const allMenuRefs = [fileMenu, editMenu, previewMenu, viewMenu];
 
 const anyMenuActive = ref(false);
 
@@ -145,6 +150,50 @@ function onButtonMouseOver(e: MouseEvent, menu: ToolbarMenuType | null) {
       </MenuItem>
     </ToolbarMenu>
 
+    <!-- View menu -->
+    <ToolbarButton
+      @click="(e) => onButtonClick(e, viewMenu)"
+      v-click-away="(e: MouseEvent) => onButtonClickAway(e, viewMenu)"
+      @mouseover.self="(e) => onButtonMouseOver(e, viewMenu)"
+    >
+      View
+    </ToolbarButton>
+    <ToolbarMenu ref="viewMenu" v-slot="{ closeMenu }">
+      <MenuText>Panels</MenuText>
+      <MenuItem text="Item Properties" @click="toggleRightPanelVisibility">
+        <template #icon="{ defaultClasses }">
+          <i-fluent-checkbox-checked-16-regular
+            v-if="state.panelVisibility.rightPanel"
+            width="16"
+            height="16"
+            :class="defaultClasses"
+          />
+          <i-fluent-checkbox-unchecked-16-regular
+            v-else
+            width="16"
+            height="16"
+            :class="defaultClasses"
+          />
+        </template>
+      </MenuItem>
+      <MenuItem text="Folders" @click="toggleLeftPanelVisibility">
+        <template #icon="{ defaultClasses }">
+          <i-fluent-checkbox-checked-16-regular
+            v-if="state.panelVisibility.leftPanel"
+            width="16"
+            height="16"
+            :class="defaultClasses"
+          />
+          <i-fluent-checkbox-unchecked-16-regular
+            v-else
+            width="16"
+            height="16"
+            :class="defaultClasses"
+          />
+        </template>
+      </MenuItem>
+    </ToolbarMenu>
+
     <!-- Preview menu -->
     <ToolbarButton
       @click="(e) => onButtonClick(e, previewMenu)"
@@ -154,10 +203,7 @@ function onButtonMouseOver(e: MouseEvent, menu: ToolbarMenuType | null) {
       Audio
     </ToolbarButton>
     <ToolbarMenu ref="previewMenu" v-slot="{ closeMenu }">
-      <MenuItem
-        :text="state.audioPreview ? 'Audio preview' : 'Audio preview'"
-        @click="toggleAudioPreview()"
-      >
+      <MenuItem text="Audio preview" @click="toggleAudioPreview()">
         <template #icon="{ defaultClasses }">
           <i-fluent-checkbox-checked-16-regular
             v-if="state.audioPreview"

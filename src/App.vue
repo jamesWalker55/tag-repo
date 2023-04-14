@@ -6,10 +6,8 @@ import ItemList from "./components/ItemList.vue";
 import { Ref, ref } from "vue";
 import PanelsContainer from "@/components/PanelsContainer.vue";
 import ItemProperties from "@/components/ItemProperties.vue";
-import FolderTree from '@/components/FolderTree.vue';
-
-// const propertiesVisible = computed(() => selection.selectedCount.value > 0);
-const propertiesVisible = true;
+import FolderTree from "@/components/FolderTree.vue";
+import { state } from "@/lib/api";
 
 // disable the native context menu except certain elements only
 function onContextMenu(e: MouseEvent) {
@@ -33,8 +31,8 @@ const itemList: Ref<InstanceType<typeof ItemList> | null> = ref(null);
     <PanelsContainer
       is="main"
       class="relative flex-1"
-      :left-size-key="propertiesVisible ? 'leftPanel' : null"
-      :right-size-key="propertiesVisible ? 'rightPanel' : null"
+      :left-size-key="state.panelVisibility.leftPanel ? 'leftPanel' : null"
+      :right-size-key="state.panelVisibility.rightPanel ? 'rightPanel' : null"
     >
       <ItemList ref="itemList" />
       <template #left>

@@ -1,6 +1,6 @@
 import { reactive } from "vue";
 import * as ffi from "@/lib/ffi";
-import {ItemDetails, ManagerStatus} from '@/lib/ffi';
+import { ItemDetails, ManagerStatus } from "@/lib/ffi";
 import { Selection } from "./selection";
 import { ListViewColumn } from "./view-columns";
 
@@ -31,6 +31,11 @@ export interface AppState {
     leftPanel: number;
     rightPanel: number;
   };
+  panelVisibility: {
+    bottomPanel: boolean;
+    leftPanel: boolean;
+    rightPanel: boolean;
+  };
 }
 
 // The app state. DO NOT MODIFY FROM CHILD COMPONENTS.
@@ -56,6 +61,11 @@ export const state: AppState = reactive({
     bottomPanel: 160,
     leftPanel: 200,
     rightPanel: 250,
+  },
+  panelVisibility: {
+    bottomPanel: false,
+    leftPanel: false,
+    rightPanel: true,
   },
 });
 

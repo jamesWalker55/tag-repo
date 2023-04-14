@@ -70,3 +70,11 @@ export function shuffleList() {
     itemIds[j] = temp;
   }
 }
+
+export function toggleLeftPanelVisibility() {
+  state.panelVisibility.leftPanel = !state.panelVisibility.leftPanel;
+}
+
+export function toggleRightPanelVisibility() {
+  state.panelVisibility.rightPanel = !state.panelVisibility.rightPanel;
+}
