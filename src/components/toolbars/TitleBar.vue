@@ -12,6 +12,13 @@ import MenuText from "@/components/menu/MenuText.vue";
 
 const fileMenu: Ref<InstanceType<typeof ToolbarMenu> | null> = ref(null);
 const editMenu: Ref<InstanceType<typeof ToolbarMenu> | null> = ref(null);
+
+const anyMenuActive = ref(false);
+
+function temporarilyHideAllMenus() {
+  fileMenu.value?.close();
+  editMenu.value?.close();
+}
 </script>
 
 <template>
@@ -25,7 +32,25 @@ const editMenu: Ref<InstanceType<typeof ToolbarMenu> | null> = ref(null);
     />
 
     <!-- File menu -->
-    <ToolbarButton @click="fileMenu?.show">File</ToolbarButton>
+    <ToolbarButton
+      @click="
+        (e) => {
+          fileMenu?.show(e);
+          anyMenuActive = true;
+        }
+      "
+      v-click-away="(e) => (anyMenuActive = false)"
+      @mouseover="
+        (e) => {
+          if (!anyMenuActive) return;
+
+          temporarilyHideAllMenus();
+          fileMenu?.show(e);
+        }
+      "
+    >
+      File
+    </ToolbarButton>
     <ToolbarMenu ref="fileMenu" v-slot="{ closeMenu }">
       <MenuItem
         text="Open repository..."
@@ -66,7 +91,25 @@ const editMenu: Ref<InstanceType<typeof ToolbarMenu> | null> = ref(null);
     </ToolbarMenu>
 
     <!-- Edit menu -->
-    <ToolbarButton @click="editMenu?.show">Edit</ToolbarButton>
+    <ToolbarButton
+      @click="
+        (e) => {
+          editMenu?.show(e);
+          anyMenuActive = true;
+        }
+      "
+      v-click-away="(e) => (anyMenuActive = false)"
+      @mouseover="
+        (e) => {
+          if (!anyMenuActive) return;
+
+          temporarilyHideAllMenus();
+          editMenu?.show(e);
+        }
+      "
+    >
+      Edit
+    </ToolbarButton>
     <ToolbarMenu ref="editMenu" v-slot="{ closeMenu }">
       <MenuItem
         text="Clear Selection"
