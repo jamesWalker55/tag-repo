@@ -159,6 +159,7 @@ const log = console.log;
             ref="tagInputField"
             v-model="tagInputValue"
             class="flex-1 rounded px-2 py-0.5 text-neutral-700 outline outline-1 outline-slate-300"
+            placeholder="Type some tags here..."
             @keydown.enter="onAddTagsClick"
             @keydown.esc="
               (e) => {
