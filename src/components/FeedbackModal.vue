@@ -1,5 +1,4 @@
 <script lang="ts" setup>
-import { AppLogo } from "@/lib/icons";
 interface Emits {
   (e: "closed"): void;
 }
@@ -17,14 +16,19 @@ const emit = defineEmits<Emits>();
       class="modal fixed left-1/2 top-1/2 z-0 flex max-h-full -translate-x-1/2 -translate-y-1/2 flex-row items-center justify-center gap-14 rounded bg-white px-14 py-10 drop-shadow"
     >
       <div class="flex flex-col items-center">
-        <AppLogo class="text-7xl text-orange-600" />
+        <i-fluent-tag-32-filled class="text-7xl text-orange-600" />
         <span class="text-xl font-bold">tagrepo</span>
-        <span class="font-light">v2023.04.07</span>
+        <span class="font-light">v2023.04.14</span>
       </div>
       <div class="h-full w-72 flex-1 overflow-x-auto py-2 text-sm">
         <p class="mb-2">
           Thanks for trying out
-          <AppLogo class="inline text-sm text-orange-600" /> <b>tagrepo</b>!
+          <i-fluent-tag-16-filled
+            width="16"
+            height="16"
+            class="inline text-orange-600"
+          />
+          <b>tagrepo</b>!
         </p>
         <p class="mb-2">
           tagrepo is a software project that I am developing as part of my final
