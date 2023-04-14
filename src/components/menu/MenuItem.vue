@@ -13,7 +13,12 @@ defineProps<Props>();
 <template>
   <tr class="group" :class="!disabled ? '' : 'text-neutral-400'">
     <td class="pl-3" :class="!disabled ? 'group-hover:bg-neutral-100' : ''">
-      <slot name="icon" v-bind="{ defaultClasses: !disabled ? 'text-neutral-600' : 'text-neutral-400' }"></slot>
+      <slot
+        name="icon"
+        v-bind="{
+          defaultClasses: !disabled ? 'text-neutral-600' : 'text-neutral-400',
+        }"
+      ></slot>
     </td>
     <td
       class="flex h-8 items-center whitespace-nowrap px-3"
