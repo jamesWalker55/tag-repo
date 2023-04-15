@@ -73,11 +73,11 @@ export async function determineFileType(path: string): Promise<FileType> {
   return await invoke("determine_filetype", { path: path });
 }
 
-export async function insertTags(itemIds: number[], tags: string[]) {
+export async function insertTags(itemIds: number[], tags: string) {
   await invoke("insert_tags", { ids: itemIds, tags: tags });
 }
 
-export async function removeTags(itemIds: number[], tags: string[]) {
+export async function removeTags(itemIds: number[], tags: string) {
   await invoke("remove_tags", { ids: itemIds, tags: tags });
 }
 

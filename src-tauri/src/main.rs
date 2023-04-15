@@ -266,13 +266,16 @@ impl_serialize_to_string!(InsertTagsError);
 async fn insert_tags(
     state: tauri::State<'_, AppState>,
     ids: Vec<i64>,
-    tags: Vec<String>,
+    tags: String,
 ) -> Result<(), InsertTagsError> {
     let manager = state.manager.read().await;
     let Some(manager) = &*manager else {
         return Err(InsertTagsError::NoOpenRepo);
     };
-    manager.insert_tags(ids, tags).await?;
+    let tags: Vec<_> = tags.split_whitespace().map(|x| x.to_string()).collect();
+    if !tags.is_empty() {
+        manager.insert_tags(ids, tags).await?;
+    }
     Ok(())
 }
 
@@ -290,13 +293,16 @@ impl_serialize_to_string!(RemoveTagsError);
 async fn remove_tags(
     state: tauri::State<'_, AppState>,
     ids: Vec<i64>,
-    tags: Vec<String>,
+    tags: String,
 ) -> Result<(), RemoveTagsError> {
     let manager = state.manager.read().await;
     let Some(manager) = &*manager else {
         return Err(RemoveTagsError::NoOpenRepo);
     };
-    manager.remove_tags(ids, tags).await?;
+    let tags: Vec<_> = tags.split_whitespace().map(|x| x.to_string()).collect();
+    if !tags.is_empty() {
+        manager.remove_tags(ids, tags).await?;
+    }
     Ok(())
 }
 

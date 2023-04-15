@@ -6,9 +6,9 @@ const props = defineProps<{ name: string; itemId: number | number[] }>();
 function onClick() {
   const itemId = props.itemId;
   if (typeof itemId === "number") {
-    removeTags([itemId], [props.name]);
+    removeTags([itemId], props.name);
   } else {
-    removeTags(itemId, [props.name]);
+    removeTags(itemId, props.name);
   }
 }
 </script>

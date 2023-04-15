@@ -66,7 +66,7 @@ function onAddTagsClick() {
   console.log();
   insertTags(
     items.value.map((item) => item!.item.id),
-    tagInputValue.value.split(/(\s+)/)
+    tagInputValue.value
   );
   tagInputValue.value = null;
 }
