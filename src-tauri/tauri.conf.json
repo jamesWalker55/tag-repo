@@ -37,7 +37,6 @@
         "fullscreen": false,
         "resizable": true,
         "decorations": false,
-        "visible": false,
         "title": "tag-repo",
         "width": 950,
         "height": 650

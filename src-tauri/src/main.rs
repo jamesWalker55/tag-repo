@@ -535,7 +535,6 @@ async fn main() {
             set_audio_volume,
             launch_manual,
         ])
-        .plugin(tauri_plugin_window_state::Builder::default().build())
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 
