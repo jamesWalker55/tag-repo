@@ -2034,6 +2034,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "nom-unicode"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a5c03a4d71ab9740c752c165329e9df13a808093b146dfbef6170ac260771ffe"
+dependencies = [
+ "nom",
+]
+
+[[package]]
 name = "normpath"
 version = "1.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3527,6 +3536,7 @@ dependencies = [
  "itertools",
  "lazy_static",
  "nom",
+ "nom-unicode",
  "normpath",
  "notify",
  "notify-debouncer-mini",
