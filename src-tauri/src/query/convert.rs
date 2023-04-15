@@ -375,10 +375,12 @@ pub(crate) fn generate_clause<'a>(root: &'a Expr<'a>) -> WhereClause<'a> {
 #[rustfmt::skip]
 #[cfg(test)]
 mod test_clauses {
+    use crate::query::parser::parse;
     use super::*;
 
     fn fts(part: FTSPart) -> WhereClause { WhereClause::FTS(part) }
     fn inpath(path: &str) -> WhereClause { WhereClause::InPath(Cow::from(path)) }
+    fn indir(path: &str) -> WhereClause { WhereClause::InDir(Cow::from(path)) }
     fn and(clauses: Vec<WhereClause>) -> WhereClause { WhereClause::And(clauses) }
     fn or(clauses: Vec<WhereClause>) -> WhereClause { WhereClause::Or(clauses) }
     fn not(clause: WhereClause) -> WhereClause { WhereClause::Not(Box::new(clause)) }
@@ -469,7 +471,7 @@ mod test_clauses {
     fn inpath_1() {
         assert_clause(
             "in:a",
-            inpath("a"),
+            indir("a"),
         );
     }
 
@@ -477,7 +479,7 @@ mod test_clauses {
     fn inpath_2() {
         assert_clause(
             "in:a in:b in:c",
-            and(vec![inpath("a"), inpath("b"), inpath("c")]),
+            and(vec![indir("a"), indir("b"), indir("c")]),
         );
     }
 
@@ -485,7 +487,7 @@ mod test_clauses {
     fn inpath_3() {
         assert_clause(
             "in:a | in:b in:c",
-            or(vec![inpath("a"), and(vec![inpath("b"), inpath("c")])]),
+            or(vec![indir("a"), and(vec![indir("b"), indir("c")])]),
         );
     }
 
@@ -493,7 +495,7 @@ mod test_clauses {
     fn inpath_4() {
         assert_clause(
             "(in:a | in:b) in:c",
-            and(vec![or(vec![inpath("a"), inpath("b")]), inpath("c")]),
+            and(vec![or(vec![indir("a"), indir("b")]), indir("c")]),
         );
     }
 
@@ -501,7 +503,7 @@ mod test_clauses {
     fn inpath_5() {
         assert_clause(
             "-(in:a | -in:b) in:c",
-            and(vec![not(or(vec![inpath("a"), not(inpath("b"))])), inpath("c")]),
+            and(vec![not(or(vec![indir("a"), not(indir("b"))])), indir("c")]),
         );
     }
 
@@ -509,7 +511,7 @@ mod test_clauses {
     fn inpath_6() {
         assert_clause(
             "(((in:a in:b))) in:c",
-            and(vec![inpath("a"), inpath("b"), inpath("c")]),
+            and(vec![indir("a"), indir("b"), indir("c")]),
         );
     }
 
@@ -519,7 +521,7 @@ mod test_clauses {
             "a b in:c",
             and(vec![
                 fts(ftsand(vec![ftsphrase("a"), ftsphrase("b")])),
-                inpath("c"),
+                indir("c"),
             ]),
         );
     }
@@ -532,7 +534,7 @@ mod test_clauses {
                 fts(ftsphrase("a")),
                 and(vec![
                     fts(ftsphrase("b")),
-                    not(inpath("c")),
+                    not(indir("c")),
                 ]),
             ]),
         );
@@ -547,7 +549,7 @@ mod test_clauses {
                     fts(ftsphrase("a")),
                     not(and(vec![
                         fts(ftsand(vec![ftsphrase("b"), ftsphrase("e")])),
-                        inpath("1"),
+                        indir("1"),
                     ])),
                 ]),
                 and(vec![
@@ -555,7 +557,7 @@ mod test_clauses {
                         ftsnot(ftsphrase("d")),
                         ftsphrase("e"),
                     ])),
-                    inpath("0"),
+                    indir("0"),
                 ]),
             ]),
         );
@@ -573,6 +575,7 @@ mod test_clauses {
 #[rustfmt::skip]
 #[cfg(test)]
 mod test_fts_query {
+    use crate::query::parser::parse;
     use super::*;
 
     fn assert_fts_statement(query: &str, expected: &str) {
@@ -646,6 +649,7 @@ mod test_fts_query {
 #[rustfmt::skip]
 #[cfg(test)]
 mod test_to_sql {
+    use crate::query::parser::parse;
     use super::*;
 
     fn assert_sql(query: &str, expected: &str) {
@@ -671,34 +675,34 @@ mod test_to_sql {
         r#"tq.tag_query = '(tags:"mc''donalds" AND tags:"b")'"#) }
 
     #[test]
-    fn inpath_1() { assert_sql(
+    fn indir_1() { assert_sql(
         "in:asd",
-        r#"i.path LIKE 'asd%' ESCAPE '\'"#) }
+        r#"i.path LIKE 'asd/%' ESCAPE '\'"#) }
 
     #[test]
-    fn inpath_2() { assert_sql(
+    fn indir_2() { assert_sql(
         r#"in:'c:\program files\'"#,
-        r#"i.path LIKE 'c:\\program files\\%' ESCAPE '\'"#) }
+        r#"i.path LIKE 'c:/program files/%' ESCAPE '\'"#) }
 
     #[test]
-    fn inpath_3() { assert_sql(
+    fn indir_3() { assert_sql(
         r#"in:'path''/wi''th/q""uotes/'"#,
         r#"i.path LIKE 'path''/wi''th/q""uotes/%' ESCAPE '\'"#) }
 
     #[test]
-    fn inpath_4() { assert_sql(
+    fn indir_4() { assert_sql(
         r#"-in:asd"#,
-        r#"NOT (i.path LIKE 'asd%' ESCAPE '\')"#) }
+        r#"NOT (i.path LIKE 'asd/%' ESCAPE '\')"#) }
 
     #[test]
-    fn inpath_5() { assert_sql(
+    fn indir_5() { assert_sql(
         r#"in:a -in:b"#,
-        r#"(i.path LIKE 'a%' ESCAPE '\' AND NOT (i.path LIKE 'b%' ESCAPE '\'))"#) }
+        r#"(i.path LIKE 'a/%' ESCAPE '\' AND NOT (i.path LIKE 'b/%' ESCAPE '\'))"#) }
 
     #[test]
     fn common_1() { assert_sql(
         r#"kick -snare in:'Drum Collection\'"#,
-        r#"(i.id IN (SELECT id FROM tag_query('(tags:"kick" NOT tags:"snare")')) AND i.path LIKE 'Drum Collection\\%' ESCAPE '\')"#) }
+        r#"(i.id IN (SELECT id FROM tag_query('(tags:"kick" NOT tags:"snare")')) AND i.path LIKE 'Drum Collection/%' ESCAPE '\')"#) }
 
     // #[test]
     // fn temp() { assert_sql(
