@@ -19,11 +19,13 @@
 
 use nom::branch::alt;
 use nom::bytes::complete::{is_not, tag as nom_tag};
-use nom::character::complete::{char as nom_char, none_of, one_of, space0, space1};
+use nom::character::complete::{char as nom_char, none_of, one_of};
 use nom::combinator::{map, opt, recognize, value};
 use nom::multi::fold_many0;
 use nom::sequence::{delimited, pair, preceded, separated_pair};
 use nom::IResult;
+use nom_unicode::complete::{space0, space1};
+use nom_unicode::is_whitespace;
 use std::borrow::Cow;
 
 fn double_quoted_string_fragment(input: &str) -> IResult<&str, Cow<str>> {
@@ -68,7 +70,8 @@ fn string(input: &str) -> IResult<&str, String> {
 ///
 /// Literals cannot contain spaces (" "), or parentheses ("(", ")").
 fn literal(input: &str) -> IResult<&str, &str> {
-    let (new_input, name) = recognize(pair(none_of("\"' -()"), opt(is_not(" ()"))))(input)?;
+    // this also checks for CJK whitespaces, that space at the end of the string is a CJK space
+    let (new_input, name) = recognize(pair(none_of("　\"' -()"), opt(is_not("　 ()"))))(input)?;
 
     // disallow operators as tags
     if ["|", "(", ")"].contains(&name) {
@@ -425,6 +428,16 @@ mod expr_tests {
             ]),
         )
     }
+    
+    #[test]
+    fn unicode() {
+        fn test(i: &str) -> IResult<&str, &str> {
+            space0(i)
+        }
+        println!("{:?}", test("   normal"));
+        println!("{:?}", test("   no-break"));
+        println!("{:?}", test("　　　안녕 잘 지내?"));
+    }
 
     #[test]
     fn complex_1() {
@@ -452,8 +465,11 @@ mod expr_tests {
         );
     }
 
-    // TODO: Detect unicode spaces
-    // #[test] fn cjk01() { assert_expr("你好　亞視啲",
-    //     and(vec![t("你好"), t("亞視啲")]),
-    // ); }
+    #[test] fn cjk01() { assert_expr("你好　亞視啲",
+        and(vec![t("你好"), t("亞視啲")]),
+    ); }
+
+    #[test] fn cjk02() { assert_expr("   normal   no-break　　　'안녕 잘 지내?'",
+        and(vec![t("normal"), t("no-break"), t("안녕 잘 지내?")]),
+    ); }
 }
