@@ -19,7 +19,7 @@ const rootFolder: Ref<Folder | null> = ref(null);
 
 const lastAddedPath: Ref<string | null> = ref(null);
 
-const recursiveMode = ref(false);
+const recursiveMode = ref(true);
 
 watch(
   () => recursiveMode.value,
