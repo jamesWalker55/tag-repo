@@ -208,6 +208,10 @@ const log = console.log;
         } else if (e.key === 'End') {
           selection.isolate(state.itemIds.length - 1);
           scrollToFocusedIndex();
+        } else if (e.key === 'a') {
+          if (e.ctrlKey) {
+            selection.selectAll();
+          }
         } else {
           // event is not handled, return early
           return;

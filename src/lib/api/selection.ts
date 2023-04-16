@@ -260,6 +260,18 @@ function createSelectionManager(state: AppState) {
     state.itemIdSelection = null;
   }
 
+  function selectAll() {
+    if (state.itemIds.length === 0) {
+      state.itemIdSelection = null;
+    } else {
+      state.itemIdSelection = {
+        type: SelectionType.RANGE,
+        rootIndex: 0,
+        extendToIndex: state.itemIds.length - 1,
+      };
+    }
+  }
+
   /** This is used for keyboard navigation, when you press "down" on the list */
   function isolateDown() {
     // ensure there is at least 1 item in the list
@@ -412,6 +424,7 @@ function createSelectionManager(state: AppState) {
     addTo: addTo,
     remove: remove,
     extendTo: extendTo,
+    selectAll: selectAll,
     clear: clear,
     isolateDown: isolateDown,
     isolateUp: isolateUp,
