@@ -64,7 +64,7 @@ export const state: AppState = reactive({
   },
   panelVisibility: {
     bottomPanel: false,
-    leftPanel: false,
+    leftPanel: true,
     rightPanel: true,
   },
 });
