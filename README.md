@@ -2,6 +2,8 @@
 
 A hybrid tag-hierarchy file manager. This is extremely early in development.
 
+For more information, see: https://jameswalker55.github.io/tag-repo-site/
+
 ## Development
 
 Requirements:
