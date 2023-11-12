@@ -241,16 +241,13 @@ const log = console.log;
       :key="state.itemIds[n + indexRangeToRender[0] - 1]"
     />
     <div
-      class="fixed bottom-2 right-2 border bg-white opacity-50 drop-shadow"
+      class="fixed bottom-2 right-2 border bg-white px-3 py-2 drop-shadow"
       v-if="debug"
     >
-      {{ indexRangeToRender }}
-      <template
-        class="mr-1"
-        v-for="n in indexRangeToRender[1] - indexRangeToRender[0]"
-      >
-        {{ n + indexRangeToRender[0] - 1 }}{{ " " }}
+      <template v-if="state.itemIdSelection">
+        {{ state.itemIdSelection }}
       </template>
+      <template v-else class="italic"> (No selection) </template>
     </div>
     <!-- I put the header after the items to make it appear above the items -->
     <ItemListHeader />
