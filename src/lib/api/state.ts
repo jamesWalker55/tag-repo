@@ -1,6 +1,6 @@
 import { reactive } from "vue";
 import * as ffi from "@/lib/ffi";
-import { ItemDetails, ManagerStatus, supportsAudioPlayback } from '@/lib/ffi';
+import { ItemDetails, ManagerStatus, supportsAudioPlayback } from "@/lib/ffi";
 import { Selection } from "./selection";
 import { ListViewColumn } from "./view-columns";
 
@@ -107,8 +107,8 @@ export async function refreshAll() {
 refreshAll().then();
 
 // check if audio device is supported, then enable audio preview now
-supportsAudioPlayback().then(supported => {
+supportsAudioPlayback().then((supported) => {
   if (supported) {
     state.audioPreview = true;
   }
-})
+});

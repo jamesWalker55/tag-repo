@@ -110,7 +110,10 @@ const indexRangeToRender = computed(() => {
   // you need to limit BOTH the start and end index with BOTH max and min values
   const actualItemsCount = state.itemIds.length;
   // subtract 1 here, we're now returning indexes that start from 0, so it's (item count - 1)
-  const startIndex = Math.max(0, Math.min(itemsBeforeTop - 1, actualItemsCount));
+  const startIndex = Math.max(
+    0,
+    Math.min(itemsBeforeTop - 1, actualItemsCount)
+  );
   // don't subtract 1 here, because a for-loop ends before the last value
   const endIndex = Math.max(0, Math.min(itemsUntilBottom, actualItemsCount));
 

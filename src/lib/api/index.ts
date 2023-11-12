@@ -4,8 +4,9 @@ import {
   insertTags,
   removeTags,
   stopAudio,
-  previewAudio, setAudioVolume,
-} from '@/lib/ffi';
+  previewAudio,
+  setAudioVolume,
+} from "@/lib/ffi";
 import { Event, listen } from "@tauri-apps/api/event";
 import { appWindow } from "@tauri-apps/api/window";
 import { refreshAll, state } from "./state";
@@ -221,7 +222,7 @@ watch(
       stopAudio().then();
     }
   }
-)
+);
 // when the audio volume changes...
 watch(
   () => state.audioVolume,

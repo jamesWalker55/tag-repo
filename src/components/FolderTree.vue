@@ -73,9 +73,7 @@ const log = console.log;
       class="flex h-6 min-w-0 flex-row items-center gap-2 border-b border-neutral-300 px-2"
     >
       <DirTreeIcon class="h-[20px] w-[20px] flex-none text-neutral-600" />
-      <div class="min-w-0 flex-1 truncate whitespace-nowrap">
-        Folders
-      </div>
+      <div class="min-w-0 flex-1 truncate whitespace-nowrap">Folders</div>
       <VerticalDots
         class="box-content h-16px w-16px flex-none cursor-pointer rounded p-0.5 text-neutral-600 hover:bg-neutral-200 hover:text-neutral-800"
         @click="(e: MouseEvent) => menu?.show(e)"

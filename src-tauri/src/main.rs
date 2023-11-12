@@ -125,7 +125,7 @@ async fn open_repo(
         let manager = state.manager.read().await;
         let Some(manager) = &*manager else {
             return Err(String::from(
-                "race condition occurred! manager was deleted between this and the previous lock"
+                "race condition occurred! manager was deleted between this and the previous lock",
             ));
         };
         manager.watch().await.unwrap();
@@ -328,8 +328,8 @@ fn reveal_file(path: String) -> Result<(), RevealFileError> {
     // normalise the path to remove forward slashes
     let path = path.normalize_virtually()?;
     let Some(path) = path.as_path().to_str() else {
-            return Err(RevealFileError::MalformedPath(path.into_path_buf()));
-        };
+        return Err(RevealFileError::MalformedPath(path.into_path_buf()));
+    };
     Command::new("explorer").args(["/select,", path]).spawn()?;
     Ok(())
 }
@@ -413,7 +413,7 @@ fn preview_audio(
     skip_milliseconds: u64,
 ) -> Result<(), PreviewAudioError> {
     let Some(sink) = &state.output_sink else {
-        return Err(PreviewAudioError::NoOutputStream)
+        return Err(PreviewAudioError::NoOutputStream);
     };
     // stop all current audio without pausing
     sink.stop();
@@ -439,7 +439,7 @@ fn preview_audio(
 #[tauri::command]
 fn stop_audio(state: tauri::State<'_, AppState>) -> Result<(), PreviewAudioError> {
     let Some(sink) = &state.output_sink else {
-        return Err(PreviewAudioError::NoOutputStream)
+        return Err(PreviewAudioError::NoOutputStream);
     };
     // stop all current audio without pausing
     sink.stop();
@@ -449,7 +449,7 @@ fn stop_audio(state: tauri::State<'_, AppState>) -> Result<(), PreviewAudioError
 #[tauri::command]
 fn get_audio_volume(state: tauri::State<'_, AppState>) -> Result<f32, PreviewAudioError> {
     let Some(sink) = &state.output_sink else {
-        return Err(PreviewAudioError::NoOutputStream)
+        return Err(PreviewAudioError::NoOutputStream);
     };
     Ok(sink.volume())
 }
@@ -460,7 +460,7 @@ fn set_audio_volume(
     volume: f32,
 ) -> Result<(), PreviewAudioError> {
     let Some(sink) = &state.output_sink else {
-        return Err(PreviewAudioError::NoOutputStream)
+        return Err(PreviewAudioError::NoOutputStream);
     };
     // stop all current audio without pausing
     sink.set_volume(volume);

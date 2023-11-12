@@ -46,7 +46,6 @@ export { default as TreeExpandedIcon } from "~icons/fluent/caret-down-12-filled?
 export { default as CheckBoxUnchecked } from "~icons/fluent/checkbox-unchecked-16-regular?width=16px&height=16px";
 export { default as CheckBoxChecked } from "~icons/fluent/checkbox-checked-16-regular?width=16px&height=16px";
 
-
 // Misc
 export { default as FaceSmile } from "~icons/heroicons/face-smile?width=24px&height=24px";
 export { default as FaceFrown } from "~icons/heroicons/face-frown?width=24px&height=24px";
