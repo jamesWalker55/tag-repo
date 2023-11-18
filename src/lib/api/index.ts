@@ -12,7 +12,7 @@ import { appWindow } from "@tauri-apps/api/window";
 import { refreshAll, state } from "./state";
 import { closeRepo, openRepo, promptOpenRepo } from "./repo";
 import { setQuery } from "./query";
-import { type ListViewColumn } from "@/lib/api/view-columns";
+import { type ListViewColumn } from "@/lib/api/state";
 import {
   type ItemDetails,
   queryItemIds,

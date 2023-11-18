@@ -2,8 +2,65 @@ import { reactive } from "vue";
 import * as ffi from "@/lib/ffi";
 import { ItemDetails, ManagerStatus, supportsAudioPlayback } from "@/lib/ffi";
 import { Selection } from "./selection";
-import { ListViewColumn } from "./view-columns";
 
+enum PanelComponent {
+  folderTree = "folderTree",
+  itemProperties = "itemProperties",
+}
+
+export interface ListViewColumn {
+  // what kind of column this is
+  type: "path" | "name" | "tags" | "extension";
+  // width of the column in pixels
+  width: number;
+}
+
+/**
+ * Persistent state between sessions
+ */
+export interface WindowConfig {
+  // the path that is open in the previous session, try to re-open in this session
+  lastOpenPath: string;
+  audioPreview: {
+    // whether the user wants to have audio preview
+    // note this may be true even if the system doesn't support it
+    enabled: boolean;
+    // 1.0 is normal, 0.5 is half-volume
+    volume: number;
+  };
+  // position of components, size of panels etc
+  layout: {
+    left: {
+      visible: boolean;
+      size: number;
+      component: PanelComponent;
+    };
+    right: {
+      visible: boolean;
+      size: number;
+      component: PanelComponent;
+    };
+    bottom: {
+      visible: boolean;
+      size: number;
+      component: PanelComponent;
+    };
+  };
+  // persistent settings for each component
+  components: {
+    itemList: {
+      columns: ListViewColumn[];
+    };
+    [PanelComponent.folderTree]: {
+      recursive: boolean;
+    };
+    // [PanelComponent.itemProperties]: {};
+  };
+}
+
+/**
+ * Temporary state that is lost between sessions
+ */
 export interface WindowState {
   // the repo path, will be null if no repo loaded
   path: string | null;
