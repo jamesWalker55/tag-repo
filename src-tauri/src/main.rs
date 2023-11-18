@@ -23,6 +23,7 @@ use crate::manager::{FileType, ItemDetails, ManagerStatus, RepoManager};
 use crate::repo::{DirStructureError, QueryError, Repo, SearchError};
 use crate::tree::FolderBuf;
 
+mod config;
 mod diff;
 mod helpers;
 mod manager;
