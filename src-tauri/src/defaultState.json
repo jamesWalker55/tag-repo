@@ -1,0 +1,26 @@
+{
+  "lastOpenPath": null,
+  "dimensions": null,
+  "audioPreview": {
+    "enabled": true,
+    "volume": 0.5
+  },
+  "layout": {
+    "left": { "component": "FolderTree", "size": 200 },
+    "right": { "component": "ItemProperties", "size": 250 },
+    "bottom": { "component": null, "size": 160 }
+  },
+  "components": {
+    "itemList": {
+      "columns": [
+        { "type": "name", "width": 300 },
+        { "type": "tags", "width": 160 },
+        { "type": "extension", "width": 60 },
+        { "type": "path", "width": 500 }
+      ]
+    },
+    "folderTree": {
+      "recursive": true
+    }
+  }
+}

@@ -19,10 +19,12 @@ use tracing::{error, Level};
 use tracing_subscriber::FmtSubscriber;
 use window_shadows::{set_shadow, Error};
 
+use crate::config::ConfigPlugin;
 use crate::manager::{FileType, ItemDetails, ManagerStatus, RepoManager};
 use crate::repo::{DirStructureError, QueryError, Repo, SearchError};
 use crate::tree::FolderBuf;
 
+mod config;
 mod diff;
 mod helpers;
 mod manager;
@@ -491,6 +493,7 @@ async fn main() {
 
     tauri::Builder::default()
         .manage(app_state)
+        .plugin(ConfigPlugin::default())
         .setup(|app| {
             let window = tauri::WindowBuilder::new(
                 app,
