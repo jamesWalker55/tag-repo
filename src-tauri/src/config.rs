@@ -6,7 +6,8 @@ use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use tauri::{
     plugin::{Plugin, Result as PluginResult},
-    AppHandle, Invoke, Manager, PageLoadPayload, RunEvent, Runtime, Window,
+    AppHandle, Invoke, LogicalSize, Manager, PageLoadPayload, PhysicalPosition, RunEvent, Runtime,
+    Window, WindowEvent,
 };
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, Debug)]
@@ -33,11 +34,10 @@ structstruck::strike! {
     struct Config {
         last_open_path: Option<String>,
         dimensions: Option<struct DimensionsConfig {
-            x: f64,
-            y: f64,
-            width: f64,
-            height: f64,
-            fullscreen: bool,
+            x: i32,
+            y: i32,
+            width: u32,
+            height: u32,
         }>,
         audio_preview: struct AudioPreviewConfig {
             enabled: bool,
@@ -67,6 +67,44 @@ structstruck::strike! {
                 recursive: bool,
             }
         }
+    }
+}
+
+impl Config {
+    fn update_from_window<R>(&mut self, window: &Window<R>) -> tauri::Result<()>
+    where
+        R: Runtime,
+    {
+        let position = window.outer_position()?;
+        let size = window.inner_size()?;
+        match &mut self.dimensions {
+            None => {
+                self.dimensions = Some(DimensionsConfig {
+                    x: position.x,
+                    y: position.y,
+                    width: size.width,
+                    height: size.height,
+                })
+            }
+            Some(ref mut dimensions) => {
+                dimensions.x = position.x;
+                dimensions.y = position.y;
+                dimensions.width = size.width;
+                dimensions.height = size.height;
+            }
+        }
+        Ok(())
+    }
+
+    fn set_window_position<R>(&self, window: Window<R>) -> tauri::Result<()>
+    where
+        R: Runtime,
+    {
+        if let Some(dimensions) = &self.dimensions {
+            window.set_position(PhysicalPosition::new(dimensions.x, dimensions.y));
+            window.set_size(LogicalSize::new(dimensions.width, dimensions.height));
+        }
+        Ok(())
     }
 }
 
@@ -131,6 +169,27 @@ impl<R: Runtime> Plugin<R> for ConfigPlugin {
         Some(script)
     }
 
+    fn created(&mut self, window: Window<R>) {
+        let managed_config = self
+            .managed_config
+            .as_ref()
+            .expect("config is still empty when webview is created")
+            .clone();
+        let window_clone = window.clone();
+        window.on_window_event(move |e| {
+            // IMPORTANT: This will not run when closing the window through script: appWindow.close()
+            // They refuse to fix this which is fucking stupid:
+            // https://github.com/tauri-apps/plugins-workspace/issues/701
+            // You need to manually update the state if you're using script to close the window
+            if let WindowEvent::CloseRequested { .. } = e {
+                let mut config = managed_config.lock().unwrap();
+                config
+                    .update_from_window(&window_clone)
+                    .expect("failed to update config from closing window");
+            }
+        });
+    }
+
     fn on_event(&mut self, app: &AppHandle<R>, event: &RunEvent) {
         if let RunEvent::Exit = event {
             if let Some(app_dir) = app.path_resolver().app_config_dir() {
@@ -157,13 +216,7 @@ mod tests {
     fn test_config() {
         let config = Config {
             last_open_path: Some("hello world".into()),
-            dimensions: Some(DimensionsConfig {
-                x: 0.0,
-                y: 0.0,
-                width: 0.0,
-                height: 0.0,
-                fullscreen: false,
-            }),
+            dimensions: Some(DimensionsConfig { x: 0, y: 0, width: 0, height: 0 }),
             audio_preview: AudioPreviewConfig { enabled: true, volume: 1.0 },
             layout: LayoutConfig {
                 left: PanelConfig {
