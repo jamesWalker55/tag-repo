@@ -2,3 +2,4 @@
 # Without this file, you'll have to `cd` into the `src-tauri` folder before running any cargo commands.
 [workspace]
 members = ["src-tauri"]
+resolver = "2"
