@@ -511,13 +511,6 @@ async fn main() {
                     error!("failed to set window shadows, unsupported system. {}", err);
                 }
             }
-            // app.listen_global("cool", |evt| {
-            //     tokio::spawn(async move {
-            //         println!("Sleeping a bit...");
-            //         tokio::time::sleep(Duration::from_secs(2)).await;
-            //         println!("Got payload: {:?}", evt.payload());
-            //     });
-            // });
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
