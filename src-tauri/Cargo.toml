@@ -10,37 +10,35 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [build-dependencies]
-tauri-build = { version = "1.2", features = [] }
+tauri-build = { version = "1.5", features = [] }
 
 [dependencies]
-tauri = { version = "1.2", features = ["api-all"] }
+tauri = { version = "1.5", features = ["api-all"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-window-shadows = { git = "https://github.com/tauri-apps/window-shadows", rev = "38e89e93340e3ecd44e6f6cdfdd810df9f7b3073" }
-time = { version = "0.3.17", features = ["std"] }
+window-shadows = { git = "https://github.com/tauri-apps/window-shadows", rev = "1f26ca4db1006a390a60e2919b833cdab9385842" }
 rusqlite = { version = "0.29.0", features = ["bundled", "functions"] }
 indoc = "2"
-rusqlite_migration = "1.0.1"
+rusqlite_migration = "1.0"
 lazy_static = "1.4.0"
-tempfile = "3.4.0"
-notify = { version = "5.1.0", default-features = false, features = ["macos_kqueue"] }
-notify-debouncer-mini = "0.2.0"
-futures = "0.3.26"
-futures-timer = "3.0.2"
+tempfile = "3.8"
+notify = { version = "6.1.1", default-features = false, features = ["macos_kqueue"] }
+futures = "0.3"
 nom = "7.1.3"
-itertools = "0.10.5"
-tokio = { version = "1.26.0", features = ["full"] }
-async-trait = "0.1.67"
-path-slash = "0.2.1"
+itertools = "0.12.0"
+tokio = { version = "1.27.0", features = ["full"] }
 relative-path = "1.8.0"
 tracing = "0.1"
-tracing-subscriber = "0.2.0"
+tracing-subscriber = "0.3.18"
 thiserror = "1.0.40"
-open = "4.0.1"
+open = "5.0.0"
 normpath = "1.1"
 rodio = { version = "0.17.1", features = ["symphonia-aac", "symphonia-isomp4"] }
 nom-unicode = "0.3.0"
 structstruck = "0.4.1"
+
+[dev-dependencies]
+path-slash = "0.2.1"
 
 [features]
 # this feature is used for production builds or when `devPath` points to the filesystem
