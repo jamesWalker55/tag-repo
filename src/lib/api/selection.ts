@@ -19,7 +19,7 @@ interface RangeSelection extends BaseSelection {
 
 interface SeparateSelection extends BaseSelection {
   type: SelectionType.SEPARATE;
-  indexes: number[];
+  indexes: Set<number>;
   // for converting to a range selection
   lastToggledIndex: number;
 }
@@ -41,11 +41,11 @@ function getRangeMinMax(rangeSel: RangeSelection): [number, number] {
 }
 
 /** Convert a range selection to a list of list indexes */
-function rangeToArray(rangeSel: RangeSelection): number[] {
+function rangeToSet(rangeSel: RangeSelection): Set<number> {
   const [small, large] = getRangeMinMax(rangeSel);
-  const indexes = [];
+  const indexes: Set<number> = new Set();
   for (let i = small; i <= large; i++) {
-    indexes.push(i);
+    indexes.add(i);
   }
   return indexes;
 }
@@ -54,21 +54,21 @@ function createSelectionManager(state: WindowState) {
   const selectedIndexes = computed(() => {
     const selection = state.itemIdSelection;
     if (selection === null) {
-      return [];
+      return new Set<number>();
     } else {
       const selectionType = selection.type;
       switch (selectionType) {
         case SelectionType.RANGE:
-          return rangeToArray(selection);
+          return rangeToSet(selection);
         case SelectionType.SEPARATE:
           return selection.indexes;
         default:
-          unreachable(selectionType);
+          return unreachable(selectionType);
       }
     }
   });
 
-  const selectedCount = computed(() => selectedIndexes.value.length);
+  const selectedCount = computed(() => selectedIndexes.value.size);
 
   function itemIdToIndex(itemId: number): number {
     const index = state.itemIds.indexOf(itemId);
@@ -151,7 +151,7 @@ function createSelectionManager(state: WindowState) {
         case SelectionType.RANGE:
           startIndex = selection.extendToIndex;
           const [small, large] = getRangeMinMax(selection);
-          indexes = rangeToArray(selection);
+          indexes = rangeToSet(selection);
           if (endIndex < small) {
             for (let i = endIndex; i < small; i++) {
               indexes.push(i);

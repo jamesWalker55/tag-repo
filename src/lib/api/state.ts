@@ -3,10 +3,16 @@ import * as ffi from "@/lib/ffi";
 import { ItemDetails, ManagerStatus, supportsAudioPlayback } from "@/lib/ffi";
 import { Selection } from "./selection";
 
+enum FixedComponents {
+  itemList = "itemList",
+}
+
 enum PanelComponent {
   folderTree = "folderTree",
   itemProperties = "itemProperties",
 }
+
+type Component = FixedComponents | PanelComponent;
 
 export interface ListViewColumn {
   // what kind of column this is
@@ -19,8 +25,8 @@ export interface ListViewColumn {
  * Persistent state between sessions
  */
 export interface WindowConfig {
-  // the path that is open in the previous session, try to re-open in this session
-  lastOpenPath: string;
+  // the path that was open in the previous session, try to re-open in this session
+  lastOpenPath: string | null;
   audioPreview: {
     // whether the user wants to have audio preview
     // note this may be true even if the system doesn't support it
@@ -31,99 +37,93 @@ export interface WindowConfig {
   // position of components, size of panels etc
   layout: {
     left: {
-      visible: boolean;
+      component: PanelComponent | null;
       size: number;
-      component: PanelComponent;
     };
     right: {
-      visible: boolean;
+      component: PanelComponent | null;
       size: number;
-      component: PanelComponent;
     };
     bottom: {
-      visible: boolean;
+      component: PanelComponent | null;
       size: number;
-      component: PanelComponent;
     };
   };
   // persistent settings for each component
   components: {
-    itemList: {
+    [FixedComponents.itemList]: {
       columns: ListViewColumn[];
     };
     [PanelComponent.folderTree]: {
       recursive: boolean;
     };
-    // [PanelComponent.itemProperties]: {};
   };
 }
+
+export const config: WindowConfig = {
+  lastOpenPath: null,
+  audioPreview: {
+    enabled: true,
+    volume: 0.5,
+  },
+  layout: {
+    left: {
+      component: PanelComponent.folderTree,
+      size: 200,
+    },
+    right: {
+      component: PanelComponent.itemProperties,
+      size: 250,
+    },
+    bottom: {
+      component: null,
+      size: 160,
+    },
+  },
+  components: {
+    [FixedComponents.itemList]: {
+      columns: [
+        { type: "name", width: 300 },
+        { type: "tags", width: 160 },
+        { type: "extension", width: 60 },
+        { type: "path", width: 500 },
+      ],
+    },
+    [PanelComponent.folderTree]: {
+      recursive: false,
+    },
+  },
+};
 
 /**
  * Temporary state that is lost between sessions
  */
 export interface WindowState {
-  // the repo path, will be null if no repo loaded
-  path: string | null;
-  // the status of the repo, will be null if no repo loaded
-  status: ManagerStatus | null;
+  repo: null | {
+    path: string;
+    status: ManagerStatus;
+  };
   // the currently-displayed query
   query: string;
   // a boolean that updates whenever you execute a search, indicating any query errors
-  queryIsInvalid: boolean;
+  queryError: boolean;
   // the currently-displayed item list
   itemIds: number[];
   // the item cache, this will be changed regularly
   itemCache: Record<number, ItemDetails | undefined>;
-  // the headers/columns displayed in the list view
-  listViewColumns: ListViewColumn[];
   // the selection in the list view
   itemIdSelection: Selection | null;
-  // whether audio previewing is enabled
-  audioPreview: boolean;
-  // playback volume
-  audioVolume: number;
-  // app panels
-  panelSizes: {
-    bottomPanel: number;
-    leftPanel: number;
-    rightPanel: number;
-  };
-  panelVisibility: {
-    bottomPanel: boolean;
-    leftPanel: boolean;
-    rightPanel: boolean;
-  };
 }
 
 // The app state. DO NOT MODIFY FROM CHILD COMPONENTS.
 // You should only modify this using functions in this module.
 export const state: WindowState = reactive({
-  path: null,
-  status: null,
+  repo: null,
   query: "",
-  queryIsInvalid: false,
+  queryError: false,
   itemIds: [],
   itemCache: {},
-  listViewColumns: [
-    { type: "name", width: 300 },
-    { type: "tags", width: 160 },
-    { type: "extension", width: 60 },
-    { type: "path", width: 500 },
-  ],
   itemIdSelection: null,
-  audioPreview: false,
-  audioVolume: 0.5,
-  // size of various panels
-  panelSizes: {
-    bottomPanel: 160,
-    leftPanel: 200,
-    rightPanel: 250,
-  },
-  panelVisibility: {
-    bottomPanel: false,
-    leftPanel: true,
-    rightPanel: true,
-  },
 });
 
 export type PanelSizeKey = keyof WindowState["panelSizes"];
