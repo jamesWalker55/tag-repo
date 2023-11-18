@@ -1,4 +1,13 @@
+use indoc::indoc;
 use serde::{Deserialize, Serialize};
+use std::fs;
+use std::fs::{create_dir_all, File};
+use std::path::PathBuf;
+use std::sync::{Arc, Mutex};
+use tauri::{
+    plugin::{Plugin, Result as PluginResult},
+    AppHandle, Invoke, Manager, PageLoadPayload, RunEvent, Runtime, Window,
+};
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, Debug)]
 enum FixedComponent {
@@ -61,35 +70,81 @@ structstruck::strike! {
     }
 }
 
-impl Default for Config {
+const DEFAULT_CONFIG_JSON: &str = include_str!("defaultState.json");
+
+pub const CONFIG_FILENAME: &str = "settings.json";
+
+type TauriManagedConfig = Arc<Mutex<Config>>;
+
+pub struct ConfigPlugin {
+    managed_config: Option<TauriManagedConfig>,
+}
+
+impl Default for ConfigPlugin {
     fn default() -> Self {
-        Self {
-            last_open_path: None,
-            dimensions: None,
-            audio_preview: AudioPreviewConfig { enabled: true, volume: 0.5 },
-            layout: LayoutConfig {
-                left: PanelConfig {
-                    component: Some(PanelComponent::FolderTree),
-                    size: 200,
-                },
-                right: PanelConfig {
-                    component: Some(PanelComponent::ItemProperties),
-                    size: 250,
-                },
-                bottom: PanelConfig { component: None, size: 160 },
-            },
-            components: ComponentsConfig {
-                item_list: ItemListConfig {
-                    columns: vec![
-                        ItemListColumn { r#type: ItemListColumnType::Name, width: 300 },
-                        ItemListColumn { r#type: ItemListColumnType::Tags, width: 160 },
-                        ItemListColumn { r#type: ItemListColumnType::Extension, width: 60 },
-                        ItemListColumn { r#type: ItemListColumnType::Path, width: 500 },
-                    ],
-                },
-                folder_tree: FolderTreeConfig { recursive: true },
-            },
+        Self { managed_config: None }
+    }
+}
+
+impl<R: Runtime> Plugin<R> for ConfigPlugin {
+    fn name(&self) -> &'static str {
+        "configPlugin"
+    }
+
+    fn initialize(&mut self, app: &AppHandle<R>, _: serde_json::Value) -> PluginResult<()> {
+        // load default config no matter what, to act as validation
+        let mut config: Config = serde_json::from_str(DEFAULT_CONFIG_JSON)
+            .expect("invalid default configuration in defaultState.json");
+
+        if let Some(app_dir) = app.path_resolver().app_config_dir() {
+            let config_path = app_dir.join(CONFIG_FILENAME);
+            if config_path.exists() {
+                if let Ok(config_json) = tauri::api::file::read_string(config_path) {
+                    if let Ok(user_config) = serde_json::from_str(config_json.as_str()) {
+                        config = user_config
+                    }
+                }
+            }
         }
+
+        let managed_config = Arc::new(Mutex::new(config));
+
+        app.manage::<TauriManagedConfig>(managed_config.clone());
+        self.managed_config = Some(managed_config);
+
+        Ok(())
+    }
+
+    fn initialization_script(&self) -> Option<String> {
+        let managed_config = self
+            .managed_config
+            .as_ref()
+            .expect("initial_config is None when creating initialization_script");
+
+        let config = managed_config.lock().unwrap();
+
+        let config_json = serde_json::to_string::<Config>(&config)
+            .expect("failed to serialise config into string");
+
+        let script = format!("window.configPlugin = {config_json};");
+
+        Some(script)
+    }
+
+    fn on_event(&mut self, app: &AppHandle<R>, event: &RunEvent) {
+        if let RunEvent::Exit = event {
+            if let Some(app_dir) = app.path_resolver().app_config_dir() {
+                let config_path = app_dir.join(CONFIG_FILENAME);
+                let managed_config = app.state::<TauriManagedConfig>();
+                let config = managed_config.lock().unwrap();
+                let config_json = serde_json::to_string_pretty::<Config>(&config)
+                    .expect("failed to serialise config into string");
+
+                // create dir, then write file if dir was created successfully
+                let _ = create_dir_all(app_dir).and_then(|_| fs::write(config_path, config_json));
+            }
+        }
+        ()
     }
 }
 
@@ -138,58 +193,6 @@ mod tests {
 
     #[test]
     fn default_config() {
-        let config = Config::default();
-        let serialized = serde_json::to_string_pretty(&config).unwrap();
-        let expected_serialized = indoc! {r#"
-            {
-              "lastOpenPath": null,
-              "dimensions": null,
-              "audioPreview": {
-                "enabled": true,
-                "volume": 0.5
-              },
-              "layout": {
-                "left": {
-                  "component": "FolderTree",
-                  "size": 200
-                },
-                "right": {
-                  "component": "ItemProperties",
-                  "size": 250
-                },
-                "bottom": {
-                  "component": null,
-                  "size": 160
-                }
-              },
-              "components": {
-                "itemList": {
-                  "columns": [
-                    {
-                      "type": "name",
-                      "width": 300
-                    },
-                    {
-                      "type": "tags",
-                      "width": 160
-                    },
-                    {
-                      "type": "extension",
-                      "width": 60
-                    },
-                    {
-                      "type": "path",
-                      "width": 500
-                    }
-                  ]
-                },
-                "folderTree": {
-                  "recursive": true
-                }
-              }
-            }
-        "#};
-        let deserialized: Config = serde_json::from_str(&serialized).unwrap();
-        assert_eq!(config, deserialized);
+        serde_json::from_str::<Config>(DEFAULT_CONFIG_JSON).unwrap();
     }
 }
