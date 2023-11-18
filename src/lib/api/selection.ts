@@ -1,4 +1,4 @@
-import { AppState, state } from "./state";
+import { WindowState, state } from "./state";
 import { unreachable } from "@/lib/utils";
 import { computed } from "vue";
 
@@ -50,7 +50,7 @@ function rangeToArray(rangeSel: RangeSelection): number[] {
   return indexes;
 }
 
-function createSelectionManager(state: AppState) {
+function createSelectionManager(state: WindowState) {
   const selectedIndexes = computed(() => {
     const selection = state.itemIdSelection;
     if (selection === null) {

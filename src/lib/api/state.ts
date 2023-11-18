@@ -4,7 +4,7 @@ import { ItemDetails, ManagerStatus, supportsAudioPlayback } from "@/lib/ffi";
 import { Selection } from "./selection";
 import { ListViewColumn } from "./view-columns";
 
-export interface AppState {
+export interface WindowState {
   // the repo path, will be null if no repo loaded
   path: string | null;
   // the status of the repo, will be null if no repo loaded
@@ -40,7 +40,7 @@ export interface AppState {
 
 // The app state. DO NOT MODIFY FROM CHILD COMPONENTS.
 // You should only modify this using functions in this module.
-export const state: AppState = reactive({
+export const state: WindowState = reactive({
   path: null,
   status: null,
   query: "",
@@ -69,7 +69,7 @@ export const state: AppState = reactive({
   },
 });
 
-export type PanelSizeKey = keyof AppState["panelSizes"];
+export type PanelSizeKey = keyof WindowState["panelSizes"];
 
 const refreshFuncs: (() => Promise<void>)[] = [];
 
