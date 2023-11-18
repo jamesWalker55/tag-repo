@@ -11,7 +11,7 @@ use normpath::PathExt;
 
 use rodio::{Decoder, OutputStream, PlayError, Sink, Source, StreamError};
 use serde::{Serialize, Serializer};
-use tauri::{AppHandle, Manager, PhysicalSize, Wry};
+use tauri::{AppHandle, LogicalSize, Manager, Wry};
 use thiserror::Error;
 use tokio::sync::{Mutex, RwLock};
 use tokio::time::sleep;
@@ -492,12 +492,19 @@ async fn main() {
     tauri::Builder::default()
         .manage(app_state)
         .setup(|app| {
-            let window = app
-                .get_window("main")
-                .expect("failed to get window with name 'main'");
-            window
-                .set_min_size(Some(PhysicalSize { width: 400, height: 270 }))
-                .expect("failed to set min size of window");
+            let window = tauri::WindowBuilder::new(
+                app,
+                "main", /* the unique window label */
+                tauri::WindowUrl::App("index.html".into()),
+            )
+            .title("tag-repo")
+            .decorations(false)
+            .resizable(true)
+            .fullscreen(false)
+            .inner_size(950.0, 650.0)
+            .min_inner_size(400.0, 270.0)
+            .build()?;
+
             match set_shadow(&window, true) {
                 Ok(_) => {}
                 Err(err) => {

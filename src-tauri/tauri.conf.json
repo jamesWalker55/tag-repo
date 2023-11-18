@@ -32,15 +32,6 @@
     "updater": {
       "active": false
     },
-    "windows": [
-      {
-        "fullscreen": false,
-        "resizable": true,
-        "decorations": false,
-        "title": "tag-repo",
-        "width": 950,
-        "height": 650
-      }
-    ]
+    "windows": []
   }
 }
