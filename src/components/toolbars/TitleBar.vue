@@ -16,6 +16,7 @@ import MenuText from "@/components/menu/MenuText.vue";
 import { setAudioVolume, toggleAudioPreview } from "@/lib/api/audio-preview";
 import MenuArbitraryItem from "@/components/menu/MenuArbitraryItem.vue";
 import AudioSlider from "@/components/toolbars/AudioSlider.vue";
+import { updateWindowSizeConfig } from "@/lib/ffi";
 
 type ToolbarMenuType = InstanceType<typeof ToolbarMenu>;
 
@@ -98,7 +99,10 @@ function onButtonMouseOver(e: MouseEvent, menu: ToolbarMenuType | null) {
         "
       />
       <MenuSeparator />
-      <MenuItem text="Exit" @click="() => appWindow.close()">
+      <MenuItem
+        text="Exit"
+        @click="() => updateWindowSizeConfig().then(() => appWindow.close())"
+      >
         <template #icon="{ defaultClasses }">
           <i-fluent-dismiss-16-regular
             width="16"
@@ -279,7 +283,7 @@ function onButtonMouseOver(e: MouseEvent, menu: ToolbarMenuType | null) {
     </ToolbarButton>
     <ToolbarButton
       class="w-title-button hover:bg-red-600 hover:text-white active:bg-red-500 active:text-white"
-      @click="() => appWindow.close()"
+      @click="() => updateWindowSizeConfig().then(() => appWindow.close())"
     >
       <i-fluent-dismiss-16-regular width="16" height="16" />
     </ToolbarButton>

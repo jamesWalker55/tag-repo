@@ -75,7 +75,7 @@ impl Config {
     where
         R: Runtime,
     {
-        let position = window.outer_position()?;
+        let position = window.inner_position()?;
         let size = window.inner_size()?;
         match &mut self.dimensions {
             None => {
@@ -96,13 +96,13 @@ impl Config {
         Ok(())
     }
 
-    fn set_window_position<R>(&self, window: Window<R>) -> tauri::Result<()>
+    fn set_window_position<R>(&self, window: &Window<R>) -> tauri::Result<()>
     where
         R: Runtime,
     {
         if let Some(dimensions) = &self.dimensions {
-            window.set_position(PhysicalPosition::new(dimensions.x, dimensions.y));
-            window.set_size(LogicalSize::new(dimensions.width, dimensions.height));
+            window.set_position(PhysicalPosition::new(dimensions.x, dimensions.y))?;
+            window.set_size(LogicalSize::new(dimensions.width, dimensions.height))?;
         }
         Ok(())
     }
@@ -114,17 +114,33 @@ pub const CONFIG_FILENAME: &str = "settings.json";
 
 type TauriManagedConfig = Arc<Mutex<Config>>;
 
-pub struct ConfigPlugin {
+pub struct ConfigPlugin<R: Runtime> {
     managed_config: Option<TauriManagedConfig>,
+    invoke_handler: Box<dyn Fn(Invoke<R>) + Send + Sync>,
 }
 
-impl Default for ConfigPlugin {
+/// You must call this function before exiting in the frontend (*).
+/// * Only needed if you exit using `appWindow.close()`
+#[tauri::command]
+fn update_window_size_config<R: Runtime>(
+    state: tauri::State<'_, TauriManagedConfig>,
+    window: Window<R>,
+) -> tauri::Result<()> {
+    let mut config = state.lock().unwrap();
+    config.update_from_window(&window)?;
+    Ok(())
+}
+
+impl<R: Runtime> Default for ConfigPlugin<R> {
     fn default() -> Self {
-        Self { managed_config: None }
+        Self {
+            managed_config: None,
+            invoke_handler: Box::new(tauri::generate_handler![update_window_size_config]),
+        }
     }
 }
 
-impl<R: Runtime> Plugin<R> for ConfigPlugin {
+impl<R: Runtime> Plugin<R> for ConfigPlugin<R> {
     fn name(&self) -> &'static str {
         "configPlugin"
     }
@@ -176,6 +192,16 @@ impl<R: Runtime> Plugin<R> for ConfigPlugin {
             .expect("config is still empty when webview is created")
             .clone();
         let window_clone = window.clone();
+
+        // apply window size and position
+        {
+            let config = managed_config.lock().unwrap();
+            config
+                .set_window_position(&window)
+                .expect("failed to set window position");
+        }
+
+        // setup callback to update config (part 1)
         window.on_window_event(move |e| {
             // IMPORTANT: This will not run when closing the window through script: appWindow.close()
             // They refuse to fix this which is fucking stupid:
@@ -204,6 +230,10 @@ impl<R: Runtime> Plugin<R> for ConfigPlugin {
             }
         }
         ()
+    }
+
+    fn extend_api(&mut self, message: Invoke<R>) {
+        (self.invoke_handler)(message)
     }
 }
 

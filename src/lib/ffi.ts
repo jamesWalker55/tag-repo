@@ -108,3 +108,7 @@ export async function setAudioVolume(volume: number) {
 export async function openManual() {
   await invoke("launch_manual");
 }
+
+export async function updateWindowSizeConfig() {
+  await invoke("plugin:configPlugin|update_window_size_config");
+}
