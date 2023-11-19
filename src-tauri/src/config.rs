@@ -32,7 +32,7 @@ structstruck::strike! {
     #[strikethrough[derive(Serialize, Deserialize, PartialEq, Debug)]]
     #[strikethrough[serde(rename_all = "camelCase")]]
     struct Config {
-        last_open_path: Option<String>,
+        last_opened_path: Option<String>,
         dimensions: Option<struct DimensionsConfig {
             x: i32,
             y: i32,
@@ -245,7 +245,7 @@ mod tests {
     #[test]
     fn test_config() {
         let config = Config {
-            last_open_path: Some("hello world".into()),
+            last_opened_path: Some("hello world".into()),
             dimensions: Some(DimensionsConfig { x: 0, y: 0, width: 0, height: 0 }),
             audio_preview: AudioPreviewConfig { enabled: true, volume: 1.0 },
             layout: LayoutConfig {

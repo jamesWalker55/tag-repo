@@ -9,7 +9,7 @@ import {
 } from "@/lib/ffi";
 import { Event, listen } from "@tauri-apps/api/event";
 import { appWindow } from "@tauri-apps/api/window";
-import { refreshAll, state } from "./state";
+import { state } from "./state";
 import { closeRepo, openRepo, promptOpenRepo } from "./repo";
 import { setQuery } from "./query";
 import { type ListViewColumn } from "@/lib/api/view-columns";
@@ -47,7 +47,6 @@ export {
   closeRepo,
   setQuery,
   state,
-  refreshAll,
   selection,
   insertTags,
   removeTags,
@@ -156,7 +155,7 @@ watch(
         }
       })(),
     ]);
-  }
+  },
 );
 // when the query changes...
 watch(
@@ -170,7 +169,7 @@ watch(
     clearItemCache();
     // actually change the item list
     state.itemIds = newItems;
-  }
+  },
 );
 // when the selection changes...
 watch(
@@ -212,7 +211,7 @@ watch(
     } else {
       stopAudio().then();
     }
-  }
+  },
 );
 // when the audio preview setting changes...
 watch(
@@ -221,7 +220,7 @@ watch(
     if (!audioPreview) {
       stopAudio().then();
     }
-  }
+  },
 );
 // when the audio volume changes...
 watch(
@@ -230,5 +229,5 @@ watch(
     // make sure volume is between 0 and 1
     newVolume = Math.max(0, Math.min(newVolume, 1));
     await setAudioVolume(newVolume);
-  }
+  },
 );

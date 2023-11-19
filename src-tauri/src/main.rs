@@ -31,6 +31,7 @@ mod manager;
 mod query;
 mod repo;
 mod scan;
+mod state;
 #[cfg(test)]
 mod tests;
 mod tree;
