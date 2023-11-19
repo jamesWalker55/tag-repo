@@ -53,7 +53,6 @@ fn get_output_stream_and_sink() -> Result<(OutputStream, Sink), CreateAudioOutpu
 }
 
 struct AppState {
-    repo: Mutex<Option<Repo>>,
     manager: RwLock<Option<RepoManager<Wry>>>,
     // a wrapper around the audio stream? if this is dropped then audio will stop
     output_sink: Option<Sink>,
@@ -62,7 +61,6 @@ struct AppState {
 impl AppState {
     fn new(output_sink: Option<Sink>) -> Self {
         Self {
-            repo: Mutex::new(None),
             manager: RwLock::new(None),
             output_sink,
         }
