@@ -1,13 +1,11 @@
-use indoc::indoc;
 use serde::{Deserialize, Serialize};
 use std::fs;
-use std::fs::{create_dir_all, File};
-use std::path::{Path, PathBuf};
+use std::fs::create_dir_all;
+use std::path::Path;
 use std::sync::{Arc, Mutex};
 use tauri::{
     plugin::{Plugin, Result as PluginResult},
-    AppHandle, Invoke, LogicalSize, Manager, PageLoadPayload, PhysicalPosition, RunEvent, Runtime,
-    Window, WindowEvent,
+    AppHandle, Invoke, Manager, RunEvent, Runtime, Window, WindowEvent,
 };
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, Debug, Clone)]
