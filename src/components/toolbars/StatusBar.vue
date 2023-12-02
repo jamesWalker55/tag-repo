@@ -1,9 +1,9 @@
 <script lang="ts" setup>
 import FeedbackModal from "@/components/FeedbackModal.vue";
-import { ref } from "vue";
-import { ManagerStatus, state } from "@/lib/api";
 import LoadingDots from "@/components/LoadingDots.vue";
 import ToolbarButton from "@/components/toolbars/ToolbarButton.vue";
+import { ManagerStatus, state } from "@/lib/api";
+import { ref } from "vue";
 
 const feedbackPopup = ref(false);
 </script>

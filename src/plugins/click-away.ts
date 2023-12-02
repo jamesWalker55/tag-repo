@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 /**
  * This is a fork of the vue-click-away plugin:
  * https://github.com/VinceG/vue-click-away
@@ -35,8 +37,8 @@ interface MyElement extends Element {
 function onMounted(el: MyElement, binding: Binding, vnode: any) {
   onUnmounted(el);
 
-  let vm = vnode.context;
-  let callback = binding.value;
+  const vm = vnode.context;
+  const callback = binding.value;
 
   let nextTick = false;
   setTimeout(function () {

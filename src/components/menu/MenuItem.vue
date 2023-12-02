@@ -1,5 +1,4 @@
 <script lang="ts" setup>
-import { Component as ComponentType } from "@vue/runtime-core";
 import { MenuMore } from "@/lib/icons";
 
 interface Props {

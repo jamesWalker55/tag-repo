@@ -1,19 +1,19 @@
 <script lang="ts" setup>
-import {
-  DirTreeIcon,
-  ClosePanelIcon,
-  Spinner,
-  RefreshIcon,
-  VerticalDots,
-  CheckBoxUnchecked,
-  CheckBoxChecked,
-} from "@/lib/icons";
-import { Folder, getFolders, setQuery, state } from "@/lib/api";
-import { Ref, ref, watch } from "vue";
 import FolderTreeItem from "@/components/FolderTreeItem.vue";
 import ToolbarMenu from "@/components/ToolbarMenu.vue";
 import MenuItem from "@/components/menu/MenuItem.vue";
 import MenuSeparator from "@/components/menu/MenuSeparator.vue";
+import { Folder, getFolders, setQuery, state } from "@/lib/api";
+import {
+  CheckBoxChecked,
+  CheckBoxUnchecked,
+  ClosePanelIcon,
+  DirTreeIcon,
+  RefreshIcon,
+  Spinner,
+  VerticalDots,
+} from "@/lib/icons";
+import { Ref, ref, watch } from "vue";
 
 const rootFolder: Ref<Folder | null> = ref(null);
 
@@ -27,7 +27,7 @@ watch(
     if (lastAddedPath.value !== null) {
       addToQuery(lastAddedPath.value);
     }
-  }
+  },
 );
 
 async function fetchFolders() {
@@ -81,11 +81,10 @@ const log = console.log;
     </div>
     <!-- the tree -->
     <div v-if="rootFolder !== null" class="overflow-x-auto py-1 pl-0.5 text-sm">
-      <div
-        v-if="rootFoldersCount(rootFolder) > 0"
-        v-for="[name, children] in sortedFolder(rootFolder)"
-      >
+      <div v-if="rootFoldersCount(rootFolder) > 0">
         <FolderTreeItem
+          v-for="[name, children] in sortedFolder(rootFolder)"
+          :key="name"
           :name="name"
           :children="children"
           @add-to-query="addToQuery"

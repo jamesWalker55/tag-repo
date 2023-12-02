@@ -51,7 +51,10 @@ function sortedFolder(folder: Folder): [string, Folder][] {
     </div>
   </div>
   <div class="ml-3" v-if="expanded">
-    <div v-for="[subname, subchildren] in sortedFolder(children)">
+    <div
+      v-for="[subname, subchildren] in sortedFolder(children)"
+      :key="subname"
+    >
       <FolderTreeItem
         :name="subname"
         :children="subchildren"

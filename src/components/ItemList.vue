@@ -1,15 +1,15 @@
 <script lang="ts" setup>
-import ItemListHeader from "@/components/itemlist/ItemListHeader.vue";
-import ItemRow from "./itemlist/ItemRow.vue";
-import { actions, selection, state } from "@/lib/api";
-import { createEventListenerRegistry } from "@/lib/utils";
-import { getSpacingSize } from "@/lib/tailwindcss";
-import { computed, onBeforeUnmount, onMounted, ref, Ref } from "vue";
 import ContextMenu from "@/components/ContextMenu.vue";
-import { CopyFilePath, OpenFile, RevealFile } from "@/lib/icons";
+import ItemListHeader from "@/components/itemlist/ItemListHeader.vue";
 import MenuItem from "@/components/menu/MenuItem.vue";
 import MenuSeparator from "@/components/menu/MenuSeparator.vue";
+import { actions, selection, state } from "@/lib/api";
 import { launchSelectedItems } from "@/lib/api/actions";
+import { CopyFilePath, OpenFile, RevealFile } from "@/lib/icons";
+import { getSpacingSize } from "@/lib/tailwindcss";
+import { createEventListenerRegistry } from "@/lib/utils";
+import { Ref, computed, onBeforeUnmount, onMounted, ref } from "vue";
+import ItemRow from "./itemlist/ItemRow.vue";
 
 const container: Ref<HTMLDivElement | null> = ref(null);
 
@@ -53,7 +53,7 @@ onMounted(() => {
       if (entry.borderBoxSize.length !== 1) {
         console.warn(
           "expected only 1 size, but got not a 1!",
-          entry.borderBoxSize.length
+          entry.borderBoxSize.length,
         );
         continue;
       }
@@ -90,10 +90,10 @@ const headerHeight = getSpacingSize("6");
 const virtualViewHeight = computed(() => viewHeight.value - headerHeight);
 
 const containerHeight = computed(
-  () => headerHeight + state.itemIds.length * itemHeight
+  () => headerHeight + state.itemIds.length * itemHeight,
 );
 const containerWidth = computed(() =>
-  state.listViewColumns.reduce((acc, col) => acc + col.width, 0)
+  state.listViewColumns.reduce((acc, col) => acc + col.width, 0),
 );
 
 const preloadPadding = itemHeight * 10; // px
@@ -112,7 +112,7 @@ const indexRangeToRender = computed(() => {
   // subtract 1 here, we're now returning indexes that start from 0, so it's (item count - 1)
   const startIndex = Math.max(
     0,
-    Math.min(itemsBeforeTop - 1, actualItemsCount)
+    Math.min(itemsBeforeTop - 1, actualItemsCount),
   );
   // don't subtract 1 here, because a for-loop ends before the last value
   const endIndex = Math.max(0, Math.min(itemsUntilBottom, actualItemsCount));
@@ -161,8 +161,6 @@ defineExpose({
     container.value?.focus();
   },
 });
-
-const log = console.log;
 </script>
 
 <template>
@@ -225,8 +223,7 @@ const log = console.log;
     "
   >
     <!-- The container resizer, it's a 1px div located at the bottom right corner -->
-    <component
-      is="div"
+    <div
       class="absolute -z-10 h-px w-px bg-red-500 opacity-0"
       :style="{
         top: containerHeight - 1 + 'px',
@@ -250,7 +247,7 @@ const log = console.log;
       <template v-if="state.itemIdSelection">
         {{ state.itemIdSelection }}
       </template>
-      <template v-else class="italic"> (No selection) </template>
+      <template v-else> (No selection) </template>
     </div>
     <!-- I put the header after the items to make it appear above the items -->
     <ItemListHeader />

@@ -17,20 +17,23 @@ export function sleep(ms: number) {
  */
 export async function pollUntilComplete<F>(
   promise: Promise<F>,
-  pollFunc: () => any,
-  pollRate = 100
+  pollFunc: () => void,
+  pollRate = 100,
 ): Promise<F> {
+  // an arbitrary marker object
   const sleepRv = {};
+
   while (true) {
     // a promise that resolves after [pollRate] ms, and returns the [sleepRv] object
-    const sleepPromise = new Promise((resolve) =>
-      setTimeout(() => resolve(sleepRv), pollRate)
+    const sleepPromise: Promise<typeof sleepRv> = new Promise((resolve) =>
+      setTimeout(() => resolve(sleepRv), pollRate),
     );
 
-    const rv: any = await Promise.race([promise, sleepPromise]);
+    // either wait for the promise to return, or timeout after [pollRate] ms
+    const rv = await Promise.race([promise, sleepPromise]);
     if (rv !== sleepRv) {
       // function finished
-      return rv;
+      return rv as F;
     }
 
     // timeout
@@ -66,17 +69,21 @@ export function parseRemSize(emSize: string): number | null {
 export type EventListenerInfo = [
   element: Element | Window,
   type: string,
-  listener: (this: Element, ev: Event) => any
+  listener: (this: Element, ev: Event) => void,
 ];
 
 export function createEventListenerRegistry() {
   const eventListeners: EventListenerInfo[] = [];
 
-  function add(
+  function add<T extends Event>(
     element: Element | Window,
     type: string,
-    listener: (this: Element, ev: any) => any
+    _listener: (this: Element, ev: T) => void,
   ): EventListenerInfo {
+    // manually force the type of 2nd parameter to be "Event"
+    // because the typing annotation of `addEventListener` is fucking wrong
+    const listener = _listener as (this: Element, ev: Event) => void;
+
     element.addEventListener(type, listener);
     const info: EventListenerInfo = [element, type, listener];
     eventListeners.push(info);
@@ -94,7 +101,7 @@ export function createEventListenerRegistry() {
     } else {
       console.error(
         "No registered event listener with given specification:",
-        listenerInfo
+        listenerInfo,
       );
       throw "No registered event listener with given specification";
     }

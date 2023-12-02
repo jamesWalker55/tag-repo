@@ -1,6 +1,6 @@
+import { parseRemSize } from "@/lib/utils";
 import resolveConfig from "tailwindcss/resolveConfig";
 import rawConfig from "../../tailwind.config";
-import { parseRemSize } from "@/lib/utils";
 
 const config = resolveConfig(rawConfig);
 

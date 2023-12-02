@@ -1,11 +1,11 @@
 <script lang="ts" setup>
-import { computed, useSlots, watch } from "vue";
-import type { Component } from "@vue/runtime-core";
-import { PanelSizeKey, state } from "@/lib/api/state";
 import BottomPanel from "@/components/panels/BottomPanel.vue";
 import LeftPanel from "@/components/panels/LeftPanel.vue";
 import RightPanel from "@/components/panels/RightPanel.vue";
-import { PANEL_MIN_HEIGHT, PANEL_MIN_WIDTH } from "@/lib/constants";
+import { PanelSizeKey, state } from "@/lib/api/state";
+import { PANEL_MIN_HEIGHT } from "@/lib/constants";
+import type { Component } from "vue";
+import { computed } from "vue";
 
 interface Props {
   is?: string | Component;
@@ -27,7 +27,7 @@ const gridRows = computed(() => {
   if (props.bottomSizeKey) {
     const lowerBoundedSize = Math.max(
       PANEL_MIN_HEIGHT,
-      state.panelSizes[props.bottomSizeKey]
+      state.panelSizes[props.bottomSizeKey],
     );
     rows.push(`minmax(auto, ${lowerBoundedSize}px)`);
   }
@@ -41,7 +41,7 @@ const gridCols = computed(() => {
   if (props.leftSizeKey) {
     const lowerBoundedSize = Math.max(
       PANEL_MIN_HEIGHT,
-      state.panelSizes[props.leftSizeKey]
+      state.panelSizes[props.leftSizeKey],
     );
     cols.push(`minmax(auto, ${lowerBoundedSize}px)`);
   }
@@ -51,7 +51,7 @@ const gridCols = computed(() => {
   if (props.rightSizeKey) {
     const lowerBoundedSize = Math.max(
       PANEL_MIN_HEIGHT,
-      state.panelSizes[props.rightSizeKey]
+      state.panelSizes[props.rightSizeKey],
     );
     cols.push(`minmax(auto, ${lowerBoundedSize}px)`);
   }

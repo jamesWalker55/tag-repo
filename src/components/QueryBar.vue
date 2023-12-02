@@ -1,45 +1,46 @@
 <script lang="ts" setup>
-import { Ref, ref, watch } from "vue";
 import { setQuery, state } from "@/lib/api";
+import { Ref, ref, watch } from "vue";
 
 const inputElement: Ref<HTMLInputElement | null> = ref(null);
 const queryText = ref("");
-// the '!' operator asserts that the object must be non-null
-const canvasContext = document.createElement("canvas").getContext("2d")!;
 
 watch(
   () => state.query,
   (newQuery) => {
     queryText.value = newQuery;
-  }
+  },
 );
 
-function getTextWidth(text: string, font: string) {
-  canvasContext.font = font;
-  const metrics = canvasContext.measureText(text);
-  return metrics.width;
-}
+// // the '!' operator asserts that the object must be non-null
+// const canvasContext = document.createElement("canvas").getContext("2d")!;
 
-function getFontStyle(element: Element) {
-  const style = window.getComputedStyle(element);
-  return `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
-}
+// function getTextWidth(text: string, font: string) {
+//   canvasContext.font = font;
+//   const metrics = canvasContext.measureText(text);
+//   return metrics.width;
+// }
 
-/**
- * Compute the width of the input text query, in pixels.
- * i.e. If you create an absolute <div> with position "left: getInputTextWidth() px", the div will
- * follow the end of the text.
- */
-function getInputTextWidth() {
-  const el = inputElement.value;
-  if (el === null)
-    throw "Failed to get input text width, element not initialised.";
+// function getFontStyle(element: Element) {
+//   const style = window.getComputedStyle(element);
+//   return `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+// }
 
-  const style = getFontStyle(el);
-  const width = getTextWidth(queryText.value, style);
+// /**
+//  * Compute the width of the input text query, in pixels.
+//  * i.e. If you create an absolute <div> with position "left: getInputTextWidth() px", the div will
+//  * follow the end of the text.
+//  */
+// function getInputTextWidth() {
+//   const el = inputElement.value;
+//   if (el === null)
+//     throw "Failed to get input text width, element not initialised.";
 
-  return width;
-}
+//   const style = getFontStyle(el);
+//   const width = getTextWidth(queryText.value, style);
+
+//   return width;
+// }
 
 // execute search on timeout
 (function () {

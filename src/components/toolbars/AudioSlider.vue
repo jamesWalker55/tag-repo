@@ -1,7 +1,6 @@
 <script lang="ts" setup>
-import { onMounted, Ref, ref, watch } from "vue";
 import { createEventListenerRegistry } from "@/lib/utils";
-import { state } from "@/lib/api";
+import { ref, watch } from "vue";
 
 interface Props {
   initialValue?: number;
@@ -26,7 +25,7 @@ const emit = defineEmits<Emits>();
 const knobValue = ref(props.initialValue);
 watch(
   () => knobValue.value,
-  (newValue) => emit("valueChanged", newValue)
+  (newValue) => emit("valueChanged", newValue),
 );
 
 const CHANGE_RATE = 0.005;

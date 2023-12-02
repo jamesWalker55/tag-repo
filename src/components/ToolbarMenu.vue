@@ -1,6 +1,6 @@
 <script lang="ts" setup>
-import { computed, Ref, ref, watch } from "vue";
-import Menu from "@/components/menu/Menu.vue";
+import MenuContainer from "@/components/menu/MenuContainer.vue";
+import { computed, Ref, ref } from "vue";
 
 const isVisible = ref(false);
 
@@ -19,7 +19,7 @@ const menuWidth = ref(0);
 const menuHeight = ref(0);
 
 const menuSizeKnown = computed(
-  () => menuWidth.value !== 0 && menuHeight.value !== 0
+  () => menuWidth.value !== 0 && menuHeight.value !== 0,
 );
 
 const bestX = computed(() => {
@@ -94,14 +94,12 @@ function visibility(): boolean {
 }
 
 defineExpose({ show: showMenu, close: closeMenu, visibility });
-
-const log = console.log;
 </script>
 
 <template>
   <Teleport v-if="isVisible" to="#context-menu-container">
     <!--suppress VueUnrecognizedDirective -->
-    <Menu
+    <MenuContainer
       ref="menu"
       :pos-x="menuSizeKnown ? bestX : 0"
       :pos-y="menuSizeKnown ? bestY : 0"
@@ -110,7 +108,7 @@ const log = console.log;
       :class="menuSizeKnown ? '' : '-z-10 opacity-0'"
     >
       <slot v-bind="{ closeMenu }" />
-    </Menu>
+    </MenuContainer>
   </Teleport>
 </template>
 

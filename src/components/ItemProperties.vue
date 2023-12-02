@@ -1,19 +1,19 @@
 <script lang="ts" setup>
-import { FileType, insertTags, ItemDetails } from "@/lib/ffi";
-import { computed, ComputedRef, ref, Ref, watch } from "vue";
-import { requestItemToBeFetched, selection, state } from "@/lib/api";
-import ItemIcon from "@/components/itemlist/ItemIcon.vue";
 import LoadingDots from "@/components/LoadingDots.vue";
-import { Spinner, FTMultiple, VerticalDots, AddTags } from "@/lib/icons";
-import Tag from "@/components/Tag.vue";
+import ItemPropertiesTag from "@/components/ItemPropertiesTag.vue";
+import ItemIcon from "@/components/itemlist/ItemIcon.vue";
+import { requestItemToBeFetched, selection, state } from "@/lib/api";
+import { FileType, insertTags } from "@/lib/ffi";
+import { AddTags, FTMultiple } from "@/lib/icons";
 import path from "path-browserify";
+import { Ref, computed, ref, watch } from "vue";
 
 const items = computed(() =>
   selection.selected.value.map((index) => {
     const itemId = state.itemIds[index];
     requestItemToBeFetched(itemId);
     return state.itemCache[itemId];
-  })
+  }),
 );
 
 const itemCount = computed(() => items.value.length);
@@ -66,7 +66,7 @@ function onAddTagsClick() {
   console.log();
   insertTags(
     items.value.map((item) => item!.item.id),
-    tagInputValue.value
+    tagInputValue.value,
   );
   tagInputValue.value = null;
 }
@@ -96,8 +96,7 @@ const log = console.log;
       />
       <FTMultiple v-else class="flex-0 h-16px w-16px text-neutral-600" />
       <!-- text -->
-      <span
-        is="div"
+      <div
         v-if="!allItemsLoaded"
         class="h-4 flex-1 animate-pulse rounded-full bg-neutral-100 italic"
       />
@@ -138,9 +137,12 @@ const log = console.log;
         No tags
       </div>
       <div v-else>
-        <template v-for="tag in displayedTags">
+        <template v-for="tag in displayedTags" :key="tag">
           <!-- must not be undefined since allItemsLoaded === true -->
-          <Tag :name="tag" :item-id="items.map((i) => i!.item.id)" />
+          <ItemPropertiesTag
+            :name="tag"
+            :item-id="items.map((i) => i!.item.id)"
+          />
           {{ " " }}
         </template>
       </div>

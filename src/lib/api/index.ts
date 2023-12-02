@@ -1,58 +1,58 @@
-import { watch } from "vue";
+import { type ListViewColumn } from "@/lib/api/view-columns";
 import {
   ManagerStatus,
   insertTags,
-  removeTags,
-  stopAudio,
   previewAudio,
+  removeTags,
   setAudioVolume,
+  stopAudio,
 } from "@/lib/ffi";
 import { Event, listen } from "@tauri-apps/api/event";
 import { appWindow } from "@tauri-apps/api/window";
-import { refreshAll, state } from "./state";
-import { closeRepo, openRepo, promptOpenRepo } from "./repo";
-import { setQuery } from "./query";
-import { type ListViewColumn } from "@/lib/api/view-columns";
-import {
-  type ItemDetails,
-  queryItemIds,
-  clearItemCache,
-  setCachedItem,
-  requestItemToBeFetched,
-} from "./items";
-import { selection } from "./selection";
-import * as actions from "./actions";
 import path from "path-browserify";
+import { watch } from "vue";
+import * as actions from "./actions";
+import {
+  clearItemCache,
+  queryItemIds,
+  requestItemToBeFetched,
+  setCachedItem,
+  type ItemDetails,
+} from "./items";
+import { setQuery } from "./query";
+import { closeRepo, openRepo, promptOpenRepo } from "./repo";
+import { selection } from "./selection";
+import { refreshAll, state } from "./state";
 
 export {
-  revealFile,
-  launchFile,
-  determineFileType,
   FileType,
-  getFolders,
-  type Folder,
-  supportsAudioPlayback,
-  previewAudio,
-  stopAudio,
+  determineFileType,
   getAudioVolume,
-  setAudioVolume,
+  getFolders,
+  launchFile,
   openManual,
+  previewAudio,
+  revealFile,
+  setAudioVolume,
+  stopAudio,
+  supportsAudioPlayback,
+  type Folder,
 } from "@/lib/ffi";
 export {
-  type ItemDetails,
-  type ListViewColumn,
   ManagerStatus,
+  actions,
+  closeRepo,
+  insertTags,
   openRepo,
   promptOpenRepo,
-  closeRepo,
-  setQuery,
-  state,
   refreshAll,
-  selection,
-  insertTags,
   removeTags,
   requestItemToBeFetched,
-  actions,
+  selection,
+  setQuery,
+  state,
+  type ItemDetails,
+  type ListViewColumn,
 };
 
 // listen to change events from the backend
@@ -156,7 +156,7 @@ watch(
         }
       })(),
     ]);
-  }
+  },
 );
 // when the query changes...
 watch(
@@ -170,7 +170,7 @@ watch(
     clearItemCache();
     // actually change the item list
     state.itemIds = newItems;
-  }
+  },
 );
 // when the selection changes...
 watch(
@@ -212,7 +212,7 @@ watch(
     } else {
       stopAudio().then();
     }
-  }
+  },
 );
 // when the audio preview setting changes...
 watch(
@@ -221,7 +221,7 @@ watch(
     if (!audioPreview) {
       stopAudio().then();
     }
-  }
+  },
 );
 // when the audio volume changes...
 watch(
@@ -230,5 +230,5 @@ watch(
     // make sure volume is between 0 and 1
     newVolume = Math.max(0, Math.min(newVolume, 1));
     await setAudioVolume(newVolume);
-  }
+  },
 );

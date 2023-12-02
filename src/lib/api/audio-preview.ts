@@ -14,7 +14,7 @@ export async function enableAudioPreview() {
     state.audioPreview = true;
   } else {
     alert(
-      "Unable to initialize audio device.\nPlease ensure your audio devices are properly configured and restart the application."
+      "Unable to initialize audio device.\nPlease ensure your audio devices are properly configured and restart the application.",
     );
   }
 }

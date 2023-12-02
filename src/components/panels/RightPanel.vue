@@ -1,8 +1,8 @@
 <script lang="ts" setup>
 import { state } from "@/lib/api";
+import { PanelSizeKey } from "@/lib/api/state";
 import { createEventListenerRegistry } from "@/lib/utils";
 import { Ref, ref } from "vue";
-import { PanelSizeKey } from "@/lib/api/state";
 
 interface Props {
   sizeKey: PanelSizeKey;
@@ -35,8 +35,7 @@ function onResizerMouseDown(downEvt: MouseEvent) {
 <template>
   <div ref="containerElement" class="flex flex-row overflow-clip">
     <!-- the resizer -->
-    <component
-      is="div"
+    <div
       class="w-1.5 flex-none cursor-col-resize border-l border-r border-neutral-300 bg-neutral-50"
       @mousedown="onResizerMouseDown"
     />

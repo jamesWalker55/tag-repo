@@ -1,6 +1,6 @@
+import { state } from "@/lib/api/state";
 import * as ffi from "@/lib/ffi";
 import { Item, ItemDetails } from "@/lib/ffi";
-import { state } from "@/lib/api/state";
 
 export type { Item, ItemDetails };
 

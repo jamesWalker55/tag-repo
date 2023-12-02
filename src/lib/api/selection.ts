@@ -1,6 +1,6 @@
-import { WindowState, state } from "./state";
 import { unreachable } from "@/lib/utils";
 import { computed } from "vue";
+import { WindowState, state } from "./state";
 
 export enum SelectionType {
   RANGE = "range",
@@ -64,6 +64,7 @@ function createSelectionManager(state: WindowState) {
           return selection.indexes;
         default:
           unreachable(selectionType);
+          return [];
       }
     }
   });
@@ -90,13 +91,16 @@ function createSelectionManager(state: WindowState) {
     } else {
       const selectionType = selection.type;
       switch (selectionType) {
-        case SelectionType.RANGE:
+        case SelectionType.RANGE: {
           const [small, large] = getRangeMinMax(selection);
           return small <= index && index <= large;
-        case SelectionType.SEPARATE:
+        }
+        case SelectionType.SEPARATE: {
           return selection.indexes.indexOf(index) !== -1;
-        default:
+        }
+        default: {
           unreachable(selectionType);
+        }
       }
     }
   }
@@ -148,7 +152,7 @@ function createSelectionManager(state: WindowState) {
       let largeIndex: number;
       let indexes: number[];
       switch (selectionType) {
-        case SelectionType.RANGE:
+        case SelectionType.RANGE: {
           startIndex = selection.extendToIndex;
           const [small, large] = getRangeMinMax(selection);
           indexes = rangeToArray(selection);
@@ -169,7 +173,8 @@ function createSelectionManager(state: WindowState) {
             lastToggledIndex: endIndex,
           };
           return;
-        case SelectionType.SEPARATE:
+        }
+        case SelectionType.SEPARATE: {
           startIndex = selection.lastToggledIndex;
           if (startIndex > endIndex) {
             smallIndex = endIndex;
@@ -186,8 +191,10 @@ function createSelectionManager(state: WindowState) {
           }
           selection.lastToggledIndex = endIndex;
           return;
-        default:
+        }
+        default: {
           unreachable(selectionType);
+        }
       }
     }
   }
@@ -200,7 +207,7 @@ function createSelectionManager(state: WindowState) {
 
     const selectionType = selection.type;
     switch (selectionType) {
-      case SelectionType.RANGE:
+      case SelectionType.RANGE: {
         const [small, large] = getRangeMinMax(selection);
         if (!(small <= index && index <= large))
           throw "item id doesn't exist in selection!";
@@ -216,15 +223,18 @@ function createSelectionManager(state: WindowState) {
           lastToggledIndex: index,
         };
         return;
-      case SelectionType.SEPARATE:
+      }
+      case SelectionType.SEPARATE: {
         const indexOfIndex = selection.indexes.indexOf(index);
         if (indexOfIndex === -1) throw "item id doesn't exist in selection!";
 
         selection.indexes.splice(indexOfIndex, 1);
         selection.lastToggledIndex = index;
         return;
-      default:
+      }
+      default: {
         unreachable(selectionType);
+      }
     }
   }
 

@@ -1,12 +1,5 @@
 <script lang="ts" setup>
-import {
-  FTAudio,
-  FTVideo,
-  FTImage,
-  FTText,
-  FTFolder,
-  FTMisc,
-} from "@/lib/icons";
+import { FTAudio, FTVideo, FTImage, FTText, FTMisc } from "@/lib/icons";
 import { FileType } from "@/lib/api";
 import { FunctionalComponent, SVGAttributes } from "vue";
 
@@ -22,11 +15,5 @@ const ICON_MAP: Record<FileType, FunctionalComponent<SVGAttributes>> = {
 </script>
 
 <template>
-  <!--@ts-ignore-->
-  <component
-    :is="
-      // @ts-ignore
-      ICON_MAP[props.filetype]
-    "
-  />
+  <component :is="ICON_MAP[props.filetype]" />
 </template>

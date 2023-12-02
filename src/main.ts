@@ -1,7 +1,7 @@
-import { createApp } from "vue";
-import "./styles.css";
-import App from "./App.vue";
 import ClickAway from "@/plugins/click-away";
+import { createApp } from "vue";
+import App from "./App.vue";
+import "./styles.css";
 
 const app = createApp(App);
 app.use(ClickAway);

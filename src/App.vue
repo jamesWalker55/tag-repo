@@ -1,13 +1,13 @@
 <script lang="ts" setup>
-import TitleBar from "./components/toolbars/TitleBar.vue";
+import FolderTree from "@/components/FolderTree.vue";
+import ItemProperties from "@/components/ItemProperties.vue";
+import PanelsContainer from "@/components/PanelsContainer.vue";
+import { state } from "@/lib/api";
+import { Ref, ref } from "vue";
+import ItemList from "./components/ItemList.vue";
 import QueryBar from "./components/QueryBar.vue";
 import StatusBar from "./components/toolbars/StatusBar.vue";
-import ItemList from "./components/ItemList.vue";
-import { Ref, ref } from "vue";
-import PanelsContainer from "@/components/PanelsContainer.vue";
-import ItemProperties from "@/components/ItemProperties.vue";
-import FolderTree from "@/components/FolderTree.vue";
-import { state } from "@/lib/api";
+import TitleBar from "./components/toolbars/TitleBar.vue";
 
 // disable the native context menu except certain elements only
 function onContextMenu(e: MouseEvent) {

@@ -1,6 +1,11 @@
 <script lang="ts" setup>
-import { appWindow } from "@tauri-apps/api/window";
-import { Ref, ref } from "vue";
+import ToolbarMenu from "@/components/ToolbarMenu.vue";
+import MenuArbitraryItem from "@/components/menu/MenuArbitraryItem.vue";
+import MenuItem from "@/components/menu/MenuItem.vue";
+import MenuSeparator from "@/components/menu/MenuSeparator.vue";
+import MenuText from "@/components/menu/MenuText.vue";
+import AudioSlider from "@/components/toolbars/AudioSlider.vue";
+import ToolbarButton from "@/components/toolbars/ToolbarButton.vue";
 import * as api from "@/lib/api";
 import { openManual, selection, state } from "@/lib/api";
 import {
@@ -8,15 +13,10 @@ import {
   toggleLeftPanelVisibility,
   toggleRightPanelVisibility,
 } from "@/lib/api/actions";
-import ToolbarButton from "@/components/toolbars/ToolbarButton.vue";
-import ToolbarMenu from "@/components/ToolbarMenu.vue";
-import MenuItem from "@/components/menu/MenuItem.vue";
-import MenuSeparator from "@/components/menu/MenuSeparator.vue";
-import MenuText from "@/components/menu/MenuText.vue";
 import { setAudioVolume, toggleAudioPreview } from "@/lib/api/audio-preview";
-import MenuArbitraryItem from "@/components/menu/MenuArbitraryItem.vue";
-import AudioSlider from "@/components/toolbars/AudioSlider.vue";
 import { updateWindowSizeConfig } from "@/lib/ffi";
+import { appWindow } from "@tauri-apps/api/window";
+import { Ref, ref } from "vue";
 
 type ToolbarMenuType = InstanceType<typeof ToolbarMenu>;
 
@@ -163,7 +163,7 @@ function onButtonMouseOver(e: MouseEvent, menu: ToolbarMenuType | null) {
     >
       View
     </ToolbarButton>
-    <ToolbarMenu ref="viewMenu" v-slot="{ closeMenu }">
+    <ToolbarMenu ref="viewMenu">
       <MenuText>Panels</MenuText>
       <MenuItem text="Item Properties" @click="toggleRightPanelVisibility">
         <template #icon="{ defaultClasses }">
@@ -207,7 +207,7 @@ function onButtonMouseOver(e: MouseEvent, menu: ToolbarMenuType | null) {
     >
       Audio
     </ToolbarButton>
-    <ToolbarMenu ref="previewMenu" v-slot="{ closeMenu }">
+    <ToolbarMenu ref="previewMenu">
       <MenuItem text="Audio preview" @click="toggleAudioPreview()">
         <template #icon="{ defaultClasses }">
           <i-fluent-checkbox-checked-16-regular

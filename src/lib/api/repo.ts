@@ -7,7 +7,7 @@ export async function openRepo(path: string) {
 }
 
 export async function promptOpenRepo() {
-  let path = await open({ directory: true, multiple: false });
+  const path = await open({ directory: true, multiple: false });
   if (Array.isArray(path)) throw "cannot open multiple directories";
 
   if (path !== null) {

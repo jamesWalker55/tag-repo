@@ -1,6 +1,6 @@
 <script lang="ts" setup>
-import { ManagerStatus, state } from "@/lib/api";
 import LoadingDots from "@/components/LoadingDots.vue";
+import { ManagerStatus, state } from "@/lib/api";
 </script>
 
 <template>

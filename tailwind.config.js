@@ -22,7 +22,7 @@ export default {
         "title-button": "2.85rem",
       },
       spacing: {
-        '16px': '16px',
+        "16px": "16px",
       },
     },
   },

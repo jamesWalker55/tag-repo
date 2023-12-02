@@ -1,6 +1,6 @@
-import { reactive } from "vue";
 import * as ffi from "@/lib/ffi";
 import { ItemDetails, ManagerStatus, supportsAudioPlayback } from "@/lib/ffi";
+import { reactive } from "vue";
 import { Selection } from "./selection";
 import { ListViewColumn } from "./view-columns";
 

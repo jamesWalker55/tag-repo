@@ -1,29 +1,10 @@
 <script lang="ts" setup>
-import {
-  requestItemToBeFetched,
-  revealFile,
-  selection,
-  state,
-} from "@/lib/api";
-import { computed, ref, watch } from "vue";
 import ItemIcon from "@/components/itemlist/ItemIcon.vue";
-import path from "path-browserify";
-import { tagsToString } from "@/lib/utils";
-import ContextMenu from "@/components/ContextMenu.vue";
-import {
-  Copy,
-  Cut,
-  Paste,
-  RevealFile,
-  OpenFile,
-  PreviewFile,
-  CopyFilePath,
-} from "@/lib/icons";
-import MenuItem from "@/components/menu/MenuItem.vue";
-import MenuSeparator from "@/components/menu/MenuSeparator.vue";
-import MenuArbitraryItem from "@/components/menu/MenuArbitraryItem.vue";
-import { clipboard } from "@tauri-apps/api";
+import { requestItemToBeFetched, selection, state } from "@/lib/api";
 import { launchSelectedItems } from "@/lib/api/actions";
+import { tagsToString } from "@/lib/utils";
+import path from "path-browserify";
+import { computed, watch } from "vue";
 
 interface Props {
   // the item id of this row
@@ -42,7 +23,7 @@ watch(
       // this means the item cache was cleared, we need to reload it
       requestItemToBeFetched(props.id);
     }
-  }
+  },
 );
 
 const isSelected = computed(() => selection.contains(props.listIndex));
@@ -75,8 +56,6 @@ function onItemMouseDown(e: MouseEvent) {
   // await clipboard.writeText(await path.join(state.path, itemData.path));
   // await revealFile(await join(state.path, itemData.path));
 }
-
-const log = console.log;
 </script>
 
 <template>
@@ -92,7 +71,7 @@ const log = console.log;
     @dblclick="launchSelectedItems"
   >
     <!-- v-if has higher priority than v-for, see https://vuejs.org/guide/essentials/list.html#v-for-with-v-if -->
-    <template v-for="col in state.listViewColumns">
+    <template v-for="col in state.listViewColumns" :key="col.type">
       <div
         v-if="col.type === 'name'"
         class="flex flex-nowrap gap-1 px-1"
@@ -108,6 +87,7 @@ const log = console.log;
       </div>
       <div
         v-else-if="col.type === 'path'"
+        :key="col.type"
         class="flex truncate px-1 text-neutral-700"
         :style="{ width: `${col.width}px` }"
       >

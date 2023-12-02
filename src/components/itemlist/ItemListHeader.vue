@@ -1,20 +1,16 @@
 <script lang="ts" setup>
 import { ListViewColumn, state } from "@/lib/api";
-import {
-  createEventListenerRegistry,
-  EventListenerInfo,
-  findClosestIndex,
-} from "@/lib/utils";
-import { getSpacingSize } from "@/lib/tailwindcss";
-import { computed, reactive, ref } from "vue";
 import { COLUMN_MIN_WIDTH } from "@/lib/constants";
+import { getSpacingSize } from "@/lib/tailwindcss";
+import { createEventListenerRegistry, findClosestIndex } from "@/lib/utils";
+import { computed, reactive } from "vue";
 
 const columnBreakpoints = computed(() => {
   const positions: number[] = [0];
   for (let i = 0; i < state.listViewColumns.length; i++) {
     const prevPos = positions[positions.length - 1];
     positions.push(
-      prevPos + Math.max(state.listViewColumns[i].width, COLUMN_MIN_WIDTH)
+      prevPos + Math.max(state.listViewColumns[i].width, COLUMN_MIN_WIDTH),
     );
   }
   return positions;
@@ -25,7 +21,7 @@ const resizeHandleWidth = getSpacingSize("2");
 function onResizerMouseDown(
   colIdx: number,
   col: ListViewColumn,
-  downEvt: MouseEvent
+  downEvt: MouseEvent,
 ) {
   const listeners = createEventListenerRegistry();
   const initialX = downEvt.clientX;
@@ -44,7 +40,7 @@ const COLUMN_DRAG_THRESHOLD = 10;
 function onColumnMouseDown(
   colIdx: number,
   col: ListViewColumn,
-  downEvt: MouseEvent
+  downEvt: MouseEvent,
 ) {
   const listeners = createEventListenerRegistry();
   const initialX = downEvt.clientX;
@@ -73,7 +69,7 @@ function handleColumnDrag(
   colIdx: number,
   col: ListViewColumn,
   downEvt: MouseEvent,
-  moveEvt: MouseEvent
+  moveEvt: MouseEvent,
 ) {
   // We are working with 2 units here:
   //   client X: X position relative to the whole window
@@ -104,7 +100,7 @@ function handleColumnDrag(
     const currentOffsetX = initialOffsetX - initialClientX + upEvt.clientX;
     const breakpointIdx = findClosestIndex(
       columnBreakpoints.value,
-      currentOffsetX
+      currentOffsetX,
     );
     const newColIdx =
       breakpointIdx > colIdx ? breakpointIdx - 1 : breakpointIdx;
@@ -121,7 +117,7 @@ function handleColumnClick(
   colIdx: number,
   col: ListViewColumn,
   downEvt: MouseEvent,
-  upEvt: MouseEvent
+  upEvt: MouseEvent,
 ) {
   // TODO: Sort by this column
   console.log("YOU HAVE CLICKED THIS COLUMN!!!");
@@ -136,6 +132,7 @@ const debug = false;
   >
     <div
       v-for="(col, i) in state.listViewColumns"
+      :key="col.type"
       class="absolute flex h-6 flex-none items-center overflow-clip border-b border-r border-neutral-300 bg-white px-2 hover:bg-slate-100"
       :style="{
         width: `${Math.max(col.width, COLUMN_MIN_WIDTH)}px`,
@@ -155,9 +152,10 @@ const debug = false;
         </span>
       </template>
     </div>
-    <component
-      is="div"
+    <!-- drag handles, invisible in production -->
+    <div
       v-for="(col, i) in state.listViewColumns"
+      :key="col.type"
       class="absolute z-10 h-6 cursor-col-resize bg-red-500"
       :class="debug ? 'opacity-50' : 'opacity-0'"
       :style="{
