@@ -10,61 +10,61 @@ use tauri::{
     Window, WindowEvent,
 };
 
-#[derive(Serialize, Deserialize, PartialEq, Eq, Debug)]
-enum FixedComponent {
+#[derive(Serialize, Deserialize, PartialEq, Eq, Debug, Clone)]
+pub enum FixedComponent {
     ItemList,
 }
 
-#[derive(Serialize, Deserialize, PartialEq, Eq, Debug)]
-enum PanelComponent {
+#[derive(Serialize, Deserialize, PartialEq, Eq, Debug, Clone)]
+pub enum PanelComponent {
     FolderTree,
     ItemProperties,
 }
 
-#[derive(Serialize, Deserialize, PartialEq, Eq, Debug)]
+#[derive(Serialize, Deserialize, PartialEq, Eq, Debug, Clone)]
 #[serde(untagged)]
-enum Component {
+pub enum Component {
     Fixed(FixedComponent),
     Panel(PanelComponent),
 }
 
 structstruck::strike! {
-    #[strikethrough[derive(Serialize, Deserialize, PartialEq, Debug)]]
+    #[strikethrough[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]]
     #[strikethrough[serde(rename_all = "camelCase")]]
-    struct Config {
-        last_open_path: Option<String>,
-        dimensions: Option<struct DimensionsConfig {
-            x: i32,
-            y: i32,
-            width: u32,
-            height: u32,
+    pub struct Config {
+        pub last_open_path: Option<String>,
+        pub dimensions: Option<pub struct DimensionsConfig {
+            pub x: i32,
+            pub y: i32,
+            pub width: u32,
+            pub height: u32,
         }>,
-        audio_preview: struct AudioPreviewConfig {
-            enabled: bool,
-            volume: f64,
+        pub audio_preview: struct AudioPreviewConfig {
+            pub enabled: bool,
+            pub volume: f64,
         },
-        layout: struct LayoutConfig {
-            left: struct PanelConfig {
-                component: Option<PanelComponent>,
-                size: i32,
+        pub layout: pub struct LayoutConfig {
+            pub left: pub struct PanelConfig {
+                pub component: Option<PanelComponent>,
+                pub size: i32,
             },
-            right: PanelConfig,
-            bottom: PanelConfig,
+            pub right: PanelConfig,
+            pub bottom: PanelConfig,
         },
-        components: struct ComponentsConfig {
-            item_list: struct ItemListConfig {
-                columns: Vec<struct ItemListColumn {
-                    r#type: enum ItemListColumnType {
+        pub components: pub struct ComponentsConfig {
+            pub item_list: pub struct ItemListConfig {
+                pub columns: Vec<pub struct ItemListColumn {
+                    pub r#type: enum ItemListColumnType {
                         Path,
                         Name,
                         Tags,
                         Extension,
                     },
-                    width: i32,
+                    pub width: i32,
                 }>,
             },
-            folder_tree: struct FolderTreeConfig {
-                recursive: bool,
+            pub folder_tree: pub struct FolderTreeConfig {
+                pub recursive: bool,
             }
         }
     }
@@ -112,7 +112,7 @@ const DEFAULT_CONFIG_JSON: &str = include_str!("defaultState.json");
 
 pub const CONFIG_FILENAME: &str = "settings.json";
 
-type TauriManagedConfig = Arc<Mutex<Config>>;
+pub type TauriManagedConfig = Arc<Mutex<Config>>;
 
 pub struct ConfigPlugin<R: Runtime> {
     managed_config: Option<TauriManagedConfig>,
