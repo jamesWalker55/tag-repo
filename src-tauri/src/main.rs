@@ -60,10 +60,7 @@ struct AppState {
 
 impl AppState {
     fn new(output_sink: Option<Sink>) -> Self {
-        Self {
-            manager: RwLock::new(None),
-            output_sink,
-        }
+        Self { manager: RwLock::new(None), output_sink }
     }
 }
 
