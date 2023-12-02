@@ -2,7 +2,7 @@ use indoc::indoc;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::fs::{create_dir_all, File};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use tauri::{
     plugin::{Plugin, Result as PluginResult},
@@ -108,6 +108,30 @@ pub struct ConfigPlugin<R: Runtime> {
     invoke_handler: Box<dyn Fn(Invoke<R>) + Send + Sync>,
 }
 
+impl<R: Runtime> ConfigPlugin<R> {
+    fn load(app_config_dir: &Path) -> Option<Config> {
+        let config_path = app_config_dir.join(CONFIG_FILENAME);
+        let Ok(config_json) = tauri::api::file::read_string(config_path) else {
+            return None;
+        };
+
+        let Ok(config) = serde_json::from_str(config_json.as_str()) else {
+            return None;
+        };
+
+        Some(config)
+    }
+
+    fn save(app_config_dir: &Path, config: &Config) {
+        let config_path = app_config_dir.join(CONFIG_FILENAME);
+        let config_json = serde_json::to_string_pretty::<Config>(config)
+            .expect("failed to serialise config into string");
+
+        // create dir, then write file if dir was created successfully
+        let _ = create_dir_all(app_config_dir).and_then(|_| fs::write(config_path, config_json));
+    }
+}
+
 /// You must call this function before exiting in the frontend (*).
 /// * Only needed if you exit using `appWindow.close()`
 #[tauri::command]
@@ -120,11 +144,76 @@ fn update_window_size_config<R: Runtime>(
     Ok(())
 }
 
+#[tauri::command]
+fn set_audio_preview(
+    state: tauri::State<'_, TauriManagedConfig>,
+    audio_preview: AudioPreviewConfig,
+) {
+    let mut config = state.lock().unwrap();
+    config.audio_preview = audio_preview;
+}
+
+#[derive(Serialize, Deserialize, PartialEq, Eq, Debug, Clone)]
+#[serde(untagged)]
+enum LayoutSide {
+    Left,
+    Right,
+    Bottom,
+}
+
+#[tauri::command]
+fn set_layout(
+    state: tauri::State<'_, TauriManagedConfig>,
+    side: LayoutSide,
+    panel_config: PanelConfig,
+) {
+    let mut config = state.lock().unwrap();
+    match side {
+        LayoutSide::Left => {
+            config.layout.left = panel_config;
+        }
+        LayoutSide::Right => {
+            config.layout.right = panel_config;
+        }
+        LayoutSide::Bottom => {
+            config.layout.bottom = panel_config;
+        }
+    }
+}
+
+#[tauri::command]
+fn set_item_list(state: tauri::State<'_, TauriManagedConfig>, value: ItemListConfig) {
+    let mut config = state.lock().unwrap();
+    config.components.item_list = value;
+}
+
+#[tauri::command]
+fn set_folder_tree(state: tauri::State<'_, TauriManagedConfig>, value: FolderTreeConfig) {
+    let mut config = state.lock().unwrap();
+    config.components.folder_tree = value;
+}
+
+#[tauri::command]
+fn save<R: Runtime>(state: tauri::State<'_, TauriManagedConfig>, app_handle: tauri::AppHandle<R>) {
+    let config = state.lock().unwrap();
+    let Some(app_dir) = app_handle.path_resolver().app_config_dir() else {
+        return;
+    };
+    ConfigPlugin::<R>::save(&app_dir, &config);
+}
+
 impl<R: Runtime> Default for ConfigPlugin<R> {
     fn default() -> Self {
         Self {
             managed_config: None,
-            invoke_handler: Box::new(tauri::generate_handler![update_window_size_config]),
+            invoke_handler: Box::new(tauri::generate_handler![
+                update_window_size_config,
+                set_audio_preview,
+                set_layout,
+                set_item_list,
+                set_folder_tree,
+                save,
+            ]),
         }
     }
 }
@@ -140,13 +229,8 @@ impl<R: Runtime> Plugin<R> for ConfigPlugin<R> {
             .expect("invalid default configuration in defaultState.json");
 
         if let Some(app_dir) = app.path_resolver().app_config_dir() {
-            let config_path = app_dir.join(CONFIG_FILENAME);
-            if config_path.exists() {
-                if let Ok(config_json) = tauri::api::file::read_string(config_path) {
-                    if let Ok(user_config) = serde_json::from_str(config_json.as_str()) {
-                        config = user_config
-                    }
-                }
+            if let Some(user_config) = Self::load(&app_dir) {
+                config = user_config
             }
         }
 
@@ -198,19 +282,16 @@ impl<R: Runtime> Plugin<R> for ConfigPlugin<R> {
     }
 
     fn on_event(&mut self, app: &AppHandle<R>, event: &RunEvent) {
-        if let RunEvent::Exit = event {
-            if let Some(app_dir) = app.path_resolver().app_config_dir() {
-                let config_path = app_dir.join(CONFIG_FILENAME);
-                let managed_config = app.state::<TauriManagedConfig>();
-                let config = managed_config.lock().unwrap();
-                let config_json = serde_json::to_string_pretty::<Config>(&config)
-                    .expect("failed to serialise config into string");
+        let RunEvent::Exit = event else {
+            return;
+        };
+        let Some(app_dir) = app.path_resolver().app_config_dir() else {
+            return;
+        };
 
-                // create dir, then write file if dir was created successfully
-                let _ = create_dir_all(app_dir).and_then(|_| fs::write(config_path, config_json));
-            }
-        }
-        ()
+        let managed_config = app.state::<TauriManagedConfig>();
+        let config = managed_config.lock().unwrap();
+        Self::save(&app_dir, &config);
     }
 
     fn extend_api(&mut self, message: Invoke<R>) {
