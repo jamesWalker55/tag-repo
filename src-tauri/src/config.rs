@@ -95,17 +95,6 @@ impl Config {
         }
         Ok(())
     }
-
-    fn set_window_position<R>(&self, window: &Window<R>) -> tauri::Result<()>
-    where
-        R: Runtime,
-    {
-        if let Some(dimensions) = &self.dimensions {
-            window.set_position(PhysicalPosition::new(dimensions.x, dimensions.y))?;
-            window.set_size(LogicalSize::new(dimensions.width, dimensions.height))?;
-        }
-        Ok(())
-    }
 }
 
 const DEFAULT_CONFIG_JSON: &str = include_str!("defaultState.json");
@@ -192,14 +181,6 @@ impl<R: Runtime> Plugin<R> for ConfigPlugin<R> {
             .expect("config is still empty when webview is created")
             .clone();
         let window_clone = window.clone();
-
-        // apply window size and position
-        {
-            let config = managed_config.lock().unwrap();
-            config
-                .set_window_position(&window)
-                .expect("failed to set window position");
-        }
 
         // setup callback to update config (part 1)
         window.on_window_event(move |e| {
