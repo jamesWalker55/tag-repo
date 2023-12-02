@@ -3,6 +3,8 @@ import ItemIcon from "@/components/itemlist/ItemIcon.vue";
 import { requestItemToBeFetched, selection, state } from "@/lib/api";
 import { launchSelectedItems } from "@/lib/api/actions";
 import { tagsToString } from "@/lib/utils";
+import { startDrag } from "@/vendor/@crabnebula/plugin-drag";
+import * as tauriPath from "@tauri-apps/api/path";
 import path from "path-browserify";
 import { computed, watch } from "vue";
 
@@ -68,6 +70,23 @@ function onItemMouseDown(e: MouseEvent) {
         : 'bg-sky-200 outline outline-1 outline-sky-300 hover:bg-sky-200 hover:outline-sky-400'
     "
     @mousedown="onItemMouseDown"
+    @dragstart.prevent="
+      async () => {
+        const item = state.itemCache[id];
+        if (!item) return;
+        if (!state.path) return;
+
+        let fullPath = await tauriPath.join(state.path, item.item.path);
+        // drag-rs is buggy as hell, and panics if you give it forward slahes (on windows)
+        // normalize path and ensure all slashes are backslashes
+        fullPath = await tauriPath.normalize(fullPath);
+        await startDrag({
+          item: [fullPath],
+          icon: 'D:/Programming/tag-repo/app-icon.png',
+        });
+      }
+    "
+    draggable="true"
     @dblclick="launchSelectedItems"
   >
     <!-- v-if has higher priority than v-for, see https://vuejs.org/guide/essentials/list.html#v-for-with-v-if -->

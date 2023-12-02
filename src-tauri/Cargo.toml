@@ -17,6 +17,8 @@ tauri = { version = "1.5", features = ["api-all"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 window-shadows = { git = "https://github.com/tauri-apps/window-shadows", rev = "1f26ca4db1006a390a60e2919b833cdab9385842" }
+drag = { git = "https://github.com/crabnebula-dev/drag-rs", rev = "4f588b534ad94847017302144e601c0b905b4bc5" }
+tauri-plugin-drag = { git = "https://github.com/crabnebula-dev/drag-rs", rev = "4f588b534ad94847017302144e601c0b905b4bc5" }
 rusqlite = { version = "0.29.0", features = ["bundled", "functions"] }
 indoc = "2"
 rusqlite_migration = "1.0"
