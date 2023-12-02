@@ -133,7 +133,7 @@ impl<R: Runtime> ConfigPlugin<R> {
 /// You must call this function before exiting in the frontend (*).
 /// * Only needed if you exit using `appWindow.close()`
 #[tauri::command]
-fn update_window_size_config<R: Runtime>(
+fn set_dimensions<R: Runtime>(
     state: tauri::State<'_, TauriManagedConfig>,
     window: Window<R>,
 ) -> tauri::Result<()> {
@@ -152,7 +152,7 @@ fn set_audio_preview(
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, Debug, Clone)]
-#[serde(untagged)]
+#[serde(rename_all = "camelCase")]
 enum LayoutSide {
     Left,
     Right,
@@ -180,15 +180,15 @@ fn set_layout(
 }
 
 #[tauri::command]
-fn set_item_list(state: tauri::State<'_, TauriManagedConfig>, value: ItemListConfig) {
+fn set_item_list(state: tauri::State<'_, TauriManagedConfig>, item_list: ItemListConfig) {
     let mut config = state.lock().unwrap();
-    config.components.item_list = value;
+    config.components.item_list = item_list;
 }
 
 #[tauri::command]
-fn set_folder_tree(state: tauri::State<'_, TauriManagedConfig>, value: FolderTreeConfig) {
+fn set_folder_tree(state: tauri::State<'_, TauriManagedConfig>, folder_tree: FolderTreeConfig) {
     let mut config = state.lock().unwrap();
-    config.components.folder_tree = value;
+    config.components.folder_tree = folder_tree;
 }
 
 #[tauri::command]
@@ -200,17 +200,26 @@ fn save<R: Runtime>(state: tauri::State<'_, TauriManagedConfig>, app_handle: tau
     ConfigPlugin::<R>::save(&app_dir, &config);
 }
 
+#[tauri::command]
+fn load<R: Runtime>(app_handle: tauri::AppHandle<R>) -> Option<Config> {
+    let Some(app_dir) = app_handle.path_resolver().app_config_dir() else {
+        return None;
+    };
+    ConfigPlugin::<R>::load(&app_dir)
+}
+
 impl<R: Runtime> Default for ConfigPlugin<R> {
     fn default() -> Self {
         Self {
             managed_config: None,
             invoke_handler: Box::new(tauri::generate_handler![
-                update_window_size_config,
+                set_dimensions,
                 set_audio_preview,
                 set_layout,
                 set_item_list,
                 set_folder_tree,
                 save,
+                load,
             ]),
         }
     }
@@ -300,7 +309,6 @@ impl<R: Runtime> Plugin<R> for ConfigPlugin<R> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use indoc::indoc;
 
     #[test]
     fn test_config() {

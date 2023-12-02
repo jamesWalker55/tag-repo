@@ -14,7 +14,7 @@ import {
   toggleRightPanelVisibility,
 } from "@/lib/api/actions";
 import { setAudioVolume, toggleAudioPreview } from "@/lib/api/audio-preview";
-import { updateWindowSizeConfig } from "@/lib/ffi";
+import { configPlugin } from "@/lib/ffi";
 import { appWindow } from "@tauri-apps/api/window";
 import { Ref, ref } from "vue";
 
@@ -101,7 +101,9 @@ function onButtonMouseOver(e: MouseEvent, menu: ToolbarMenuType | null) {
       <MenuSeparator />
       <MenuItem
         text="Exit"
-        @click="() => updateWindowSizeConfig().then(() => appWindow.close())"
+        @click="
+          () => configPlugin.setDimensions().then(() => appWindow.close())
+        "
       >
         <template #icon="{ defaultClasses }">
           <i-fluent-dismiss-16-regular
@@ -283,7 +285,7 @@ function onButtonMouseOver(e: MouseEvent, menu: ToolbarMenuType | null) {
     </ToolbarButton>
     <ToolbarButton
       class="w-title-button hover:bg-red-600 hover:text-white active:bg-red-500 active:text-white"
-      @click="() => updateWindowSizeConfig().then(() => appWindow.close())"
+      @click="() => configPlugin.setDimensions().then(() => appWindow.close())"
     >
       <i-fluent-dismiss-16-regular width="16" height="16" />
     </ToolbarButton>

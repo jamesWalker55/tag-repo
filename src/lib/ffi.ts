@@ -109,6 +109,37 @@ export async function openManual() {
   await invoke("launch_manual");
 }
 
-export async function updateWindowSizeConfig() {
-  await invoke("plugin:configPlugin|update_window_size_config");
-}
+export const configPlugin = {
+  async setDimensions() {
+    await invoke("plugin:configPlugin|set_dimensions");
+  },
+  async setAudioPreview(audioPreview: { enabled: boolean; volume: number }) {
+    await invoke("plugin:configPlugin|set_audio_preview", { audioPreview });
+  },
+  async setLayout(
+    side: "left" | "right" | "bottom",
+    panelConfig: {
+      size: number;
+      component: "FolderTree" | "ItemProperties" | null;
+    },
+  ) {
+    await invoke("plugin:configPlugin|set_layout", { side, panelConfig });
+  },
+  async setItemList(itemList: {
+    columns: {
+      type: "name" | "tags" | "extension" | "path";
+      width: number;
+    }[];
+  }) {
+    await invoke("plugin:configPlugin|set_item_list", { itemList });
+  },
+  async setFolderTree(folderTree: { recursive: boolean }) {
+    await invoke("plugin:configPlugin|set_folder_tree", { folderTree });
+  },
+  async save() {
+    await invoke("plugin:configPlugin|save");
+  },
+  async load() {
+    return await invoke("plugin:configPlugin|load");
+  },
+};
