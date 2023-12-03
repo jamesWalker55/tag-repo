@@ -488,6 +488,7 @@ async fn main() {
     tauri::Builder::default()
         .manage(app_state)
         .plugin(ConfigPlugin::default())
+        .plugin(tauri_plugin_drag::init())
         .setup(|app| {
             let handle = app.handle();
             let managed_config = handle.state::<TauriManagedConfig>();
