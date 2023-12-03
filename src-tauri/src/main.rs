@@ -19,7 +19,7 @@ use tracing::{error, Level};
 use tracing_subscriber::FmtSubscriber;
 use window_shadows::{set_shadow, Error};
 
-use crate::config::ConfigPlugin;
+use crate::config::{ConfigPlugin, TauriManagedConfig};
 use crate::manager::{FileType, ItemDetails, ManagerStatus, RepoManager};
 use crate::repo::{DirStructureError, QueryError, Repo, SearchError};
 use crate::tree::FolderBuf;
@@ -490,7 +490,18 @@ async fn main() {
         .manage(app_state)
         .plugin(ConfigPlugin::default())
         .setup(|app| {
-            let window = tauri::WindowBuilder::new(
+            let handle = app.handle();
+            let managed_config = handle.state::<TauriManagedConfig>();
+
+            let config_dim;
+            let config_path;
+            {
+                let config = managed_config.lock().unwrap();
+                config_dim = config.dimensions.clone();
+                config_path = config.path.clone();
+            }
+
+            let mut window_builder = tauri::WindowBuilder::new(
                 app,
                 "main", /* the unique window label */
                 tauri::WindowUrl::App("index.html".into()),
@@ -499,9 +510,17 @@ async fn main() {
             .decorations(false)
             .resizable(true)
             .fullscreen(false)
-            .inner_size(950.0, 650.0)
-            .min_inner_size(400.0, 270.0)
-            .build()?;
+            .min_inner_size(400.0, 270.0);
+
+            if let Some(dim) = config_dim {
+                window_builder = window_builder
+                    .inner_size(dim.width.into(), dim.height.into())
+                    .position(dim.x.into(), dim.y.into());
+            } else {
+                window_builder = window_builder.inner_size(950.0, 650.0);
+            }
+
+            let window = window_builder.build()?;
 
             match set_shadow(&window, true) {
                 Ok(_) => {}
@@ -509,6 +528,22 @@ async fn main() {
                     error!("failed to set window shadows, unsupported system. {}", err);
                 }
             }
+
+            // read the config and call commands accordingly
+            if let Some(path) = config_path {
+                // manually change the repo
+                let handle = app.handle();
+                let handle2 = app.handle();
+                let path = path.to_str();
+                if let Some(path) = path {
+                    let path = path.to_string();
+                    tokio::spawn(async move {
+                        let app_state = handle2.state::<AppState>();
+                        open_repo(app_state, handle, &path).await
+                    });
+                }
+            }
+
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![

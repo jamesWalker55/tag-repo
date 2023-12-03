@@ -19,6 +19,8 @@ export interface WindowState {
   itemCache: Record<number, ItemDetails | undefined>;
   // the headers/columns displayed in the list view
   listViewColumns: ListViewColumn[];
+  // whether the folder tree panel should be recursive
+  recursiveTree: boolean;
   // the selection in the list view
   itemIdSelection: Selection | null;
   // whether audio previewing is enabled
@@ -38,34 +40,32 @@ export interface WindowState {
   };
 }
 
+const initialConfig = (window as any).configPlugin;
+
 // The app state. DO NOT MODIFY FROM CHILD COMPONENTS.
 // You should only modify this using functions in this module.
 export const state: WindowState = reactive({
-  path: null,
+  path: initialConfig.path,
   status: null,
   query: "",
   queryIsInvalid: false,
   itemIds: [],
   itemCache: {},
-  listViewColumns: [
-    { type: "name", width: 300 },
-    { type: "tags", width: 160 },
-    { type: "extension", width: 60 },
-    { type: "path", width: 500 },
-  ],
+  listViewColumns: initialConfig.components.itemList.columns,
+  recursiveTree: initialConfig.components.folderTree.recursive,
   itemIdSelection: null,
-  audioPreview: false,
-  audioVolume: 0.5,
+  audioPreview: initialConfig.audioPreview.enabled,
+  audioVolume: initialConfig.audioPreview.volume,
   // size of various panels
   panelSizes: {
-    bottomPanel: 160,
-    leftPanel: 200,
-    rightPanel: 250,
+    bottomPanel: initialConfig.layout.bottom.size,
+    leftPanel: initialConfig.layout.left.size,
+    rightPanel: initialConfig.layout.right.size,
   },
   panelVisibility: {
-    bottomPanel: false,
-    leftPanel: true,
-    rightPanel: true,
+    bottomPanel: initialConfig.layout.bottom.component !== null,
+    leftPanel: initialConfig.layout.left.component !== null,
+    rightPanel: initialConfig.layout.right.component !== null,
   },
 });
 

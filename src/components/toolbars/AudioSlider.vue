@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import { config } from "@/lib/api";
 import { createEventListenerRegistry } from "@/lib/utils";
 import { ref, watch } from "vue";
 
@@ -49,6 +50,7 @@ function onKnobMouseDown(downEvt: MouseEvent) {
   listeners.add(window, "mouseup", (upEvt: MouseEvent) => {
     updateKnobValue(upEvt);
     listeners.clear();
+    config.setAudioPreview().then(config.save);
   });
 }
 </script>

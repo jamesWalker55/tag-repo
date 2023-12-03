@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { ListViewColumn, state } from "@/lib/api";
+import { ListViewColumn, config, state } from "@/lib/api";
 import { COLUMN_MIN_WIDTH } from "@/lib/constants";
 import { getSpacingSize } from "@/lib/tailwindcss";
 import { createEventListenerRegistry, findClosestIndex } from "@/lib/utils";
@@ -110,6 +110,8 @@ function handleColumnDrag(
       const tmp = state.listViewColumns.splice(colIdx, 1);
       state.listViewColumns.splice(newColIdx, 0, tmp[0]);
     }
+
+    config.setItemList().then(config.save);
   });
 }
 

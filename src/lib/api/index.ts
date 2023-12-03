@@ -1,6 +1,7 @@
 import { type ListViewColumn } from "@/lib/api/view-columns";
 import {
   ManagerStatus,
+  configPlugin,
   insertTags,
   previewAudio,
   removeTags,
@@ -11,6 +12,7 @@ import { Event, listen } from "@tauri-apps/api/event";
 import { appWindow } from "@tauri-apps/api/window";
 import path from "path-browserify";
 import { watch } from "vue";
+import { unreachable } from "../utils";
 import * as actions from "./actions";
 import {
   clearItemCache,
@@ -53,6 +55,56 @@ export {
   state,
   type ItemDetails,
   type ListViewColumn,
+};
+
+export const config = {
+  async setPath() {
+    await configPlugin.setPath(state.path);
+  },
+  async setDimensions() {
+    await configPlugin.setDimensions();
+  },
+  async setAudioPreview() {
+    await configPlugin.setAudioPreview({
+      enabled: state.audioPreview,
+      volume: state.audioVolume,
+    });
+  },
+  async setLayout(side: "left" | "right" | "bottom") {
+    // bottom is not implemented
+    if (side === "bottom") return;
+
+    switch (side) {
+      case "left": {
+        await configPlugin.setLayout(side, {
+          component: "FolderTree",
+          size: state.panelSizes.leftPanel,
+        });
+        return;
+      }
+      case "right": {
+        await configPlugin.setLayout(side, {
+          component: "ItemProperties",
+          size: state.panelSizes.rightPanel,
+        });
+        return;
+      }
+      default:
+        unreachable(side);
+    }
+  },
+  async setItemList() {
+    await configPlugin.setItemList({ columns: state.listViewColumns });
+  },
+  async setFolderTree() {
+    await configPlugin.setFolderTree({ recursive: state.recursiveTree });
+  },
+  async save() {
+    await configPlugin.save();
+  },
+  async load() {
+    return await configPlugin.load();
+  },
 };
 
 // listen to change events from the backend
