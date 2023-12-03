@@ -8,20 +8,19 @@ use std::process::Command;
 use std::time::Duration;
 
 use normpath::PathExt;
-
 use rodio::{Decoder, OutputStream, PlayError, Sink, Source, StreamError};
 use serde::{Serialize, Serializer};
-use tauri::{AppHandle, LogicalSize, Manager, Wry};
+use tauri::{AppHandle, Manager, Wry};
 use thiserror::Error;
-use tokio::sync::{Mutex, RwLock};
+use tokio::sync::RwLock;
 use tokio::time::sleep;
 use tracing::{error, Level};
 use tracing_subscriber::FmtSubscriber;
-use window_shadows::{set_shadow, Error};
+use window_shadows::set_shadow;
 
 use crate::config::{ConfigPlugin, TauriManagedConfig};
 use crate::manager::{FileType, ItemDetails, ManagerStatus, RepoManager};
-use crate::repo::{DirStructureError, QueryError, Repo, SearchError};
+use crate::repo::{DirStructureError, QueryError, SearchError};
 use crate::tree::FolderBuf;
 
 mod config;
@@ -581,11 +580,9 @@ mod testsa {
 
     use path_slash::PathExt;
 
-    use super::*;
-
     #[test]
     fn my_test() {
-        let x = PathBuf::from("testrepo");
+        let _x = PathBuf::from("testrepo");
         let mut cwd = current_dir().unwrap();
         cwd.push("testrepo");
         dbg!(cwd.to_slash());

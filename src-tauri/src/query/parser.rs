@@ -17,6 +17,8 @@
 //! // => (a ∧ b) ∨ (c ∧ f ∧ in:src/) ∨ (c ∧ d ∧ e ∧ f)
 //! ```
 
+use std::borrow::Cow;
+
 use nom::branch::alt;
 use nom::bytes::complete::{is_not, tag as nom_tag};
 use nom::character::complete::{char as nom_char, none_of, one_of};
@@ -25,8 +27,6 @@ use nom::multi::fold_many0;
 use nom::sequence::{delimited, pair, preceded, separated_pair};
 use nom::IResult;
 use nom_unicode::complete::{space0, space1};
-use nom_unicode::is_whitespace;
-use std::borrow::Cow;
 
 fn double_quoted_string_fragment(input: &str) -> IResult<&str, Cow<str>> {
     alt((

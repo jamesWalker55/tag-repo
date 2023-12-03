@@ -1,7 +1,7 @@
+pub(crate) use parser::ParseError;
+
 mod convert;
 mod parser;
-
-pub(crate) use parser::ParseError;
 
 pub(crate) fn to_sql(query: &str) -> Result<String, ParseError> {
     if query.trim().is_empty() {

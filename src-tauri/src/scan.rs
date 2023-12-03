@@ -1,8 +1,9 @@
-use relative_path::RelativePathBuf;
 use std::fs;
 use std::fs::DirEntry;
 use std::io::Error;
 use std::path::{Path, PathBuf};
+
+use relative_path::RelativePathBuf;
 use thiserror::Error;
 use tracing::{debug, warn};
 
@@ -143,7 +144,6 @@ fn classify_dir_items<T>(
 
 #[cfg(test)]
 mod tests {
-
     use std::fs::File;
 
     use tempfile::{tempdir, TempDir};

@@ -1,3 +1,18 @@
+use std::fmt::Debug;
+use std::path::{Path, PathBuf};
+use std::sync::Arc;
+
+use futures::executor::block_on;
+use notify::event::{ModifyKind, RenameMode};
+use notify::EventKind::{Create, Modify, Remove};
+use notify::{Config, Event, RecursiveMode, Watcher};
+use serde::Serialize;
+use tauri::{AppHandle, Manager, Runtime};
+use thiserror::Error;
+use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver};
+use tokio::sync::{Mutex, RwLock};
+use tracing::{debug, error, instrument};
+
 use crate::repo::{
     DirStructureError, InsertTagsError, Item, OpenError, QueryError, RemoveTagsError, Repo,
     SearchError, SyncError,
@@ -5,23 +20,6 @@ use crate::repo::{
 use crate::scan::{classify_path, scan_dir, to_relative_path, Options, PathType};
 use crate::tree::FolderBuf;
 use crate::watch::BestWatcher;
-use futures::executor::block_on;
-use notify::event::{ModifyKind, RenameMode};
-use notify::EventKind::{Create, Modify, Remove};
-use notify::{Config, Event, RecursiveMode, Watcher};
-
-use serde::Serialize;
-use std::fmt::Debug;
-use std::path::{Path, PathBuf};
-use std::sync::Arc;
-
-use tauri::{AppHandle, Manager, Runtime};
-use thiserror::Error;
-
-use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver};
-use tokio::sync::{Mutex, RwLock};
-
-use tracing::{debug, error, instrument};
 
 #[derive(Debug, Copy, Clone, Serialize)]
 pub enum ManagerStatus {

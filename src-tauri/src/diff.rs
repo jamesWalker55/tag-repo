@@ -1,7 +1,7 @@
+use std::collections::{HashMap, HashSet};
+
 use futures::StreamExt;
 use relative_path::{RelativePath, RelativePathBuf};
-
-use std::collections::{HashMap, HashSet};
 use thiserror::Error;
 
 #[derive(Error, Debug)]

@@ -1,5 +1,4 @@
 use std::collections::HashSet;
-
 use std::fs::create_dir;
 use std::path::{Path, PathBuf};
 
@@ -12,7 +11,6 @@ use rusqlite::Error::{QueryReturnedNoRows, SqliteFailure};
 use rusqlite::{ffi, params, Connection, ErrorCode, Row};
 use rusqlite_migration::{Migrations, M};
 use serde::Serialize;
-
 #[cfg(test)]
 use tempfile::{tempdir, TempDir};
 use thiserror::Error;
@@ -20,7 +18,6 @@ use tracing::debug;
 
 use crate::diff::{diff_path_list, DiffError};
 use crate::query::to_sql;
-
 use crate::scan::{scan_dir, Options, ScanError};
 use crate::tree::{from_ordered_paths, FolderBuf, PathTreeError};
 

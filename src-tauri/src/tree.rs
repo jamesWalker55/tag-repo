@@ -1,9 +1,8 @@
-use serde::{Serialize, Serializer};
-
 use std::collections::HashMap;
 use std::fmt::{Debug, Formatter};
 use std::path::{Path, PathBuf};
 
+use serde::{Serialize, Serializer};
 use thiserror::Error;
 
 struct Folder<'a> {

@@ -1,10 +1,13 @@
 // TODO: Make this module be able to handle complicated queries like in src/repo.rs:478
 
-use super::parser::Expr;
-use crate::helpers::sql::{escape_fts5_string, escape_like_pattern};
-use itertools::Itertools;
 use std::borrow::{Borrow, Cow};
 use std::cmp::Ordering;
+
+use itertools::Itertools;
+
+use crate::helpers::sql::{escape_fts5_string, escape_like_pattern};
+
+use super::parser::Expr;
 
 #[derive(Debug, PartialEq, Eq)]
 pub(crate) enum WhereClause<'a> {
@@ -376,6 +379,7 @@ pub(crate) fn generate_clause<'a>(root: &'a Expr<'a>) -> WhereClause<'a> {
 #[cfg(test)]
 mod test_clauses {
     use crate::query::parser::parse;
+
     use super::*;
 
     fn fts(part: FTSPart) -> WhereClause { WhereClause::FTS(part) }
@@ -576,6 +580,7 @@ mod test_clauses {
 #[cfg(test)]
 mod test_fts_query {
     use crate::query::parser::parse;
+
     use super::*;
 
     fn assert_fts_statement(query: &str, expected: &str) {
@@ -650,6 +655,7 @@ mod test_fts_query {
 #[cfg(test)]
 mod test_to_sql {
     use crate::query::parser::parse;
+
     use super::*;
 
     fn assert_sql(query: &str, expected: &str) {

@@ -1,8 +1,9 @@
-use serde::{Deserialize, Serialize};
 use std::fs;
 use std::fs::create_dir_all;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
+
+use serde::{Deserialize, Serialize};
 use tauri::{
     plugin::{Plugin, Result as PluginResult},
     AppHandle, Invoke, Manager, RunEvent, Runtime, Window, WindowEvent,

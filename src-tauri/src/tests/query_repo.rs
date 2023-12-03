@@ -1,9 +1,11 @@
 use crate::repo::{Repo, TestRepo};
 
 mod PresetRepo {
-    use super::*;
-    use crate::repo::Repo;
     use serde_json::{from_str, Value};
+
+    use crate::repo::Repo;
+
+    use super::*;
 
     fn insert_from_testrepo_json(repo: &mut Repo, data: &str) {
         let data: Value = from_str(data).unwrap();
