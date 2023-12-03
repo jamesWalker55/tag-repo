@@ -1,5 +1,6 @@
 import { state } from "@/lib/api/state";
 import { supportsAudioPlayback } from "@/lib/ffi";
+import { config } from ".";
 
 export async function toggleAudioPreview() {
   if (state.audioPreview) {
@@ -7,6 +8,7 @@ export async function toggleAudioPreview() {
   } else {
     await enableAudioPreview();
   }
+  config.setAudioPreview().then(config.save);
 }
 
 export async function enableAudioPreview() {

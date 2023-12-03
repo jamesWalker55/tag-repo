@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::fs::create_dir_all;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use tauri::{
     plugin::{Plugin, Result as PluginResult},
@@ -30,7 +30,7 @@ structstruck::strike! {
     #[strikethrough[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]]
     #[strikethrough[serde(rename_all = "camelCase")]]
     pub struct Config {
-        pub path: Option<String>,
+        pub path: Option<PathBuf>,
         pub dimensions: Option<pub struct DimensionsConfig {
             pub x: i32,
             pub y: i32,
@@ -130,6 +130,22 @@ impl<R: Runtime> ConfigPlugin<R> {
     }
 }
 
+#[tauri::command]
+fn set_path(state: tauri::State<'_, TauriManagedConfig>, path: Option<&str>) -> Result<(), String> {
+    let mut config = state.lock().unwrap();
+    if let Some(path) = path {
+        let path = PathBuf::from(path);
+        if !(path.exists() && path.is_dir()) {
+            return Err("invalid path given".into());
+        }
+
+        config.path = Some(path);
+    } else {
+        config.path = None;
+    }
+    Ok(())
+}
+
 /// You must call this function before exiting in the frontend (*).
 /// * Only needed if you exit using `appWindow.close()`
 #[tauri::command]
@@ -194,17 +210,19 @@ fn set_folder_tree(state: tauri::State<'_, TauriManagedConfig>, folder_tree: Fol
 #[tauri::command]
 fn save<R: Runtime>(state: tauri::State<'_, TauriManagedConfig>, app_handle: tauri::AppHandle<R>) {
     let config = state.lock().unwrap();
-    let Some(app_dir) = app_handle.path_resolver().app_config_dir() else {
-        return;
-    };
+    let app_dir = app_handle
+        .path_resolver()
+        .app_config_dir()
+        .expect("failed to get app config directory");
     ConfigPlugin::<R>::save(&app_dir, &config);
 }
 
 #[tauri::command]
 fn load<R: Runtime>(app_handle: tauri::AppHandle<R>) -> Option<Config> {
-    let Some(app_dir) = app_handle.path_resolver().app_config_dir() else {
-        return None;
-    };
+    let app_dir = app_handle
+        .path_resolver()
+        .app_config_dir()
+        .expect("failed to get app config directory");
     ConfigPlugin::<R>::load(&app_dir)
 }
 
@@ -213,6 +231,7 @@ impl<R: Runtime> Default for ConfigPlugin<R> {
         Self {
             managed_config: None,
             invoke_handler: Box::new(tauri::generate_handler![
+                set_path,
                 set_dimensions,
                 set_audio_preview,
                 set_layout,

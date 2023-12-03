@@ -110,6 +110,9 @@ export async function openManual() {
 }
 
 export const configPlugin = {
+  async setPath(path: string | null) {
+    await invoke("plugin:configPlugin|set_path", { path });
+  },
   async setDimensions() {
     await invoke("plugin:configPlugin|set_dimensions");
   },

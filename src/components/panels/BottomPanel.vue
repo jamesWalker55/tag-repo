@@ -28,8 +28,8 @@ function onResizerMouseDown(downEvt: MouseEvent) {
   });
   listeners.add(window, "mouseup", (_: MouseEvent) => {
     listeners.clear();
+    config.setLayout("bottom").then(config.save);
   });
-  config.setLayout("bottom").then(config.save);
 }
 </script>
 

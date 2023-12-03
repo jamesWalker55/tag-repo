@@ -12,6 +12,7 @@ import { Event, listen } from "@tauri-apps/api/event";
 import { appWindow } from "@tauri-apps/api/window";
 import path from "path-browserify";
 import { watch } from "vue";
+import { unreachable } from "../utils";
 import * as actions from "./actions";
 import {
   clearItemCache,
@@ -24,7 +25,6 @@ import { setQuery } from "./query";
 import { closeRepo, openRepo, promptOpenRepo } from "./repo";
 import { selection } from "./selection";
 import { refreshAll, state } from "./state";
-import { unreachable } from "../utils";
 
 export {
   FileType,
@@ -58,6 +58,9 @@ export {
 };
 
 export const config = {
+  async setPath() {
+    await configPlugin.setPath(state.path);
+  },
   async setDimensions() {
     await configPlugin.setDimensions();
   },
@@ -75,7 +78,7 @@ export const config = {
       case "left": {
         await configPlugin.setLayout(side, {
           component: "FolderTree",
-          size: state.panelSizes.rightPanel,
+          size: state.panelSizes.leftPanel,
         });
         return;
       }

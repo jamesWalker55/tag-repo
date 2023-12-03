@@ -534,11 +534,14 @@ async fn main() {
                 // manually change the repo
                 let handle = app.handle();
                 let handle2 = app.handle();
-                let path = path.to_string();
-                tokio::spawn(async move {
-                    let app_state = handle2.state::<AppState>();
-                    open_repo(app_state, handle, &path).await
-                });
+                let path = path.to_str();
+                if let Some(path) = path {
+                    let path = path.to_string();
+                    tokio::spawn(async move {
+                        let app_state = handle2.state::<AppState>();
+                        open_repo(app_state, handle, &path).await
+                    });
+                }
             }
 
             Ok(())
