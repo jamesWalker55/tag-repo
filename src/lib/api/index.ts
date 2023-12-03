@@ -1,6 +1,7 @@
 import { type ListViewColumn } from "@/lib/api/view-columns";
 import {
   ManagerStatus,
+  configPlugin,
   insertTags,
   previewAudio,
   removeTags,
@@ -23,6 +24,7 @@ import { setQuery } from "./query";
 import { closeRepo, openRepo, promptOpenRepo } from "./repo";
 import { selection } from "./selection";
 import { refreshAll, state } from "./state";
+import { unreachable } from "../utils";
 
 export {
   FileType,
@@ -53,6 +55,53 @@ export {
   state,
   type ItemDetails,
   type ListViewColumn,
+};
+
+export const config = {
+  async setDimensions() {
+    await configPlugin.setDimensions();
+  },
+  async setAudioPreview() {
+    await configPlugin.setAudioPreview({
+      enabled: state.audioPreview,
+      volume: state.audioVolume,
+    });
+  },
+  async setLayout(side: "left" | "right" | "bottom") {
+    // bottom is not implemented
+    if (side === "bottom") return;
+
+    switch (side) {
+      case "left": {
+        await configPlugin.setLayout(side, {
+          component: "FolderTree",
+          size: state.panelSizes.rightPanel,
+        });
+        return;
+      }
+      case "right": {
+        await configPlugin.setLayout(side, {
+          component: "ItemProperties",
+          size: state.panelSizes.rightPanel,
+        });
+        return;
+      }
+      default:
+        unreachable(side);
+    }
+  },
+  async setItemList() {
+    await configPlugin.setItemList({ columns: state.listViewColumns });
+  },
+  async setFolderTree() {
+    await configPlugin.setFolderTree({ recursive: state.recursiveTree });
+  },
+  async save() {
+    await configPlugin.save();
+  },
+  async load() {
+    return await configPlugin.load();
+  },
 };
 
 // listen to change events from the backend

@@ -3,7 +3,7 @@ import FolderTreeItem from "@/components/FolderTreeItem.vue";
 import ToolbarMenu from "@/components/ToolbarMenu.vue";
 import MenuItem from "@/components/menu/MenuItem.vue";
 import MenuSeparator from "@/components/menu/MenuSeparator.vue";
-import { Folder, getFolders, setQuery, state } from "@/lib/api";
+import { Folder, config, getFolders, setQuery, state } from "@/lib/api";
 import {
   CheckBoxChecked,
   CheckBoxUnchecked,
@@ -19,10 +19,8 @@ const rootFolder: Ref<Folder | null> = ref(null);
 
 const lastAddedPath: Ref<string | null> = ref(null);
 
-const recursiveMode = ref(true);
-
 watch(
-  () => recursiveMode.value,
+  () => state.recursiveTree,
   (newRecursiveMode) => {
     if (lastAddedPath.value !== null) {
       addToQuery(lastAddedPath.value);
@@ -54,7 +52,7 @@ function addToQuery(path: string) {
   lastAddedPath.value = path;
 
   // TODO: For now I'll just replace the query
-  if (recursiveMode.value) {
+  if (state.recursiveTree) {
     setQuery(`in:"${path}"`);
   } else {
     setQuery(`children:"${path}"`);
@@ -116,13 +114,14 @@ const log = console.log;
         text="Recursive"
         @click="
           (e) => {
-            recursiveMode = !recursiveMode;
+            state.recursiveTree = !state.recursiveTree;
             closeMenu();
+            config.setFolderTree().then(config.save);
           }
         "
       >
         <template #icon="{ defaultClasses }">
-          <CheckBoxChecked v-if="recursiveMode" :class="defaultClasses" />
+          <CheckBoxChecked v-if="state.recursiveTree" :class="defaultClasses" />
           <CheckBoxUnchecked
             v-else
             class="h-16px w-16px"

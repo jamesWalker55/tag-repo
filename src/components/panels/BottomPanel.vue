@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { state } from "@/lib/api";
+import { config, state } from "@/lib/api";
 import { PanelSizeKey } from "@/lib/api/state";
 import { createEventListenerRegistry } from "@/lib/utils";
 import { Ref, ref } from "vue";
@@ -29,6 +29,7 @@ function onResizerMouseDown(downEvt: MouseEvent) {
   listeners.add(window, "mouseup", (_: MouseEvent) => {
     listeners.clear();
   });
+  config.setLayout("bottom").then(config.save);
 }
 </script>
 
