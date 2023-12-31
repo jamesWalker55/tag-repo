@@ -15,7 +15,7 @@ use tracing::{debug, error, instrument};
 
 use crate::repo::{
     DirStructureError, InsertTagsError, Item, OpenError, QueryError, RemoveTagsError, Repo,
-    SearchError, SyncError,
+    SearchError, SyncError, Tag,
 };
 use crate::scan::{classify_path, scan_dir, to_relative_path, Options, PathType};
 use crate::tree::FolderBuf;
@@ -273,6 +273,20 @@ impl<R: Runtime> RepoManager<R> {
             .expect("failed to join with thread that's batch-updating the database")?
         };
         Ok(items)
+    }
+
+    pub async fn tags(&self) -> Result<Vec<Tag>, QueryError> {
+        let tags = {
+            // clone a reference to the repo
+            let repo = self.repo.clone();
+            tokio::task::spawn_blocking(move || {
+                let repo = block_on(async { repo.lock().await });
+                repo.tags()
+            })
+            .await
+            .expect("failed to join with thread that's batch-updating the database")?
+        };
+        Ok(tags)
     }
 
     pub async fn get_dir_structure(&self) -> Result<FolderBuf, DirStructureError> {

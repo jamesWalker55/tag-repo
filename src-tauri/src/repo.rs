@@ -124,6 +124,23 @@ pub struct Item {
     pub(crate) meta_tags: String,
 }
 
+#[derive(Debug, Serialize, Clone)]
+pub struct Tag {
+    pub(crate) name: String,
+    pub(crate) column: String,
+    pub(crate) count: i64,
+}
+
+impl Tag {
+    fn from_row(row: &Row) -> Result<Self, rusqlite::Error> {
+        Ok(Self {
+            name: row.get::<_, String>("term")?,
+            column: row.get::<_, String>("col")?,
+            count: row.get::<_, i64>("cnt")?,
+        })
+    }
+}
+
 #[derive(Debug)]
 pub struct Repo {
     path: PathBuf,
@@ -508,6 +525,18 @@ impl Repo {
         );
         let mut stmt = self.conn.prepare_cached(sql.as_str())?;
         let mapped_rows = stmt.query_map([], Self::row_to_id)?;
+        let items: Result<Vec<_>, _> = mapped_rows.collect();
+        Ok(items?)
+    }
+
+    pub fn tags(&self) -> Result<Vec<Tag>, QueryError> {
+        let sql = indoc! {"
+            SELECT t.term, t.col, t.doc, t.cnt
+            FROM tags_col t
+            ORDER BY doc DESC
+        "};
+        let mut stmt = self.conn.prepare_cached(sql)?;
+        let mapped_rows = stmt.query_map([], Tag::from_row)?;
         let items: Result<Vec<_>, _> = mapped_rows.collect();
         Ok(items?)
     }

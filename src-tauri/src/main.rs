@@ -8,6 +8,7 @@ use std::process::Command;
 use std::time::Duration;
 
 use normpath::PathExt;
+use repo::Tag;
 use rodio::{Decoder, OutputStream, PlayError, Sink, Source, StreamError};
 use serde::{Serialize, Serializer};
 use tauri::{AppHandle, Manager, Wry};
@@ -224,6 +225,16 @@ async fn query_item_ids(
     };
     let item_ids = manager.query(query.as_str()).await?;
     Ok(item_ids)
+}
+
+#[tauri::command]
+async fn tags(state: tauri::State<'_, AppState>) -> Result<Vec<Tag>, QueryItemIdsError> {
+    let manager = state.manager.read().await;
+    let Some(manager) = &*manager else {
+        return Err(QueryItemIdsError::NoOpenRepo);
+    };
+    let tags = manager.tags().await?;
+    Ok(tags)
 }
 
 #[derive(Error, Debug)]
@@ -567,6 +578,7 @@ async fn main() {
             get_audio_volume,
             set_audio_volume,
             launch_manual,
+            tags,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -11,6 +11,12 @@ export interface Item {
   meta_tags: string;
 }
 
+export interface Tag {
+  name: string;
+  column: string;
+  count: number;
+}
+
 export interface ItemDetails {
   item: Item;
   filetype: FileType;
@@ -41,6 +47,10 @@ export async function getRepoPath(): Promise<string | null> {
 
 export async function queryItemIds(query: string): Promise<number[]> {
   return await invoke("query_item_ids", { query: query });
+}
+
+export async function tags(): Promise<Tag[]> {
+  return await invoke("tags");
 }
 
 export async function getItemDetails(id: number): Promise<ItemDetails> {
