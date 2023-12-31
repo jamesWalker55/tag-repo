@@ -17,6 +17,8 @@ export interface WindowState {
   itemIds: number[];
   // the item cache, this will be changed regularly
   itemCache: Record<number, ItemDetails | undefined>;
+  // list of all tags
+  tags: ffi.Tag[];
   // the headers/columns displayed in the list view
   listViewColumns: ListViewColumn[];
   // whether the folder tree panel should be recursive
@@ -51,6 +53,7 @@ export const state: WindowState = reactive({
   queryIsInvalid: false,
   itemIds: [],
   itemCache: {},
+  tags: [],
   listViewColumns: initialConfig.components.itemList.columns,
   recursiveTree: initialConfig.components.folderTree.recursive,
   itemIdSelection: null,
@@ -95,6 +98,11 @@ export async function refreshAudioVolume() {
   if (volume !== state.audioVolume) {
     state.audioVolume = volume;
   }
+}
+
+refreshFuncs.push(refreshTags);
+export async function refreshTags() {
+  state.tags = await ffi.tags();
 }
 
 export async function refreshAll() {

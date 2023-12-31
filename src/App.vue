@@ -36,7 +36,16 @@ const itemList: Ref<InstanceType<typeof ItemList> | null> = ref(null);
     >
       <ItemList ref="itemList" />
       <template #left>
-        <FolderTree />
+        <div class="grid lpanel-grid h-full">
+          <FolderTree class="flex-1" />
+          <div
+            class="overflow-x-auto py-1 pl-0.5 text-sm flex-1 border-t border-neutral-300"
+          >
+            <div v-for="tag of state.tags" :key="tag.name">
+              {{ tag.name }} <i>{{ tag.count }}</i>
+            </div>
+          </div>
+        </div>
       </template>
       <template #right>
         <ItemProperties />
@@ -50,5 +59,9 @@ const itemList: Ref<InstanceType<typeof ItemList> | null> = ref(null);
 <style scoped>
 .app-grid {
   grid-template-rows: max-content max-content minmax(0, 1fr) max-content;
+}
+
+.lpanel-grid {
+  grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
 }
 </style>

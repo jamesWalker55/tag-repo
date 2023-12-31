@@ -24,7 +24,7 @@ import {
 import { setQuery } from "./query";
 import { closeRepo, openRepo, promptOpenRepo } from "./repo";
 import { selection } from "./selection";
-import { refreshAll, state } from "./state";
+import { refreshAll, refreshTags, state } from "./state";
 
 export {
   FileType,
@@ -48,6 +48,7 @@ export {
   openRepo,
   promptOpenRepo,
   refreshAll,
+  refreshTags,
   removeTags,
   requestItemToBeFetched,
   selection,
@@ -150,26 +151,31 @@ export const config = {
       // TODO: You should make the resync code emit an event containing removed paths, so
       //  you can remove them from the selection
       selection.clear();
+      await refreshTags();
     }),
     listen("item-tags-added", async (evt: Event<ItemDetails>) => {
       console.log("item-tags-added", evt);
       setCachedItem(evt.payload.item.id, evt.payload);
+      await refreshTags();
     }),
     listen("batch-item-tags-added", async (evt: Event<ItemDetails[]>) => {
       console.log("batch-item-tags-added", evt);
       for (const itemDetail of evt.payload) {
         setCachedItem(itemDetail.item.id, itemDetail);
       }
+      await refreshTags();
     }),
     listen("item-tags-removed", async (evt: Event<ItemDetails>) => {
       console.log("item-tags-removed", evt);
       setCachedItem(evt.payload.item.id, evt.payload);
+      await refreshTags();
     }),
     listen("batch-item-tags-removed", async (evt: Event<ItemDetails[]>) => {
       console.log("batch-item-tags-removed", evt);
       for (const itemDetail of evt.payload) {
         setCachedItem(itemDetail.item.id, itemDetail);
       }
+      await refreshTags();
     }),
   ]);
 })();
