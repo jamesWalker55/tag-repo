@@ -43,3 +43,7 @@ CREATE TRIGGER items_trigger_au AFTER UPDATE ON items BEGIN
   INSERT INTO tag_query(tag_query, rowid, tags, meta_tags) VALUES('delete', OLD.id, OLD.tags, OLD.meta_tags);
   INSERT INTO tag_query(rowid, tags, meta_tags) VALUES (NEW.id, NEW.tags, NEW.meta_tags);
 END;
+
+-- Create virtual table to allow querying the tags itself
+-- https://www.sqlite.org/fts5.html#the_fts5vocab_virtual_table_module
+CREATE VIRTUAL TABLE tags_col USING fts5vocab('tag_query', 'col');

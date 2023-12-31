@@ -1,3 +1,4 @@
+DROP TABLE IF EXISTS tags_col;
 DROP TRIGGER IF EXISTS items_trigger_ai;
 DROP TRIGGER IF EXISTS items_trigger_ad;
 DROP TRIGGER IF EXISTS items_trigger_au;
