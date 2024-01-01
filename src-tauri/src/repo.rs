@@ -825,6 +825,7 @@ mod tests {
                 "tag_query_idx",
                 "tag_query_docsize",
                 "tag_query_config",
+                "tags_col",
             ],
         );
     }
