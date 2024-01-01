@@ -19,9 +19,9 @@ serde_json = "1.0"
 window-shadows = { git = "https://github.com/tauri-apps/window-shadows", rev = "1f26ca4db1006a390a60e2919b833cdab9385842" }
 drag = { git = "https://github.com/crabnebula-dev/drag-rs", rev = "4f588b534ad94847017302144e601c0b905b4bc5" }
 tauri-plugin-drag = { git = "https://github.com/crabnebula-dev/drag-rs", rev = "4f588b534ad94847017302144e601c0b905b4bc5" }
-rusqlite = { version = "0.29.0", features = ["bundled", "functions"] }
+rusqlite = { version = "0.30.0", features = ["bundled", "functions"] }
 indoc = "2"
-rusqlite_migration = "1.0"
+rusqlite_migration = "1.1.0"
 lazy_static = "1.4.0"
 tempfile = "3.8"
 notify = { version = "6.1.1", default-features = false, features = ["macos_kqueue"] }
@@ -38,6 +38,8 @@ normpath = "1.1"
 rodio = { version = "0.17.1", features = ["symphonia-aac", "symphonia-isomp4"] }
 nom-unicode = "0.3.0"
 structstruck = "0.4.1"
+r2d2 = "0.8.10"
+r2d2_sqlite = "0.23.0"
 
 [dev-dependencies]
 path-slash = "0.2.1"

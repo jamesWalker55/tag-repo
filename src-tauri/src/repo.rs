@@ -21,6 +21,8 @@ use crate::query::to_sql;
 use crate::scan::{scan_dir, Options, ScanError};
 use crate::tree::{from_ordered_paths, FolderBuf, PathTreeError};
 
+type Pool = r2d2::Pool<r2d2_sqlite::SqliteConnectionManager>;
+
 #[derive(Error, Debug)]
 pub enum OpenError {
     #[error("repo path does not exist")]
@@ -28,7 +30,7 @@ pub enum OpenError {
     #[error("failed to create .tagrepo folder")]
     FailedToCreateRepo(#[from] std::io::Error),
     #[error("failed to create database")]
-    FailedToCreateDatabase(#[from] rusqlite::Error),
+    FailedToOpenDatabase(#[from] r2d2::Error),
     #[error("failed to migrate database")]
     FailedToMigrateDatabase(#[from] rusqlite_migration::Error),
 }
@@ -144,7 +146,7 @@ impl Tag {
 #[derive(Debug)]
 pub struct Repo {
     path: PathBuf,
-    conn: Connection,
+    pool: Pool,
 }
 
 fn repeat_vars(count: usize) -> String {
@@ -250,8 +252,8 @@ impl Repo {
             create_dir(&data_path)?;
         }
         let db_path = data_path.join("tags.db");
-        let conn = open_database(db_path)?;
-        let repo = Self { path: PathBuf::from(repo_path), conn };
+        let pool = open_database(db_path)?;
+        let repo = Self { path: PathBuf::from(repo_path), pool };
         Ok(repo)
     }
 
@@ -266,14 +268,15 @@ impl Repo {
     {
         let path = path.as_ref();
         let tags = tags.into_tags();
-        let result = self.conn.execute(
+        let conn = self.pool.get().unwrap();
+        let result = conn.execute(
             "INSERT INTO items (path, tags) VALUES (?1, ?2)",
             (&path, tags.join(" ")),
         );
 
         match result {
             Ok(_) => {
-                let id = self.conn.last_insert_rowid();
+                let id = conn.last_insert_rowid();
                 Ok(self.get_item_by_id(id)?)
             }
             Err(SqliteFailure(
@@ -297,7 +300,8 @@ impl Repo {
         // I attempted to optimise this following this guide:
         // https://avi.im/blag/2021/fast-sqlite-inserts/
 
-        let tx = self.conn.transaction()?;
+        let mut conn = self.pool.get().unwrap();
+        let tx = conn.transaction()?;
         {
             let mut stmt = tx.prepare_cached("INSERT INTO items (path, tags) VALUES (?1, ?2)")?;
             for (path, tags) in items_params {
@@ -312,9 +316,9 @@ impl Repo {
 
     pub(crate) fn get_item_by_path(&self, path: impl AsRef<str>) -> Result<Item, SearchError> {
         let path = path.as_ref();
-        let mut stmt = self
-            .conn
-            .prepare("SELECT id, path, tags, meta_tags FROM items WHERE path = :path LIMIT 1")?;
+        let conn = self.pool.get().unwrap();
+        let mut stmt =
+            conn.prepare("SELECT id, path, tags, meta_tags FROM items WHERE path = :path LIMIT 1")?;
         let item = stmt.query_row([&path], Self::row_to_item);
         if let Err(QueryReturnedNoRows) = item {
             return Err(SearchError::ItemNotFound);
@@ -324,9 +328,9 @@ impl Repo {
     }
 
     pub(crate) fn get_item_by_id(&self, id: i64) -> Result<Item, SearchError> {
-        let mut stmt = self
-            .conn
-            .prepare("SELECT id, path, tags, meta_tags FROM items WHERE id = :id LIMIT 1")?;
+        let conn = self.pool.get().unwrap();
+        let mut stmt =
+            conn.prepare("SELECT id, path, tags, meta_tags FROM items WHERE id = :id LIMIT 1")?;
         let item = stmt.query_row([id], Self::row_to_item);
         if let Err(QueryReturnedNoRows) = item {
             return Err(SearchError::ItemNotFound);
@@ -338,19 +342,20 @@ impl Repo {
     pub(crate) fn remove_item_by_path(&self, path: impl AsRef<str>) -> Result<Item, RemoveError> {
         let removed_item = self.get_item_by_path(&path)?;
         let path = path.as_ref();
-        self.conn
-            .execute("DELETE FROM items WHERE path = :path", [path])?;
+        let conn = self.pool.get().unwrap();
+        conn.execute("DELETE FROM items WHERE path = :path", [path])?;
         Ok(removed_item)
     }
 
     pub(crate) fn remove_item_by_id(&self, id: i64) -> Result<(), RemoveError> {
-        self.conn
-            .execute("DELETE FROM items WHERE id = :id", [id])?;
+        let conn = self.pool.get().unwrap();
+        conn.execute("DELETE FROM items WHERE id = :id", [id])?;
         Ok(())
     }
 
     pub(crate) fn update_tags(&self, item_id: i64, tags: impl IntoTags) -> Result<(), UpdateError> {
-        let rv = self.conn.execute(
+        let conn = self.pool.get().unwrap();
+        let rv = conn.execute(
             "UPDATE items SET tags = :tags WHERE id = :id",
             params![tags.into_tags().join(" "), item_id],
         );
@@ -366,7 +371,8 @@ impl Repo {
         path: impl AsRef<str>,
     ) -> Result<(), UpdateError> {
         let path = path.as_ref();
-        let rv = self.conn.execute(
+        let conn = self.pool.get().unwrap();
+        let rv = conn.execute(
             "UPDATE items SET path = :path WHERE id = :id",
             params![path, item_id],
         );
@@ -383,7 +389,8 @@ impl Repo {
     ) -> Result<(), UpdateError> {
         let old_path = old_path.as_ref();
         let new_path = new_path.as_ref();
-        self.conn.execute(
+        let conn = self.pool.get().unwrap();
+        conn.execute(
             "UPDATE items SET path = ?2 WHERE path = ?1",
             params![old_path, new_path],
         )?;
@@ -406,7 +413,8 @@ impl Repo {
         );
         // converting item_id to a string is fine, sqlite converts types dynamically
         let item_id = item_id.to_string();
-        self.conn.execute(
+        let conn = self.pool.get().unwrap();
+        conn.execute(
             &sql,
             rusqlite::params_from_iter(tags.iter().chain(Some(&item_id))),
         )?;
@@ -433,7 +441,8 @@ impl Repo {
             repeat_vars(item_ids.len()),
         );
         let item_ids: Vec<_> = item_ids.iter().map(|x| x.to_string()).collect();
-        self.conn.execute(
+        let conn = self.pool.get().unwrap();
+        conn.execute(
             &sql,
             // converting item_id to a string is fine, sqlite converts types dynamically
             rusqlite::params_from_iter(tags.iter().chain(item_ids.iter())),
@@ -457,7 +466,8 @@ impl Repo {
         );
         // converting item_id to a string is fine, sqlite converts types dynamically
         let item_id = item_id.to_string();
-        self.conn.execute(
+        let conn = self.pool.get().unwrap();
+        conn.execute(
             &sql,
             rusqlite::params_from_iter(tags.iter().chain(Some(&item_id))),
         )?;
@@ -484,7 +494,8 @@ impl Repo {
             repeat_vars(item_ids.len()),
         );
         let item_ids: Vec<_> = item_ids.iter().map(|x| x.to_string()).collect();
-        self.conn.execute(
+        let conn = self.pool.get().unwrap();
+        conn.execute(
             &sql,
             // converting item_id to a string is fine, sqlite converts types dynamically
             rusqlite::params_from_iter(tags.iter().chain(item_ids.iter())),
@@ -504,7 +515,8 @@ impl Repo {
             "},
             where_clause
         );
-        let mut stmt = self.conn.prepare_cached(sql.as_str())?;
+        let conn = self.pool.get().unwrap();
+        let mut stmt = conn.prepare_cached(sql.as_str())?;
         let mapped_rows = stmt.query_map([], Self::row_to_item)?;
         let items: Result<Vec<_>, _> = mapped_rows.collect();
         Ok(items?)
@@ -523,7 +535,8 @@ impl Repo {
             "},
             where_clause
         );
-        let mut stmt = self.conn.prepare_cached(sql.as_str())?;
+        let conn = self.pool.get().unwrap();
+        let mut stmt = conn.prepare_cached(sql.as_str())?;
         let mapped_rows = stmt.query_map([], Self::row_to_id)?;
         let items: Result<Vec<_>, _> = mapped_rows.collect();
         Ok(items?)
@@ -535,7 +548,8 @@ impl Repo {
             FROM tags_col t
             ORDER BY doc DESC
         "};
-        let mut stmt = self.conn.prepare_cached(sql)?;
+        let conn = self.pool.get().unwrap();
+        let mut stmt = conn.prepare_cached(sql)?;
         let mapped_rows = stmt.query_map([], Tag::from_row)?;
         let items: Result<Vec<_>, _> = mapped_rows.collect();
         Ok(items?)
@@ -543,7 +557,8 @@ impl Repo {
 
     pub(crate) fn all_items(&self) -> Result<Vec<Item>, rusqlite::Error> {
         let sql = "SELECT i.id, i.path, i.tags, i.meta_tags FROM items i";
-        let mut stmt = self.conn.prepare_cached(sql)?;
+        let conn = self.pool.get().unwrap();
+        let mut stmt = conn.prepare_cached(sql)?;
         let mapped_rows = stmt.query_map([], Self::row_to_item)?;
         let items: Result<Vec<_>, _> = mapped_rows.collect();
         Ok(items?)
@@ -551,7 +566,8 @@ impl Repo {
 
     pub fn all_folders(&self) -> Result<Vec<String>, rusqlite::Error> {
         let sql = "SELECT DISTINCT dirname(i.path) FROM items i ORDER BY dirname(i.path)";
-        let mut stmt = self.conn.prepare_cached(sql)?;
+        let conn = self.pool.get().unwrap();
+        let mut stmt = conn.prepare_cached(sql)?;
         let mapped_rows = stmt.query_map([], |row| row.get::<_, String>(0))?;
         let items: Result<Vec<_>, _> = mapped_rows.collect();
         Ok(items?)
@@ -587,7 +603,8 @@ impl Repo {
             path_diff.renamed.len(),
         );
 
-        let tx = self.conn.transaction()?;
+        let mut conn = self.pool.get().unwrap();
+        let tx = conn.transaction()?;
         {
             // delete old paths
             let mut stmt = tx.prepare_cached("DELETE FROM items WHERE path = :path")?;
@@ -717,27 +734,35 @@ fn add_functions(conn: &Connection) -> rusqlite::Result<()> {
     Ok(())
 }
 
-pub(crate) fn open_database(db_path: impl AsRef<Path>) -> Result<Connection, OpenError> {
+pub(crate) fn open_database(db_path: impl AsRef<Path>) -> Result<Pool, OpenError> {
     let db_path = db_path.as_ref();
-    let mut conn = Connection::open(db_path).map_err(OpenError::FailedToCreateDatabase)?;
+    let manager = r2d2_sqlite::SqliteConnectionManager::file(db_path).with_init(|conn| {
+        // https://www.sqlite.org/pragma.html
+        // WAL is somehow slower. Play around with the benchmark test at the bottom of this file.
+        conn.pragma_update(None, "journal_mode", "WAL").unwrap();
+        conn.pragma_update(None, "foreign_keys", "ON").unwrap();
+        conn.pragma_update(None, "synchronous", "FULL").unwrap();
+        conn.pragma_update(None, "locking_mode", "EXCLUSIVE")
+            .unwrap();
+        conn.pragma_update(None, "case_sensitive_like", false)
+            .unwrap();
 
-    // https://www.sqlite.org/pragma.html
-    // WAL is somehow slower. Play around with the benchmark test at the bottom of this file.
-    conn.pragma_update(None, "journal_mode", "WAL").unwrap();
-    conn.pragma_update(None, "foreign_keys", "ON").unwrap();
-    conn.pragma_update(None, "synchronous", "FULL").unwrap();
-    conn.pragma_update(None, "locking_mode", "EXCLUSIVE")
-        .unwrap();
-    conn.pragma_update(None, "case_sensitive_like", false)
-        .unwrap();
+        add_functions(&conn).unwrap();
 
-    add_functions(&conn).unwrap();
+        Ok(())
+    });
+    let mut pool = r2d2::Pool::new(manager).map_err(OpenError::FailedToOpenDatabase)?;
 
-    MIGRATIONS
-        .to_latest(&mut conn)
-        .map_err(OpenError::FailedToMigrateDatabase)?;
+    // migrate to latest version
+    {
+        let mut conn = pool.get().map_err(OpenError::FailedToOpenDatabase)?;
 
-    Ok(conn)
+        MIGRATIONS
+            .to_latest(&mut conn)
+            .map_err(OpenError::FailedToMigrateDatabase)?;
+    }
+
+    Ok(pool)
 }
 
 /// The only purpose of this struct is to bundle `Repo` and `TempDir` together. This ensures that
@@ -809,8 +834,8 @@ mod tests {
         let mut tr = empty_testrepo();
         let repo = &mut tr.repo;
 
-        let mut stmt = repo
-            .conn
+        let conn = repo.pool.get().unwrap();
+        let mut stmt = conn
             .prepare("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")
             .unwrap();
         let table_names = stmt.query_map([], |row| row.get::<_, String>(0)).unwrap();
@@ -838,7 +863,8 @@ mod tests {
         repo.insert_item("hello", "text root").unwrap();
         repo.insert_item("world", "video root").unwrap();
 
-        let mut stmt = repo.conn.prepare("SELECT path FROM items").unwrap();
+        let conn = repo.pool.get().unwrap();
+        let mut stmt = conn.prepare("SELECT path FROM items").unwrap();
         let item_names: Vec<String> = stmt
             .query_map([], |row| row.get::<_, String>(0))
             .unwrap()
@@ -973,7 +999,7 @@ mod tests {
                 AND i.path LIKE '%0%'
         "#};
 
-        let conn = tr.repo.conn;
+        let conn = tr.repo.pool.get().unwrap();
 
         let mut stmt = conn.prepare(&sql).unwrap();
         let out = stmt
@@ -1010,7 +1036,9 @@ mod tests {
         let expected = "a b c";
         let result: String = tr
             .repo
-            .conn
+            .pool
+            .get()
+            .unwrap()
             .query_row("SELECT validate_tags(?1)", params![input], |row| row.get(0))
             .unwrap();
         assert_eq!(result, expected);
@@ -1023,7 +1051,9 @@ mod tests {
         let expected = "a b c";
         let result: String = tr
             .repo
-            .conn
+            .pool
+            .get()
+            .unwrap()
             .query_row("SELECT validate_tags(?1)", params![input], |row| row.get(0))
             .unwrap();
         assert_eq!(result, expected);
@@ -1036,7 +1066,9 @@ mod tests {
         let expected = "";
         let result: String = tr
             .repo
-            .conn
+            .pool
+            .get()
+            .unwrap()
             .query_row("SELECT validate_tags(?1)", params![input], |row| row.get(0))
             .unwrap();
         assert_eq!(result, expected);
@@ -1047,7 +1079,9 @@ mod tests {
         let tr = empty_testrepo();
         let result: String = tr
             .repo
-            .conn
+            .pool
+            .get()
+            .unwrap()
             .query_row(
                 "SELECT insert_tags(?, ?, ?, ?, ?)",
                 params!["", "b", "a", "d", "asdq"],
@@ -1063,7 +1097,9 @@ mod tests {
         let tr = empty_testrepo();
         let result: String = tr
             .repo
-            .conn
+            .pool
+            .get()
+            .unwrap()
             .query_row(
                 "SELECT insert_tags(?, ?, ?, ?, ?, ?, ?)",
                 params!["bee egg", "apple", "bee", "banana", "cat", "", "fish"],
@@ -1079,7 +1115,9 @@ mod tests {
         let tr = empty_testrepo();
         let result: String = tr
             .repo
-            .conn
+            .pool
+            .get()
+            .unwrap()
             .query_row(
                 "SELECT remove_tags(?, ?, ?)",
                 params!["a asdq b d fish goat", "asdq", "d"],
@@ -1095,7 +1133,9 @@ mod tests {
         let tr = empty_testrepo();
         let result: String = tr
             .repo
-            .conn
+            .pool
+            .get()
+            .unwrap()
             .query_row(
                 "SELECT remove_tags(?, ?, ?, ?, ?)",
                 params![
