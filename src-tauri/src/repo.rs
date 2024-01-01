@@ -290,7 +290,7 @@ impl Repo {
     }
 
     pub(crate) fn insert_items<T, U>(
-        &mut self,
+        &self,
         items_params: impl Iterator<Item = (T, U)>,
     ) -> Result<(), InsertError>
     where
@@ -583,7 +583,7 @@ impl Repo {
 
     #[tracing::instrument(skip(new_paths))]
     pub fn sync(
-        &mut self,
+        &self,
         new_paths: impl IntoIterator<Item = RelativePathBuf>,
     ) -> Result<(), SyncError> {
         let old_paths: HashSet<RelativePathBuf> = self
@@ -626,7 +626,7 @@ impl Repo {
         Ok(())
     }
 
-    pub fn sync_all(&mut self) -> Result<(), SyncError> {
+    pub fn sync_all(&self) -> Result<(), SyncError> {
         self.sync(scan_dir(&self.path, Options::default()).unwrap())?;
         Ok(())
     }
