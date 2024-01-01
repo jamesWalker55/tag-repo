@@ -114,7 +114,7 @@ pub fn determine_filetype(path: impl AsRef<Path>) -> FileType {
 // either reduce the text or remove it entirely
 // #[tracing::instrument]
 async fn event_handler<R: Runtime>(
-    repo: Arc<Mutex<Repo>>,
+    repo: Arc<RwLock<Repo>>,
     repo_path: PathBuf,
     app_handle: AppHandle<R>,
     mut receiver: UnboundedReceiver<notify::Result<Event>>,
@@ -132,7 +132,7 @@ async fn event_handler<R: Runtime>(
                 let PathType::Item(path) = classify_path(path, repo_path, &options) else {
                     continue;
                 };
-                let repo = repo.lock().await;
+                let repo = repo.read().await;
                 let inserted_item = repo
                     .insert_item(path.to_string(), "")
                     .expect("failed to insert item");
@@ -143,7 +143,7 @@ async fn event_handler<R: Runtime>(
             Event { kind: Remove(_), mut paths, .. } => {
                 let path = paths.pop().expect("remove event doesn't have a path");
                 let path = to_relative_path(path.as_path(), repo_path);
-                let repo = repo.lock().await;
+                let repo = repo.read().await;
                 // TODO: Better handling here
                 // Since removals are delayed, the item we are trying to remove may not be in the repo
                 // Don't panic if the item isn't found
@@ -168,7 +168,7 @@ async fn event_handler<R: Runtime>(
                 };
                 let old_path = old_path.to_string();
                 let new_path = new_path.to_string();
-                let repo = repo.lock().await;
+                let repo = repo.read().await;
                 repo.rename_path(&old_path, &new_path)
                     .expect("failed to rename item");
                 let renamed_item = repo
@@ -200,7 +200,7 @@ pub enum UnwatchError {
 
 #[derive(Debug)]
 pub struct RepoManager<R: Runtime> {
-    repo: Arc<Mutex<Repo>>,
+    repo: Arc<RwLock<Repo>>,
     status: RwLock<ManagerStatus>,
     path: PathBuf,
     watcher: RwLock<Option<BestWatcher>>,
@@ -212,7 +212,7 @@ impl<R: Runtime> RepoManager<R> {
         let path = path.as_ref();
         let repo = Repo::open(&path)?;
         let manager = Self {
-            repo: Arc::new(Mutex::new(repo)),
+            repo: Arc::new(RwLock::new(repo)),
             status: RwLock::new(ManagerStatus::Idle),
             path: path.to_path_buf(),
             watcher: RwLock::new(None),
@@ -249,7 +249,7 @@ impl<R: Runtime> RepoManager<R> {
             let repo = self.repo.clone();
             // move the sync() call to a separate blocking thread
             tokio::task::spawn_blocking(move || {
-                let mut repo = block_on(async { repo.lock().await });
+                let mut repo = block_on(async { repo.read().await });
                 repo.sync(new_paths)
             })
             .await
@@ -266,7 +266,7 @@ impl<R: Runtime> RepoManager<R> {
             let repo = self.repo.clone();
             let query = query.to_string();
             tokio::task::spawn_blocking(move || {
-                let repo = block_on(async { repo.lock().await });
+                let repo = block_on(async { repo.read().await });
                 repo.query_ids(&query)
             })
             .await
@@ -280,7 +280,7 @@ impl<R: Runtime> RepoManager<R> {
             // clone a reference to the repo
             let repo = self.repo.clone();
             tokio::task::spawn_blocking(move || {
-                let repo = block_on(async { repo.lock().await });
+                let repo = block_on(async { repo.read().await });
                 repo.tags()
             })
             .await
@@ -294,7 +294,7 @@ impl<R: Runtime> RepoManager<R> {
             // clone a reference to the repo
             let repo = self.repo.clone();
             tokio::task::spawn_blocking(move || {
-                let repo = block_on(async { repo.lock().await });
+                let repo = block_on(async { repo.read().await });
                 repo.dir_structure()
             })
             .await
@@ -305,7 +305,7 @@ impl<R: Runtime> RepoManager<R> {
 
     pub async fn get_item_details(&self, id: i64) -> Result<ItemDetails, SearchError> {
         let item = {
-            let repo = self.repo.lock().await;
+            let repo = self.repo.read().await;
             repo.get_item_by_id(id)
         }?;
         let details = ItemDetails::from_item(item);
@@ -324,7 +324,7 @@ impl<R: Runtime> RepoManager<R> {
         let repo = self.repo.clone();
         let app_handle = self.app_handle.clone();
         tokio::task::spawn_blocking(move || {
-            let repo = block_on(async { repo.lock().await });
+            let repo = block_on(async { repo.read().await });
             let ids = ids;
             if ids.len() == 1 {
                 let rv = repo.insert_tags(*ids.get(0).unwrap(), tags);
@@ -377,7 +377,7 @@ impl<R: Runtime> RepoManager<R> {
         let repo = self.repo.clone();
         let app_handle = self.app_handle.clone();
         tokio::task::spawn_blocking(move || {
-            let repo = block_on(async { repo.lock().await });
+            let repo = block_on(async { repo.read().await });
             let ids = ids;
             if ids.len() == 1 {
                 let rv = repo.remove_tags(*ids.get(0).unwrap(), tags);
