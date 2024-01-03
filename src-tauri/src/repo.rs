@@ -737,9 +737,6 @@ fn add_functions(conn: &Connection) -> rusqlite::Result<()> {
 pub(crate) fn open_database(db_path: impl AsRef<Path>) -> Result<Pool, OpenError> {
     let db_path = db_path.as_ref();
     let manager = r2d2_sqlite::SqliteConnectionManager::file(db_path).with_init(|conn| {
-        // https://www.sqlite.org/pragma.html
-        // WAL is somehow slower. Play around with the benchmark test at the bottom of this file.
-        conn.pragma_update(None, "journal_mode", "WAL").unwrap();
         conn.pragma_update(None, "foreign_keys", "ON").unwrap();
         conn.pragma_update(None, "synchronous", "FULL").unwrap();
         conn.pragma_update(None, "locking_mode", "EXCLUSIVE")
@@ -751,12 +748,16 @@ pub(crate) fn open_database(db_path: impl AsRef<Path>) -> Result<Pool, OpenError
 
         Ok(())
     });
-    let mut pool = r2d2::Pool::new(manager).map_err(OpenError::FailedToOpenDatabase)?;
+    let pool = r2d2::Pool::new(manager).map_err(OpenError::FailedToOpenDatabase)?;
 
-    // migrate to latest version
     {
         let mut conn = pool.get().map_err(OpenError::FailedToOpenDatabase)?;
 
+        // https://www.sqlite.org/pragma.html
+        // WAL is somehow slower. Play around with the benchmark test at the bottom of this file.
+        conn.pragma_update(None, "journal_mode", "WAL").unwrap();
+
+        // migrate to latest version
         MIGRATIONS
             .to_latest(&mut conn)
             .map_err(OpenError::FailedToMigrateDatabase)?;
